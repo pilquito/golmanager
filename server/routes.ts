@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (duplicates.length > 1) {
         // Keep the most recent one, delete the rest
-        const sorted = duplicates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const sorted = duplicates.sort((a, b) => new Date(b.updatedAt || b.createdAt || Date.now()).getTime() - new Date(a.updatedAt || a.createdAt || Date.now()).getTime());
         const toKeep = sorted[0];
         const toDelete = sorted.slice(1);
         
@@ -677,9 +677,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint for getting upload URL
   app.post("/api/upload/url", isAuthenticated, async (req, res) => {
     try {
+      const { fileName, contentType, purpose } = req.body;
+      
+      if (!fileName || !contentType) {
+        return res.status(400).json({ error: "fileName and contentType are required" });
+      }
+
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL(fileName, contentType, purpose);
+      
+      // Generate object path for serving later
+      const timestamp = Date.now();
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const prefix = purpose === 'logo' ? 'logos' : 'backgrounds';
+      const objectPath = `/objects/uploads/${prefix}_${timestamp}_${sanitizedFileName}`;
+      
+      res.json({ 
+        uploadURL,
+        objectPath,
+        publicURL: objectPath
+      });
     } catch (error) {
       console.error("Error getting upload URL:", error);
       res.status(500).json({ error: "Failed to get upload URL" });

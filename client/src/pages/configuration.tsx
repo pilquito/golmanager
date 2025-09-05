@@ -57,7 +57,7 @@ export default function Configuration() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/team-config", data);
+      const response = await apiRequest("/api/team-config", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -91,29 +91,55 @@ export default function Configuration() {
     updateMutation.mutate(data);
   };
 
-  const handleLogoUpload = async () => {
-    const response = await apiRequest("POST", "/api/upload/url");
-    const data = await response.json();
-    return {
-      method: "PUT" as const,
-      url: data.uploadURL,
-    };
+  const handleLogoUpload = async (file: File, purpose?: string) => {
+    try {
+      const response = await apiRequest("/api/upload/url", "POST", {
+        fileName: file.name,
+        contentType: file.type,
+        purpose: purpose || 'logo'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+        objectPath: data.objectPath,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
   };
 
-  const handleBackgroundUpload = async () => {
-    const response = await apiRequest("POST", "/api/upload/url");
-    const data = await response.json();
-    return {
-      method: "PUT" as const,
-      url: data.uploadURL,
-    };
+  const handleBackgroundUpload = async (file: File, purpose?: string) => {
+    try {
+      const response = await apiRequest("/api/upload/url", "POST", {
+        fileName: file.name,
+        contentType: file.type,
+        purpose: purpose || 'background'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+        objectPath: data.objectPath,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
   };
 
   const onLogoUploadComplete = (result: any) => {
     if (result.successful && result.successful.length > 0) {
       const uploadedFile = result.successful[0];
-      const objectPath = `/objects/profile-images/${uploadedFile.name}`;
-      form.setValue("logoUrl", objectPath);
+      // Use the object path returned by the server
+      form.setValue("logoUrl", uploadedFile.objectPath);
       toast({
         title: "Logo subido",
         description: "El logo se ha subido correctamente",
@@ -124,8 +150,8 @@ export default function Configuration() {
   const onBackgroundUploadComplete = (result: any) => {
     if (result.successful && result.successful.length > 0) {
       const uploadedFile = result.successful[0];
-      const objectPath = `/objects/profile-images/${uploadedFile.name}`;
-      form.setValue("backgroundImageUrl", objectPath);
+      // Use the object path returned by the server
+      form.setValue("backgroundImageUrl", uploadedFile.objectPath);
       toast({
         title: "Imagen de fondo subida",
         description: "La imagen de fondo se ha subido correctamente",
@@ -233,6 +259,8 @@ export default function Configuration() {
                             onGetUploadParameters={handleLogoUpload}
                             onComplete={onLogoUploadComplete}
                             buttonClassName="w-full"
+                            acceptedFileTypes="image/png,image/jpeg,image/svg+xml,image/webp"
+                            purpose="logo"
                           >
                             <Upload className="h-4 w-4 mr-2" />
                             Subir Logo
@@ -266,6 +294,8 @@ export default function Configuration() {
                               onGetUploadParameters={handleBackgroundUpload}
                               onComplete={onBackgroundUploadComplete}
                               buttonClassName="flex-1"
+                              acceptedFileTypes="image/png,image/jpeg,image/webp"
+                              purpose="background"
                             >
                               <Upload className="h-4 w-4 mr-2" />
                               Subir Imagen

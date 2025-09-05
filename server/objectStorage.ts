@@ -120,7 +120,7 @@ export class ObjectStorageService {
   }
 
   // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(fileName?: string, contentType?: string, purpose?: string): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(

@@ -8,14 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
-  onGetUploadParameters: () => Promise<{
+  onGetUploadParameters: (file: File, purpose?: string) => Promise<{
     method: "PUT";
     url: string;
+    objectPath: string;
   }>;
-  onComplete?: (result: { successful: Array<{ name: string; uploadURL: string }> }) => void;
+  onComplete?: (result: { successful: Array<{ name: string; uploadURL: string; objectPath: string }> }) => void;
   buttonClassName?: string;
   children: ReactNode;
   acceptedFileTypes?: string;
+  purpose?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function ObjectUploader({
   buttonClassName,
   children,
   acceptedFileTypes = "image/*",
+  purpose,
 }: ObjectUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -60,7 +63,7 @@ export function ObjectUploader({
       setUploadProgress(0);
 
       // Get upload URL
-      const uploadParams = await onGetUploadParameters();
+      const uploadParams = await onGetUploadParameters(file, purpose);
 
       // Upload file
       const xhr = new XMLHttpRequest();
@@ -77,7 +80,8 @@ export function ObjectUploader({
           const result = {
             successful: [{
               name: file.name,
-              uploadURL: uploadParams.url
+              uploadURL: uploadParams.url,
+              objectPath: uploadParams.objectPath
             }]
           };
           onComplete?.(result);
