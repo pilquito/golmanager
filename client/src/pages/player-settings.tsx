@@ -26,6 +26,7 @@ const updatePlayerSchema = z.object({
   phoneNumber: z.string().optional(),
   position: z.string().min(1, "Posición requerida"),
   jerseyNumber: z.number().min(1).max(99).optional(),
+  tagline: z.string().optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -81,17 +82,19 @@ export default function PlayerSettings() {
       phoneNumber: playerInfo?.phoneNumber || "",
       position: playerInfo?.position || "",
       jerseyNumber: playerInfo?.jerseyNumber || undefined,
+      tagline: playerInfo?.tagline || "",
     },
     values: {
       phoneNumber: playerInfo?.phoneNumber || "",
       position: playerInfo?.position || "",
       jerseyNumber: playerInfo?.jerseyNumber || undefined,
+      tagline: playerInfo?.tagline || "",
     },
   });
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/users/${(user as any)?.id}`, "PATCH", data);
+      return apiRequest("PATCH", `/api/users/${(user as any)?.id}`, data);
     },
     onSuccess: () => {
       toast({
@@ -139,7 +142,7 @@ export default function PlayerSettings() {
 
   const updatePlayerMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/players/${playerInfo?.id}`, "PATCH", data);
+      return apiRequest("PATCH", `/api/players/${playerInfo?.id}`, data);
     },
     onSuccess: async (updatedPlayer) => {
       toast({
@@ -581,6 +584,23 @@ export default function PlayerSettings() {
                         <FormLabel>Teléfono</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Número de teléfono" data-testid="input-player-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={playerForm.control}
+                    name="tagline"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sub-eslogan</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="ej: Deportista, Atleta, etc." 
+                            {...field} 
+                            data-testid="input-tagline" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

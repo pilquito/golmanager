@@ -47,6 +47,8 @@ export default function Players() {
       position: "",
       phoneNumber: "",
       email: "",
+      tagline: "",
+      birthDate: "",
       isActive: true,
     },
   });
@@ -200,6 +202,8 @@ export default function Players() {
       position: player.position,
       phoneNumber: player.phoneNumber || "",
       email: player.email || "",
+      tagline: player.tagline || "",
+      birthDate: player.birthDate ? new Date(player.birthDate).toISOString().slice(0, 10) : "",
       isActive: player.isActive ?? true,
     });
     setIsDialogOpen(true);
@@ -229,9 +233,9 @@ export default function Players() {
         const player = row.original;
         return (
           <div className="flex items-center justify-center w-10 h-10">
-            {player.profileImageUrl ? (
+            {(player.profile_image_url || player.profileImageUrl) ? (
               <img 
-                src={player.profileImageUrl} 
+                src={player.profile_image_url || player.profileImageUrl} 
                 alt={player.name}
                 className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
                 data-testid={`player-photo-${player.id}`}
@@ -439,6 +443,32 @@ export default function Players() {
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="Correo electrónico" {...field} data-testid="input-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tagline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sub-eslogan (ej: "Deportista")</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Deportista, Atleta, etc." {...field} data-testid="input-tagline" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de Nacimiento</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} data-testid="input-birth-date" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

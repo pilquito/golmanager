@@ -193,6 +193,7 @@ export class DatabaseStorage implements IStorage {
         phone: players.phoneNumber,
         email: players.email,
         birthDate: players.birthDate,
+        tagline: players.tagline,
         profile_image_url: users.profileImageUrl,
         isActive: players.isActive,
         createdAt: players.createdAt,

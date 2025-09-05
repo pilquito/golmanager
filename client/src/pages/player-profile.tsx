@@ -138,13 +138,29 @@ export default function PlayerProfile() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                  #{player.jerseyNumber || "?"}
+                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                  {(player.profile_image_url || player.profileImageUrl) ? (
+                    <img 
+                      src={player.profile_image_url || player.profileImageUrl} 
+                      alt={player.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                      data-testid="player-profile-image"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                      #{player.jerseyNumber || "?"}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold text-foreground" data-testid="player-name">
                     {player.name}
                   </h1>
+                  {player.tagline && (
+                    <p className="text-lg text-muted-foreground mb-2" data-testid="player-tagline">
+                      {player.tagline}
+                    </p>
+                  )}
                   <div className="flex items-center space-x-4 mt-2">
                     <Badge variant="outline" data-testid="player-position">
                       {player.position}

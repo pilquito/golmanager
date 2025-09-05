@@ -50,6 +50,7 @@ export const players = pgTable("players", {
   phoneNumber: varchar("phone_number"),
   email: varchar("email"),
   birthDate: date("birth_date"),
+  tagline: varchar("tagline"), // Campo "deportista" - sub-eslogan
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
