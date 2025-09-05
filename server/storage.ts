@@ -188,6 +188,25 @@ export class DatabaseStorage implements IStorage {
 
   async createMatch(match: InsertMatch): Promise<Match> {
     const [newMatch] = await db.insert(matches).values(match).returning();
+    
+    // Auto-create championship payment in pending status
+    try {
+      const teamConfig = await this.getTeamConfig();
+      const championshipFee = teamConfig?.monthlyFee || "15.00"; // Default fee
+      
+      await db.insert(championshipPayments).values({
+        matchId: newMatch.id,
+        concept: `Inscripción - ${match.competition || 'Competición'}`,
+        amount: championshipFee,
+        dueDate: match.date ? match.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        status: "pending",
+        notes: `Pago automático generado para partido vs ${match.opponent}`,
+      });
+    } catch (error) {
+      // Log error but don't fail match creation if payment creation fails
+      console.warn('Failed to create automatic championship payment:', error);
+    }
+    
     return newMatch;
   }
 
