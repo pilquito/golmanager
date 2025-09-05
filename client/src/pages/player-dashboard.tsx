@@ -190,10 +190,10 @@ export default function PlayerDashboard() {
         {/* Stats Cards con estilo futbolero */}
         <div className="grid grid-cols-3 gap-3">
           {/* Pagos Pendientes */}
-          <Card className="bg-gradient-to-br from-red-500/40 to-orange-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-red-500/70 to-orange-400/70 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
+                <div className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center shadow-lg">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
@@ -207,10 +207,10 @@ export default function PlayerDashboard() {
           </Card>
 
           {/* Partidos Totales */}
-          <Card className="bg-gradient-to-br from-blue-600/40 to-blue-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-500/70 to-cyan-400/70 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
+                <div className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center shadow-lg">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
@@ -224,10 +224,10 @@ export default function PlayerDashboard() {
           </Card>
 
           {/* Rendimiento (placeholder) */}
-          <Card className="bg-gradient-to-br from-pink-500/40 to-rose-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-pink-500/70 to-fuchsia-400/70 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
+                <div className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center shadow-lg">
                   <Target className="w-5 h-5" />
                 </div>
                 <div>
