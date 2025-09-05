@@ -45,7 +45,7 @@ export default function ChampionshipPayments() {
   const form = useForm({
     resolver: zodResolver(insertChampionshipPaymentSchema),
     defaultValues: {
-      matchId: "",
+      matchId: "none",
       concept: "",
       amount: "50.00",
       dueDate: undefined,
@@ -167,7 +167,7 @@ export default function ChampionshipPayments() {
   const handleEdit = (payment: ChampionshipPayment & { match?: Match }) => {
     setEditingPayment(payment);
     form.reset({
-      matchId: payment.matchId || "",
+      matchId: payment.matchId || "none",
       concept: payment.concept,
       amount: payment.amount,
       dueDate: payment.dueDate ? new Date(payment.dueDate) : undefined,
@@ -346,7 +346,7 @@ export default function ChampionshipPayments() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Sin partido específico</SelectItem>
+                          <SelectItem value="none">Sin partido específico</SelectItem>
                           {matches?.map((match) => (
                             <SelectItem key={match.id} value={match.id}>
                               {match.opponent} - {new Date(match.date).toLocaleDateString("es-ES")}

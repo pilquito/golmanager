@@ -288,14 +288,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createChampionshipPayment(payment: InsertChampionshipPayment): Promise<ChampionshipPayment> {
-    const [newPayment] = await db.insert(championshipPayments).values(payment).returning();
+    // Handle "none" value for matchId (no specific match)
+    const paymentData = {
+      ...payment,
+      matchId: payment.matchId === "none" ? null : payment.matchId,
+    };
+    const [newPayment] = await db.insert(championshipPayments).values(paymentData).returning();
     return newPayment;
   }
 
   async updateChampionshipPayment(id: string, payment: Partial<InsertChampionshipPayment>): Promise<ChampionshipPayment> {
+    // Handle "none" value for matchId (no specific match)
+    const paymentData = {
+      ...payment,
+      matchId: payment.matchId === "none" ? null : payment.matchId,
+      updatedAt: new Date(),
+    };
     const [updatedPayment] = await db
       .update(championshipPayments)
-      .set({ ...payment, updatedAt: new Date() })
+      .set(paymentData)
       .where(eq(championshipPayments.id, id))
       .returning();
     return updatedPayment;
