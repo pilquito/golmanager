@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Archive } from "lucide-react";
 import { insertPlayerSchema } from "@shared/schema";
 import type { Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -122,7 +122,8 @@ export default function Players() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/players/${id}`);
+      const response = await apiRequest("DELETE", `/api/players/${id}`);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
@@ -146,6 +147,38 @@ export default function Players() {
       toast({
         title: "Error",
         description: "Error al eliminar jugador",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("PATCH", `/api/players/${id}`, { isActive: false });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      toast({
+        title: "Éxito",
+        description: "Jugador archivado correctamente",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Error al archivar jugador",
         variant: "destructive",
       });
     },
@@ -177,8 +210,14 @@ export default function Players() {
   };
 
   const handleDelete = async (player: Player) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar a ${player.name}?`)) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${player.name}?`)) {
       deleteMutation.mutate(player.id);
+    }
+  };
+
+  const handleArchive = async (player: Player) => {
+    if (window.confirm(`¿Archivar a ${player.name}? Podrás reactivarlo después.`)) {
+      archiveMutation.mutate(player.id);
     }
   };
 
@@ -257,6 +296,14 @@ export default function Players() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => handleArchive(player)}
+              data-testid={`button-archive-${player.id}`}
+            >
+              <Archive className="h-4 w-4 text-orange-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleDelete(player)}
               data-testid={`button-delete-${player.id}`}
             >
@@ -271,37 +318,13 @@ export default function Players() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header title="Jugadores" subtitle="Gestión de plantilla del equipo">
-        <div className="space-x-2">
-          <Button 
-            variant="destructive"
-            onClick={async () => {
-              try {
-                const response = await apiRequest("POST", "/api/players/cleanup-all");
-                toast({
-                  title: "Limpieza masiva completada",
-                  description: `${response.message}. Eliminados: ${response.totalDeleted}`,
-                });
-                queryClient.invalidateQueries({ queryKey: ["/api/players"] });
-              } catch (error) {
-                console.error("Cleanup error:", error);
-                toast({
-                  title: "Error",
-                  description: "Error al limpiar jugadores duplicados",
-                  variant: "destructive",
-                });
-              }
-            }}
-            data-testid="button-cleanup-all"
-          >
-            🗑️ Limpiar Duplicados
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-add-player">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Jugador
-              </Button>
-            </DialogTrigger>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-player">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Jugador
+            </Button>
+          </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>
@@ -423,7 +446,6 @@ export default function Players() {
             </Form>
             </DialogContent>
           </Dialog>
-        </div>
       </Header>
 
       <main className="flex-1 overflow-auto bg-background p-3 md:p-6">
