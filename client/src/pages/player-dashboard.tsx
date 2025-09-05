@@ -12,6 +12,7 @@ export default function PlayerDashboard() {
   const { data: playerData, isLoading: playerLoading } = useQuery({
     queryKey: [`/api/players/user/${user?.id}`],
     enabled: !!user?.id,
+    refetchOnWindowFocus: true,
   });
 
   const playerInfo = playerData as any;
@@ -23,6 +24,7 @@ export default function PlayerDashboard() {
   const { data: playerPayments, isLoading: paymentsLoading } = useQuery({
     queryKey: [`/api/monthly-payments/player/${playerInfo?.id}`],
     enabled: !!playerInfo?.id,
+    refetchOnWindowFocus: true,
   });
 
   if (playerLoading) {
@@ -62,7 +64,7 @@ export default function PlayerDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold" data-testid="player-name">
-              {playerInfo?.name || user?.firstName || "Jugador"}
+              {playerInfo?.name || `${user?.firstName} ${user?.lastName}`.trim() || "Jugador"}
             </h1>
             <p className="text-blue-200 text-sm" data-testid="player-age">
               {playerInfo?.age ? `${playerInfo.age} años` : ""}
@@ -202,33 +204,50 @@ export default function PlayerDashboard() {
         )}
 
         {/* Pagos pendientes */}
-        {pendingPayments.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-orange-600">Pagos Pendientes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {pendingPayments.map((payment: any) => (
-                <div key={payment.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div>
-                    <p className="font-medium" data-testid={`payment-month-${payment.id}`}>
-                      {payment.month}
-                    </p>
-                    <p className="text-sm text-gray-600" data-testid={`payment-due-${payment.id}`}>
-                      Vence: {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString('es-ES') : 'Sin fecha'}
-                    </p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-orange-600">
+              Pagos Pendientes ({pendingPayments.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingPayments.length > 0 ? (
+              <>
+                {pendingPayments.map((payment: any) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                    <div>
+                      <p className="font-medium" data-testid={`payment-month-${payment.id}`}>
+                        {payment.month}
+                      </p>
+                      <p className="text-sm text-gray-600" data-testid={`payment-due-${payment.id}`}>
+                        Vence: {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString('es-ES') : 'Sin fecha'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-orange-600" data-testid={`payment-amount-${payment.id}`}>
+                        €{parseFloat(payment.amount).toFixed(2)}
+                      </p>
+                      <Badge variant="secondary">Pendiente</Badge>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-orange-600" data-testid={`payment-amount-${payment.id}`}>
-                      €{parseFloat(payment.amount).toFixed(2)}
-                    </p>
-                    <Badge variant="secondary">Pendiente</Badge>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+                ))}
+              </>
+            ) : (
+              <p className="text-green-600 text-center py-4">
+                ¡No tienes pagos pendientes!
+              </p>
+            )}
+            <div className="pt-3 border-t">
+              <button 
+                onClick={() => window.location.href = '/payments-history'}
+                className="w-full text-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                data-testid="button-view-payment-history"
+              >
+                Ver historial completo de pagos →
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

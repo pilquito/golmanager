@@ -49,6 +49,11 @@ export default function PlayerSettings() {
       lastName: (user as any)?.lastName || "",
       email: (user as any)?.email || "",
     },
+    values: {
+      firstName: (user as any)?.firstName || "",
+      lastName: (user as any)?.lastName || "",
+      email: (user as any)?.email || "",
+    },
   });
 
   const passwordForm = useForm({
@@ -100,14 +105,42 @@ export default function PlayerSettings() {
     },
   });
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // Upload to server
+        const response = await apiRequest('/api/upload/profile-image', 'POST', formData);
+        
+        // Update local preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfileImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+
+        // Update user profile with new image URL
+        if (response.imageUrl) {
+          await updateProfileMutation.mutateAsync({
+            profileImageUrl: response.imageUrl
+          });
+        }
+
+        toast({
+          title: "Foto actualizada",
+          description: "Tu foto de perfil ha sido actualizada correctamente",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo subir la imagen",
+          variant: "destructive",
+        });
+      }
     }
   };
 

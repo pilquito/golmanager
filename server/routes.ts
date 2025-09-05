@@ -106,6 +106,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple profile image upload endpoint
+  app.post('/api/upload/profile-image', isAuthenticated, async (req, res) => {
+    try {
+      // For now, just return a dummy URL since we need to integrate object storage properly
+      const imageUrl = `/api/placeholder-profile-image/${(req.user as any).id}`;
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  // Serve placeholder profile image
+  app.get('/api/placeholder-profile-image/:userId', (req, res) => {
+    // Return a simple SVG placeholder
+    const svg = `<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="90" fill="#e2e8f0"/>
+      <circle cx="100" cy="70" r="25" fill="#64748b"/>
+      <path d="M100 120 Q70 150 40 180 Q70 160 100 160 Q130 160 160 180 Q130 150 100 120" fill="#64748b"/>
+    </svg>`;
+    
+    res.set('Content-Type', 'image/svg+xml');
+    res.send(svg);
+  });
+
   app.get('/api/auth/user', isAuthenticated, async (req, res) => {
     try {
       // req.user is already populated by isAuthenticated middleware  
