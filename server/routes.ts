@@ -110,6 +110,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player by user ID
+  app.get("/api/players/user/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const player = await storage.getPlayerByUserId(userId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found for this user" });
+      }
+      res.json(player);
+    } catch (error) {
+      console.error("Error fetching player by user ID:", error);
+      res.status(500).json({ message: "Failed to fetch player" });
+    }
+  });
+
   app.post("/api/players", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertPlayerSchema.parse(req.body);
@@ -228,6 +243,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching player monthly payments:", error);
       res.status(500).json({ message: "Failed to fetch player monthly payments" });
+    }
+  });
+
+  // Get monthly payments for specific player
+  app.get("/api/monthly-payments/player/:playerId", isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getPlayerMonthlyPayments(req.params.playerId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching monthly payments for player:", error);
+      res.status(500).json({ message: "Failed to fetch monthly payments for player" });
     }
   });
 

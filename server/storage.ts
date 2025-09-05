@@ -36,6 +36,7 @@ export interface IStorage {
   // Player operations
   getPlayers(): Promise<Player[]>;
   getPlayer(id: string): Promise<Player | undefined>;
+  getPlayerByUserId(userId: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
   deletePlayer(id: string): Promise<void>;
@@ -135,6 +136,21 @@ export class DatabaseStorage implements IStorage {
 
   async getPlayer(id: string): Promise<Player | undefined> {
     const [player] = await db.select().from(players).where(eq(players.id, id));
+    return player;
+  }
+
+  async getPlayerByUserId(userId: string): Promise<Player | undefined> {
+    // First get the user to get their username
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+    
+    // Find player by matching the generated username pattern (name -> username)
+    const allPlayers = await this.getPlayers();
+    const player = allPlayers.find(p => {
+      const expectedUsername = p.name.toLowerCase().replace(/\s+/g, '.');
+      return expectedUsername === user.username;
+    });
+    
     return player;
   }
 

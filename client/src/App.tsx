@@ -14,10 +14,32 @@ import OtherPayments from "@/pages/other-payments";
 import Users from "@/pages/users";
 import Configuration from "@/pages/configuration";
 import PlayerProfile from "@/pages/player-profile";
+import PlayerDashboard from "@/pages/player-dashboard";
+import TeamView from "@/pages/team-view";
 import Sidebar from "@/components/layout/sidebar";
+import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
+import { useAuth } from "@/hooks/useAuth";
 
 function AuthenticatedApp() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  // For non-admin users (players), show different interface
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background pb-16">
+        <Switch>
+          <Route path="/" component={PlayerDashboard} />
+          <Route path="/team" component={TeamView} />
+          <Route component={() => <PlayerDashboard />} />
+        </Switch>
+        <PlayerNav />
+      </div>
+    );
+  }
+
+  // Admin interface (existing)
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-background">
       <Sidebar />
