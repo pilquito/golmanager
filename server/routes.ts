@@ -684,18 +684,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL(fileName, contentType, purpose);
-      
-      // Generate object path for serving later
-      const timestamp = Date.now();
-      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const prefix = purpose === 'logo' ? 'logos' : 'backgrounds';
-      const objectPath = `/objects/uploads/${prefix}_${timestamp}_${sanitizedFileName}`;
+      const result = await objectStorageService.getObjectEntityUploadURL(fileName, contentType, purpose);
       
       res.json({ 
-        uploadURL,
-        objectPath,
-        publicURL: objectPath
+        uploadURL: result.uploadURL,
+        objectPath: result.objectPath,
+        publicURL: result.objectPath
       });
     } catch (error) {
       console.error("Error getting upload URL:", error);

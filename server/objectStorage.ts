@@ -120,7 +120,7 @@ export class ObjectStorageService {
   }
 
   // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL(fileName?: string, contentType?: string, purpose?: string): Promise<string> {
+  async getObjectEntityUploadURL(fileName?: string, contentType?: string, purpose?: string): Promise<{uploadURL: string, objectPath: string}> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
@@ -129,18 +129,34 @@ export class ObjectStorageService {
       );
     }
 
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/profile-images/${objectId}`;
+    // Generate consistent path structure
+    const timestamp = Date.now();
+    const randomId = Math.floor(Math.random() * 1000000000);
+    const sanitizedFileName = fileName ? fileName.replace(/[^a-zA-Z0-9.-]/g, '_') : 'file';
+    const prefix = purpose === 'logo' ? 'logos' : 'backgrounds';
+    const objectId = `${prefix}_${timestamp}_${randomId}`;
+    
+    // Add file extension if provided
+    const extension = fileName ? fileName.split('.').pop() : 'jpg';
+    const finalFileName = `${objectId}.${extension}`;
+    
+    const fullPath = `${privateObjectDir}/uploads/${finalFileName}`;
+    const objectPath = `/objects/uploads/${finalFileName}`;
 
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
     // Sign URL for PUT method with TTL
-    return signObjectURL({
+    const uploadURL = await signObjectURL({
       bucketName,
       objectName,
       method: "PUT",
       ttlSec: 900,
     });
+
+    return {
+      uploadURL,
+      objectPath
+    };
   }
 
   // Gets the object entity file from the object path.
