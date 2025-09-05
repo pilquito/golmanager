@@ -597,10 +597,31 @@ export default function PlayerSettings() {
               </Form>
               
               <Separator />
-              <p className="text-sm text-muted-foreground">
-                Para cambios en la información del jugador (dorsal, posición, etc.), 
-                contacta con el administrador del equipo.
-              </p>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const response = await apiRequest(`/api/players/cleanup/${(user as any)?.id}`, "POST");
+                      toast({
+                        title: "Limpieza completada",
+                        description: response.message || "Jugadores duplicados eliminados",
+                      });
+                      // Refresh player data
+                      queryClient.invalidateQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+                    } catch (error) {
+                      console.error("Cleanup error:", error);
+                    }
+                  }}
+                  data-testid="button-cleanup-duplicates"
+                >
+                  Limpiar jugadores duplicados
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Si los cambios no se reflejan, usa el botón de arriba para limpiar duplicados.
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}

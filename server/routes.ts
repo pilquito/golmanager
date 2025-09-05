@@ -179,24 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/players/user/:userId", isAuthenticated, async (req, res) => {
     try {
       const { userId } = req.params;
-      let player = await storage.getPlayerByUserId(userId);
-      
-      if (!player) {
-        // Try to create a default player for the user if none exists
-        const currentUser = req.user as any;
-        if (currentUser && currentUser.role === 'user') {
-          const defaultPlayer = {
-            name: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Jugador',
-            position: 'Mediocampista',
-            jerseyNumber: Math.floor(Math.random() * 99) + 1,
-            phoneNumber: '',
-            email: currentUser.email || '',
-            isActive: true,
-          };
-          
-          player = await storage.createPlayerForExistingUser(defaultPlayer, userId);
-        }
-      }
+      const player = await storage.getPlayerByUserId(userId);
       
       if (!player) {
         return res.status(404).json({ message: "Player not found for this user" });
@@ -247,6 +230,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting player:", error);
       res.status(500).json({ message: "Failed to delete player" });
+    }
+  });
+
+  // Clean duplicate players for user
+  app.post("/api/players/cleanup/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = req.user as any;
+      
+      // Get user info
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Find all players with same name
+      const allPlayers = await storage.getPlayers();
+      const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const duplicates = allPlayers.filter(p => p.name === userFullName);
+      
+      if (duplicates.length > 1) {
+        // Keep the most recent one, delete the rest
+        const sorted = duplicates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const toKeep = sorted[0];
+        const toDelete = sorted.slice(1);
+        
+        for (const player of toDelete) {
+          await storage.deletePlayer(player.id);
+          console.log(`Deleted duplicate player: ${player.id}`);
+        }
+        
+        res.json({ 
+          message: `Cleaned up ${toDelete.length} duplicate players`, 
+          keptPlayer: toKeep,
+          deletedCount: toDelete.length 
+        });
+      } else {
+        res.json({ message: "No duplicates found", player: duplicates[0] });
+      }
+    } catch (error) {
+      console.error("Error cleaning up players:", error);
+      res.status(500).json({ message: "Failed to cleanup players" });
     }
   });
 
