@@ -337,47 +337,24 @@ export default function PlayerSettings() {
                 )}
               </div>
               <div className="flex flex-col items-center space-y-2">
-                <ObjectUploader
-                  maxNumberOfFiles={1}
-                  maxFileSize={5242880} // 5MB
-                  acceptedFileTypes="image/*"
-                  purpose="profile-photo"
-                  onGetUploadParameters={async (file) => {
-                    // Simple upload using the existing base64 approach
-                    return new Promise((resolve) => {
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        const base64 = reader.result as string;
-                        setProfileImage(base64);
-                        
-                        // Update profile immediately
-                        updateProfileMutation.mutate({
-                          profileImageUrl: base64
-                        });
-                        
-                        resolve({
-                          method: "PUT" as const,
-                          url: "data://fake-upload", // Fake URL since we're using base64
-                          objectPath: `/profile/${file.name}`
-                        });
-                      };
-                      reader.readAsDataURL(file);
-                    });
-                  }}
-                  onComplete={(result) => {
-                    // Profile already updated in onGetUploadParameters
-                    toast({
-                      title: "Foto actualizada",
-                      description: "Tu foto de perfil ha sido actualizada correctamente",
-                    });
-                  }}
-                  buttonClassName="w-full"
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Cambiar Foto
-                </ObjectUploader>
+                <Label htmlFor="profile-image" className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span data-testid="button-change-photo">
+                      <Camera className="h-4 w-4 mr-2" />
+                      Cambiar Foto
+                    </span>
+                  </Button>
+                </Label>
+                <Input
+                  id="profile-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  data-testid="input-profile-image"
+                />
                 <p className="text-sm text-white/60 text-center">
-                  Formatos soportados: JPG, PNG, GIF (máx. 5MB)
+                  Formatos soportados: JPG, PNG, GIF (máx. 1MB)
                 </p>
               </div>
             </div>

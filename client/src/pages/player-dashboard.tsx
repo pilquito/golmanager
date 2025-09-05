@@ -50,22 +50,49 @@ export default function PlayerDashboard() {
         status,
       });
     },
+    onMutate: async ({ matchId }) => {
+      // Cancelar queries en progreso
+      await queryClient.cancelQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
+      
+      // Snapshot del estado anterior
+      const previousAttendances = queryClient.getQueryData([`/api/attendances/user/${user?.id}`]);
+      
+      // Actualización optimista
+      queryClient.setQueryData([`/api/attendances/user/${user?.id}`], (old: any) => {
+        const newAttendance = {
+          id: 'temp-' + Date.now(),
+          matchId,
+          userId: user?.id,
+          status: 'confirmed',
+          confirmedAt: new Date().toISOString(),
+        };
+        return old ? [...old, newAttendance] : [newAttendance];
+      });
+      
+      return { previousAttendances };
+    },
     onSuccess: () => {
       toast({
         title: "¡Asistencia confirmada!",
         description: "Tu asistencia al partido ha sido registrada exitosamente.",
       });
-      // Invalidar queries para actualizar el estado del botón
-      queryClient.invalidateQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/attendances"] });
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revertir cambios optimistas
+      if (context?.previousAttendances) {
+        queryClient.setQueryData([`/api/attendances/user/${user?.id}`], context.previousAttendances);
+      }
+      
       console.error("Error confirming attendance:", error);
       toast({
         title: "Error",
         description: "No se pudo confirmar tu asistencia. Inténtalo de nuevo.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Refrescar data desde el servidor
+      queryClient.invalidateQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
     },
   });
 
@@ -469,11 +496,11 @@ export default function PlayerDashboard() {
                     className="w-full mt-4 hover:opacity-90 transition-opacity" 
                     style={{ backgroundColor: primaryColor }}
                     onClick={() => handleConfirmAttendance(nextMatch)}
-                    disabled={confirmAttendanceMutation.isPending}
+                    disabled={confirmAttendanceMutation.isPending && confirmAttendanceMutation.variables?.matchId === nextMatch.id}
                     data-testid="button-confirm-assistance"
                   >
                     <Award className="w-4 h-4 mr-2" />
-                    {confirmAttendanceMutation.isPending ? "Confirmando..." : "Confirmar Asistencia"}
+                    {(confirmAttendanceMutation.isPending && confirmAttendanceMutation.variables?.matchId === nextMatch.id) ? "Confirmando..." : "Confirmar Asistencia"}
                   </Button>
                 )}
               </div>
