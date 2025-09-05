@@ -140,6 +140,26 @@ export class DatabaseStorage implements IStorage {
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const [newPlayer] = await db.insert(players).values(player).returning();
+    
+    // Auto-create user account for player with read-only access
+    try {
+      const username = player.name.toLowerCase().replace(/\s+/g, '.');
+      const defaultPassword = 'jugador123'; // Default password for players
+      
+      await this.createUser({
+        username,
+        password: defaultPassword,
+        firstName: player.name.split(' ')[0],
+        lastName: player.name.split(' ').slice(1).join(' ') || '',
+        email: player.email || null,
+        role: 'user',
+        isActive: true,
+      });
+    } catch (error) {
+      // Log error but don't fail player creation if user creation fails
+      console.warn('Failed to create user account for player:', error);
+    }
+    
     return newPlayer;
   }
 
