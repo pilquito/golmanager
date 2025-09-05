@@ -26,7 +26,7 @@ export default function TeamView() {
       className="min-h-screen relative"
       style={{
         backgroundColor: '#2d5016',
-        backgroundImage: "url('/attached_assets/stadium-background.png')",
+        backgroundImage: "url('/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'

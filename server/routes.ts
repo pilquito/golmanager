@@ -671,6 +671,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Object storage routes
+  const { ObjectStorageService } = await import("./objectStorage");
+  
+  // Endpoint for getting upload URL
+  app.post("/api/upload/url", isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  // Endpoint for serving uploaded objects
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving object:", error);
+      return res.status(404).json({ error: "Object not found" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

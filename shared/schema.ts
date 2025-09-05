@@ -107,7 +107,7 @@ export const teamConfig = pgTable("team_config", {
   teamName: varchar("team_name").default("GolManager FC"),
   teamColors: varchar("team_colors").default("#dc2626,#ffffff"), // Colores principales y secundarios separados por coma
   logoUrl: varchar("logo_url"),
-  backgroundImageUrl: varchar("background_image_url").default("https://images.unsplash.com/photo-1574263867128-4d0d8dfaeb48?q=80&w=2070&auto=format&fit=crop"),
+  backgroundImageUrl: varchar("background_image_url").default("/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png"),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).default("15.00"),
   paymentDueDay: integer("payment_due_day").default(1),
   contactEmail: varchar("contact_email"),

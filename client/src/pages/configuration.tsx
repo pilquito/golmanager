@@ -14,6 +14,8 @@ import type { TeamConfig } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { Upload } from "lucide-react";
 
 export default function Configuration() {
   const { toast } = useToast();
@@ -87,6 +89,48 @@ export default function Configuration() {
 
   const onSubmit = (data: any) => {
     updateMutation.mutate(data);
+  };
+
+  const handleLogoUpload = async () => {
+    const response = await apiRequest("POST", "/api/upload/url");
+    const data = await response.json();
+    return {
+      method: "PUT" as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const handleBackgroundUpload = async () => {
+    const response = await apiRequest("POST", "/api/upload/url");
+    const data = await response.json();
+    return {
+      method: "PUT" as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const onLogoUploadComplete = (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      const objectPath = `/objects/profile-images/${uploadedFile.name}`;
+      form.setValue("logoUrl", objectPath);
+      toast({
+        title: "Logo subido",
+        description: "El logo se ha subido correctamente",
+      });
+    }
+  };
+
+  const onBackgroundUploadComplete = (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      const objectPath = `/objects/profile-images/${uploadedFile.name}`;
+      form.setValue("backgroundImageUrl", objectPath);
+      toast({
+        title: "Imagen de fondo subida",
+        description: "La imagen de fondo se ha subido correctamente",
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -174,14 +218,29 @@ export default function Configuration() {
                     name="logoUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>URL del Logo del Equipo</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://ejemplo.com/logo.png" 
-                            {...field} 
-                            data-testid="input-logo-url"
-                          />
-                        </FormControl>
+                        <FormLabel>Logo del Equipo</FormLabel>
+                        <div className="space-y-2">
+                          <FormControl>
+                            <Input 
+                              placeholder="https://ejemplo.com/logo.png" 
+                              {...field} 
+                              data-testid="input-logo-url"
+                            />
+                          </FormControl>
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={5242880} // 5MB
+                            onGetUploadParameters={handleLogoUpload}
+                            onComplete={onLogoUploadComplete}
+                            buttonClassName="w-full"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Subir Logo
+                          </ObjectUploader>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Formatos soportados: PNG, JPG, SVG (máx. 5MB)
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -195,23 +254,36 @@ export default function Configuration() {
                         <div className="space-y-2">
                           <FormControl>
                             <Input 
-                              placeholder="/attached_assets/stadium-background.png" 
+                              placeholder="/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png" 
                               {...field} 
                               data-testid="input-background-image-url"
                             />
                           </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => field.onChange("/attached_assets/stadium-background.png")}
-                            data-testid="button-reset-background"
-                          >
-                            Usar imagen por defecto
-                          </Button>
+                          <div className="flex gap-2">
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              maxFileSize={10485760} // 10MB
+                              onGetUploadParameters={handleBackgroundUpload}
+                              onComplete={onBackgroundUploadComplete}
+                              buttonClassName="flex-1"
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              Subir Imagen
+                            </ObjectUploader>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="default"
+                              onClick={() => field.onChange("/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png")}
+                              data-testid="button-reset-background"
+                              className="flex-1"
+                            >
+                              Usar por defecto
+                            </Button>
+                          </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Usa imágenes de estadios o campos de fútbol para mejor apariencia.
+                          Usa imágenes de estadios o campos de fútbol para mejor apariencia. (máx. 10MB)
                         </p>
                         <FormMessage />
                       </FormItem>

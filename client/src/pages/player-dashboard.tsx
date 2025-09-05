@@ -71,7 +71,7 @@ export default function PlayerDashboard() {
         backgroundColor: '#2d5016', // Fallback color
         backgroundImage: `
           linear-gradient(135deg, ${primaryColor}40 0%, ${primaryColor}20 50%, transparent 100%),
-          url('${(teamConfig?.backgroundImageUrl && teamConfig.backgroundImageUrl.trim()) ? teamConfig.backgroundImageUrl : '/attached_assets/stadium-background.png'}')
+          url('${(teamConfig?.backgroundImageUrl && teamConfig.backgroundImageUrl.trim()) ? teamConfig.backgroundImageUrl : '/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png'}')
         `,
         backgroundSize: 'cover, cover',
         backgroundPosition: 'center, center',
