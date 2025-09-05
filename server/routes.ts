@@ -609,6 +609,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team configuration routes
+  app.get("/api/team-config", async (req, res) => {
+    try {
+      const config = await storage.getTeamConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching team config:", error);
+      res.status(500).json({ message: "Failed to fetch team configuration" });
+    }
+  });
+
   app.get("/api/other-payments/:id", isAuthenticated, async (req, res) => {
     try {
       const payment = await storage.getOtherPayment(req.params.id);

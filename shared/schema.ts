@@ -104,8 +104,8 @@ export const championshipPayments = pgTable("championship_payments", {
 // Team configuration table
 export const teamConfig = pgTable("team_config", {
   id: varchar("id").primaryKey().default("team_config"),
-  teamName: varchar("team_name").default("Mi Equipo"),
-  teamColors: varchar("team_colors"),
+  teamName: varchar("team_name").default("GolManager FC"),
+  teamColors: varchar("team_colors").default("#dc2626,#ffffff"), // Colores principales y secundarios separados por coma
   logoUrl: varchar("logo_url"),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).default("15.00"),
   paymentDueDay: integer("payment_due_day").default(1),
@@ -176,13 +176,13 @@ export const insertChampionshipPaymentSchema = createInsertSchema(championshipPa
   updatedAt: true,
 });
 
-export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
+export const insertOtherPaymentSchema = createInsertSchema(otherPayments).omit({
+  id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertOtherPaymentSchema = createInsertSchema(otherPayments).omit({
-  id: true,
+export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
   createdAt: true,
   updatedAt: true,
 });

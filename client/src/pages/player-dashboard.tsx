@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar, CreditCard, Users, Trophy, User } from "lucide-react";
+import { Calendar, CreditCard, Users, Trophy, User, Target, Zap, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TeamConfig } from "@shared/schema";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
@@ -27,9 +28,13 @@ export default function PlayerDashboard() {
     refetchOnWindowFocus: true,
   });
 
-  if (playerLoading) {
+  const { data: teamConfig, isLoading: teamConfigLoading } = useQuery<TeamConfig>({
+    queryKey: ["/api/team-config"],
+  });
+
+  if (playerLoading || teamConfigLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700">
+      <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-700 to-green-600">
         <div className="container mx-auto p-4 space-y-6">
           <Skeleton className="h-48 w-full" />
           <div className="grid grid-cols-2 gap-4">
@@ -42,86 +47,155 @@ export default function PlayerDashboard() {
     );
   }
 
+  const teamColors = teamConfig?.teamColors?.split(',') || ['#dc2626', '#ffffff'];
+  const primaryColor = teamColors[0] || '#dc2626';
+  const secondaryColor = teamColors[1] || '#ffffff';
+
   const pendingPayments = (playerPayments as any)?.filter((p: any) => p.status === 'pending') || [];
-  const nextMatches = (upcomingMatches as any)?.filter((m: any) => m.status === 'scheduled').slice(0, 3) || [];
+  const nextMatch = (upcomingMatches as any)?.filter((m: any) => m.status === 'scheduled')?.[0] || null; // Solo el próximo partido
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700">
-      {/* Header con perfil del jugador */}
-      <div className="bg-blue-900 text-white p-6 text-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-            {(user as any)?.profileImageUrl ? (
-              <img 
-                src={(user as any).profileImageUrl} 
-                alt="Profile" 
-                className="w-24 h-24 rounded-full object-cover"
-                data-testid="player-profile-image"
-              />
-            ) : (
-              <User className="w-12 h-12 text-blue-900" />
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="player-name">
-              {`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim() || "Jugador"}
-            </h1>
-            <p className="text-blue-200 text-sm" data-testid="player-age">
-              {playerInfo?.age ? `${playerInfo.age} años` : ""}
-            </p>
-            <p className="text-blue-300 font-medium" data-testid="player-nickname">
-              "{playerInfo?.nickname || 'Deportista'}"
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-700 to-green-600" style={{
+      background: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor}cc 50%, ${primaryColor}aa 100%)`
+    }}>
+      {/* Header con patrón de césped */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-repeat-x opacity-20" style={{
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 20 20\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.1\'%3E%3Cpolygon points=\'0 0 0 20 20 20 20 0\'/%3E%3C/g%3E%3C/svg%3E")'
+        }} />
+        
+        {/* Stadium-style header */}
+        <div className="relative p-6 text-center text-white">
+          <div className="flex flex-col items-center space-y-6">
+            {/* Logo del equipo */}
+            <div className="relative">
+              <div 
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-2xl border-4 border-white/30"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {teamConfig?.logoUrl ? (
+                  <img 
+                    src={teamConfig.logoUrl} 
+                    alt={teamConfig.teamName} 
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                ) : (
+                  teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"
+                )}
+              </div>
+              {/* Efecto de estadio */}
+              <div className="absolute -inset-2 rounded-full bg-white/20 animate-pulse" />
+            </div>
 
-      {/* Información del equipo */}
-      <div className="bg-gray-100 p-6 text-center">
-        <div className="flex flex-col items-center space-y-2">
-          <div className="w-16 h-16 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold">
-            GFC
+            {/* Nombre del equipo */}
+            <div>
+              <h1 className="text-3xl font-bold tracking-wider drop-shadow-lg" data-testid="team-name">
+                {teamConfig?.teamName || "GOLMANAGER FC"}
+              </h1>
+              <div className="flex items-center justify-center space-x-2 mt-2">
+                <div className="w-8 h-1 bg-white/60 rounded" />
+                <Trophy className="w-5 h-5 text-yellow-300" />
+                <div className="w-8 h-1 bg-white/60 rounded" />
+              </div>
+            </div>
+
+            {/* Perfil del jugador */}
+            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 w-full max-w-sm border border-white/20">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30">
+                  {(user as any)?.profileImageUrl ? (
+                    <img 
+                      src={(user as any).profileImageUrl} 
+                      alt="Profile" 
+                      className="w-14 h-14 rounded-full object-cover"
+                      data-testid="player-profile-image"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-white" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <h2 className="text-lg font-bold" data-testid="player-name">
+                    {`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim() || "Jugador"}
+                  </h2>
+                  <p className="text-white/80 text-sm" data-testid="player-nickname">
+                    {playerInfo?.tagline || 'Deportista'}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge 
+                      variant="outline" 
+                      className="text-xs bg-white/20 text-white border-white/30"
+                      data-testid="player-position"
+                    >
+                      {(playerData as any)?.position || "Sin posición"}
+                    </Badge>
+                    {playerInfo?.jerseyNumber && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs bg-white/20 text-white border-white/30"
+                        data-testid="player-number"
+                      >
+                        #{playerInfo.jerseyNumber}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-gray-800" data-testid="team-name">
-            GOLMANAGER FC
-          </h2>
-          <p className="text-gray-600" data-testid="player-position">
-            {(playerData as any)?.position || "Sin posición asignada"}
-          </p>
         </div>
       </div>
 
       {/* Contenido principal */}
       <div className="container mx-auto p-4 space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-orange-600" />
+        {/* Stats Cards con estilo futbolero */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* Pagos Pendientes */}
+          <Card className="bg-gradient-to-br from-red-500/90 to-red-600/90 border-none shadow-lg">
+            <CardContent className="p-3 text-center text-white">
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-orange-600" data-testid="pending-payments-count">
+                  <p className="text-xl font-bold" data-testid="pending-payments-count">
                     {pendingPayments.length}
                   </p>
-                  <p className="text-xs text-gray-600">Pagos Pendientes</p>
+                  <p className="text-xs opacity-90">Pagos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-blue-600" />
+          {/* Partidos Totales */}
+          <Card className="bg-gradient-to-br from-blue-500/90 to-blue-600/90 border-none shadow-lg">
+            <CardContent className="p-3 text-center text-white">
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600" data-testid="next-matches-count">
-                    {nextMatches.length}
+                  <p className="text-xl font-bold" data-testid="total-matches-count">
+                    {(upcomingMatches as any)?.length || 0}
                   </p>
-                  <p className="text-xs text-gray-600">Próximos Partidos</p>
+                  <p className="text-xs opacity-90">Partidos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rendimiento (placeholder) */}
+          <Card className="bg-gradient-to-br from-green-500/90 to-green-600/90 border-none shadow-lg">
+            <CardContent className="p-3 text-center text-white">
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold" data-testid="player-performance">
+                    100%
+                  </p>
+                  <p className="text-xs opacity-90">Activo</p>
                 </div>
               </div>
             </CardContent>
@@ -172,33 +246,117 @@ export default function PlayerDashboard() {
           </CardContent>
         </Card>
 
-        {/* Próximos partidos */}
-        {nextMatches.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Próximos Partidos</CardTitle>
+        {/* PRÓXIMO PARTIDO - Solo el siguiente */}
+        {nextMatch ? (
+          <Card 
+            className="relative overflow-hidden border-none shadow-xl"
+            style={{
+              background: `linear-gradient(135deg, ${primaryColor}20 0%, ${primaryColor}10 100%)`
+            }}
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 12l4-4v3h4v2h-4v3l-4-4z"/>
+              </svg>
+            </div>
+            
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-lg">
+                <div 
+                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Zap className="w-4 h-4 text-white" />
+                </div>
+                <span>Próximo Partido</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {nextMatches.map((match: any) => (
-                <div key={match.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium" data-testid={`match-opponent-${match.id}`}>
-                      vs {match.opponent}
-                    </p>
-                    <p className="text-sm text-gray-600" data-testid={`match-date-${match.id}`}>
-                      {new Date(match.date).toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+            
+            <CardContent className="space-y-4">
+              {/* Enfrentamiento */}
+              <div className="flex items-center justify-center space-x-6 py-4">
+                {/* Equipo local */}
+                <div className="flex flex-col items-center space-y-2">
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
                   </div>
-                  <Badge variant="outline" data-testid={`match-status-${match.id}`}>
-                    {match.competition}
+                  <p className="text-sm font-medium text-center">
+                    {teamConfig?.teamName || "Mi Equipo"}
+                  </p>
+                </div>
+                
+                {/* VS */}
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="text-2xl font-bold text-gray-600">VS</div>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs"
+                    data-testid={`match-competition-${nextMatch.id}`}
+                  >
+                    {nextMatch.competition}
                   </Badge>
                 </div>
-              ))}
+                
+                {/* Equipo rival */}
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-xs shadow-lg">
+                    {nextMatch.opponent.substring(0, 3).toUpperCase()}
+                  </div>
+                  <p className="text-sm font-medium text-center" data-testid={`match-opponent-${nextMatch.id}`}>
+                    {nextMatch.opponent}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Detalles del partido */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium" data-testid={`match-date-${nextMatch.id}`}>
+                      {new Date(nextMatch.date).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long'
+                      })}
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold">
+                    {new Date(nextMatch.date).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm" data-testid={`match-venue-${nextMatch.id}`}>
+                    {nextMatch.venue || "Por confirmar"}
+                  </span>
+                </div>
+                
+                {/* Botón de confirmación (preparado para futuro módulo) */}
+                <Button 
+                  className="w-full mt-4" 
+                  style={{ backgroundColor: primaryColor }}
+                  data-testid="button-confirm-assistance"
+                >
+                  <Award className="w-4 h-4 mr-2" />
+                  Confirmar Asistencia
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="text-center py-8">
+            <CardContent>
+              <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-gray-500">No hay partidos programados</p>
             </CardContent>
           </Card>
         )}

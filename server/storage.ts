@@ -522,6 +522,24 @@ export class DatabaseStorage implements IStorage {
   async deleteOtherPayment(id: string): Promise<void> {
     await db.delete(otherPayments).where(eq(otherPayments.id, id));
   }
+
+  // Team configuration methods
+  async getTeamConfig(): Promise<TeamConfig | null> {
+    const [config] = await db.select().from(teamConfig).where(eq(teamConfig.id, 'team_config'));
+    return config || null;
+  }
+
+  async updateTeamConfig(configData: Partial<InsertTeamConfig>): Promise<TeamConfig> {
+    const [config] = await db
+      .insert(teamConfig)
+      .values({ id: 'team_config', ...configData })
+      .onConflictDoUpdate({
+        target: teamConfig.id,
+        set: configData,
+      })
+      .returning();
+    return config;
+  }
 }
 
 export const storage = new DatabaseStorage();
