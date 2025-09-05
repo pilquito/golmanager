@@ -153,6 +153,7 @@ export default function PlayerSettings() {
       // Also refresh the form with new values
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/players"] }); // Invalidate players list
       }, 200);
     },
     onError: (error) => {

@@ -94,13 +94,18 @@ export default function TeamView() {
             ) : (
               <div className="grid grid-cols-3 gap-4">
                 {activePlayersList.map((player: any) => (
-                  <Card key={player.id} className="text-center">
+                  <Card 
+                    key={player.id} 
+                    className="text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => alert(`Jugador: ${player.name}\nPosición: ${player.position}\nDorsal: #${player.jerseyNumber || 'N/A'}\nEmail: ${player.email || 'N/A'}`)}
+                    data-testid={`card-player-${player.id}`}
+                  >
                     <CardContent className="p-4">
                       <div className="flex flex-col items-center space-y-2">
                         <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center relative">
-                          {player.profileImageUrl ? (
+                          {(player.profile_image_url || player.profileImageUrl) ? (
                             <img 
-                              src={player.profileImageUrl} 
+                              src={player.profile_image_url || player.profileImageUrl} 
                               alt={player.name}
                               className="w-16 h-16 rounded-full object-cover"
                             />

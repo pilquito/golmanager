@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`Player updated successfully:`, player);
+      console.log(`✅ Player updated successfully:`, player);
       res.json(player);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -576,6 +576,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(userId, req.body);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      // Sync changes back to player data if name was updated
+      if (req.body.firstName || req.body.lastName) {
+        const player = await storage.getPlayerByUserId(userId);
+        if (player) {
+          const fullName = `${req.body.firstName || updatedUser.firstName || ''} ${req.body.lastName || updatedUser.lastName || ''}`.trim();
+          if (fullName && fullName !== player.name) {
+            await storage.updatePlayer(player.id, { name: fullName });
+            console.log(`🔄 Synced name from user to player: ${fullName}`);
+          }
+        }
       }
 
       const { password, ...userWithoutPassword } = updatedUser as any;

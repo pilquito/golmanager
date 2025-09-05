@@ -190,13 +190,13 @@ export class DatabaseStorage implements IStorage {
         name: players.name,
         jerseyNumber: players.jerseyNumber,
         position: players.position,
-        phoneNumber: players.phoneNumber,
+        phone: players.phoneNumber,
         email: players.email,
         birthDate: players.birthDate,
+        profile_image_url: users.profileImageUrl,
         isActive: players.isActive,
         createdAt: players.createdAt,
         updatedAt: players.updatedAt,
-        profileImageUrl: users.profileImageUrl
       })
       .from(players)
       .leftJoin(users, eq(players.email, users.email))
