@@ -17,6 +17,7 @@ import PlayerProfile from "@/pages/player-profile";
 import PlayerDashboard from "@/pages/player-dashboard";
 import TeamView from "@/pages/team-view";
 import CreatePlayersBatch from "@/pages/create-players-batch";
+import FixPlayersUsers from "@/pages/fix-players-users";
 import Sidebar from "@/components/layout/sidebar";
 import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
@@ -58,6 +59,7 @@ function AuthenticatedApp() {
             <Route path="/users" component={Users} />
             <Route path="/configuration" component={Configuration} />
             <Route path="/create-players" component={CreatePlayersBatch} />
+            <Route path="/fix-users" component={FixPlayersUsers} />
             <Route component={NotFound} />
           </Switch>
         </main>

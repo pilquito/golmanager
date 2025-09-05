@@ -167,18 +167,22 @@ export class DatabaseStorage implements IStorage {
       const username = player.name.toLowerCase().replace(/\s+/g, '.');
       const defaultPassword = 'jugador123'; // Default password for players
       
-      await this.createUser({
+      console.log(`Creating user account for player: ${player.name} with username: ${username}`);
+      
+      const newUser = await this.createUser({
         username,
         password: defaultPassword,
         firstName: player.name.split(' ')[0],
         lastName: player.name.split(' ').slice(1).join(' ') || '',
-        email: player.email || null,
+        email: player.email || `${username}@golmanager.com`,
         role: 'user',
         isActive: true,
       });
+      
+      console.log(`✓ User account created successfully for ${player.name}: ${username}`);
     } catch (error) {
       // Log error but don't fail player creation if user creation fails
-      console.warn('Failed to create user account for player:', error);
+      console.error('Failed to create user account for player:', player.name, error);
     }
     
     return newPlayer;

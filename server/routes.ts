@@ -63,6 +63,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Admin-only endpoint to create users manually
+  app.post('/api/auth/register-admin', isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const validatedData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(validatedData);
+      const { password, ...userWithoutPassword } = user as any;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
+      }
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   app.get('/api/auth/user', isAuthenticated, async (req, res) => {
     try {
       // req.user is already populated by isAuthenticated middleware  
