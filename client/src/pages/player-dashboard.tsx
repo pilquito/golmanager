@@ -220,25 +220,25 @@ export default function PlayerDashboard() {
         </div>
 
         {/* Estadísticas del jugador */}
-        <Card>
+        <Card className="bg-white/70 backdrop-blur-md border border-white/30 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-gray-800">
               <Trophy className="w-5 h-5" />
               <span>Estadísticas de jugador</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8 text-gray-500">
-              <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-400" />
               <p>No hay datos para mostrar</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Mi competición */}
-        <Card>
+        <Card className="bg-white/70 backdrop-blur-md border border-white/30 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-gray-800">
               <Users className="w-5 h-5" />
               <span>Mi competición</span>
             </CardTitle>
@@ -246,7 +246,7 @@ export default function PlayerDashboard() {
           <CardContent className="space-y-3">
             <Button 
               variant="ghost" 
-              className="w-full justify-between h-12"
+              className="w-full justify-between h-12 hover:bg-white/20"
               data-testid="button-classification"
             >
               <span>Clasificación</span>
@@ -254,7 +254,7 @@ export default function PlayerDashboard() {
             </Button>
             <Button 
               variant="ghost" 
-              className="w-full justify-between h-12"
+              className="w-full justify-between h-12 hover:bg-white/20"
               data-testid="button-calendar"
             >
               <span>Calendario</span>
