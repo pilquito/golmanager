@@ -55,14 +55,35 @@ export default function PlayerDashboard() {
   const nextMatch = (upcomingMatches as any)?.filter((m: any) => m.status === 'scheduled')?.[0] || null; // Solo el próximo partido
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-700 to-green-600" style={{
-      background: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor}cc 50%, ${primaryColor}aa 100%)`
+    <div className="min-h-screen relative" style={{
+      background: `
+        linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.03) 50%),
+        linear-gradient(90deg, #1e7e34 0%, #28a745 20%, #1e7e34 40%, #28a745 60%, #1e7e34 80%, #28a745 100%),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 2px,
+          rgba(255,255,255,0.05) 2px,
+          rgba(255,255,255,0.05) 4px
+        )
+      `,
+      backgroundSize: '100px 100%, 100% 100%, 4px 100%'
     }}>
-      {/* Header con patrón de césped */}
+      {/* Overlay con color del equipo */}
+      <div className="absolute inset-0" style={{
+        background: `linear-gradient(135deg, ${primaryColor}30 0%, ${primaryColor}20 50%, ${primaryColor}10 100%)`
+      }} />
+      
+      {/* Header con efecto de estadio */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-repeat-x opacity-20" style={{
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 20 20\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.1\'%3E%3Cpolygon points=\'0 0 0 20 20 20 20 0\'/%3E%3C/g%3E%3C/svg%3E")'
-        }} />
+        {/* Líneas del campo de fútbol */}
+        <div className="absolute inset-0 opacity-15">
+          {/* Línea central horizontal */}
+          <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white transform -translate-y-1/2" />
+          {/* Círculo central */}
+          <div className="absolute left-1/2 top-1/2 w-24 h-24 border border-white rounded-full transform -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2" />
+        </div>
         
         {/* Stadium-style header */}
         <div className="relative p-6 text-center text-white">
@@ -147,7 +168,7 @@ export default function PlayerDashboard() {
       </div>
 
       {/* Contenido principal */}
-      <div className="container mx-auto p-4 space-y-6">
+      <div className="relative container mx-auto p-4 space-y-6">
         {/* Stats Cards con estilo futbolero */}
         <div className="grid grid-cols-3 gap-3">
           {/* Pagos Pendientes */}
