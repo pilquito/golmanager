@@ -64,7 +64,7 @@ export default function PlayerDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold" data-testid="player-name">
-              {playerInfo?.name || `${user?.firstName} ${user?.lastName}`.trim() || "Jugador"}
+              {`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim() || "Jugador"}
             </h1>
             <p className="text-blue-200 text-sm" data-testid="player-age">
               {playerInfo?.age ? `${playerInfo.age} años` : ""}

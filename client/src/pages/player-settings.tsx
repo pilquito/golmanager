@@ -77,9 +77,15 @@ export default function PlayerSettings() {
         title: "Perfil actualizado",
         description: "Tus datos han sido actualizados correctamente",
       });
-      // Force refresh all user-related data
+      // Force refresh all user-related data immediately
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+      
+      // Also reset the form with new values
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      }, 100);
     },
     onError: (error) => {
       toast({
@@ -159,6 +165,10 @@ export default function PlayerSettings() {
             await updateProfileMutation.mutateAsync({
               profileImageUrl: compressedBase64
             });
+            
+            // Force immediate refresh of user data
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
 
             toast({
               title: "Foto actualizada",
