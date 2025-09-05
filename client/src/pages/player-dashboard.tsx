@@ -39,12 +39,9 @@ export default function PlayerDashboard() {
   // Mutation para confirmar asistencia
   const confirmAttendanceMutation = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
-      return apiRequest("/api/attendances", {
-        method: "POST",
-        body: JSON.stringify({
-          matchId,
-          status,
-        }),
+      return apiRequest("/api/attendances", "POST", {
+        matchId,
+        status,
       });
     },
     onSuccess: () => {

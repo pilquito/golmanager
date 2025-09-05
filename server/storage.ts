@@ -137,7 +137,7 @@ export class DatabaseStorage implements IStorage {
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
     const user = await this.getUser(userId);
-    if (!user) return false;
+    if (!user || !user.password) return false;
 
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) return false;
@@ -155,6 +155,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    if (!userData.password) {
+      throw new Error("Password is required");
+    }
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const [user] = await db
       .insert(users)
@@ -166,22 +169,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUser(id: string, userData: Partial<UpsertUser>): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ ...userData, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
-  }
-
   async validateUserCredentials(username: string, password: string): Promise<User | null> {
     const user = await this.getUserByUsername(username);
     if (!user) {
       return null;
     }
     
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password!);
     if (!isValid) {
       return null;
     }
@@ -426,23 +420,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(championshipPayments).where(eq(championshipPayments.id, id));
   }
 
-  // Team configuration operations
-  async getTeamConfig(): Promise<TeamConfig | undefined> {
-    const [config] = await db.select().from(teamConfig).where(eq(teamConfig.id, "team_config"));
-    return config;
-  }
-
-  async updateTeamConfig(config: InsertTeamConfig): Promise<TeamConfig> {
-    const [updatedConfig] = await db
-      .insert(teamConfig)
-      .values({ ...config, id: "team_config" })
-      .onConflictDoUpdate({
-        target: teamConfig.id,
-        set: { ...config, updatedAt: new Date() },
-      })
-      .returning();
-    return updatedConfig;
-  }
 
   // Dashboard statistics
   async getDashboardStats(): Promise<{
