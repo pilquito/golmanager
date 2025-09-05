@@ -13,7 +13,9 @@ import {
   UserCog, 
   Settings,
   LogOut,
-  Gamepad2
+  Gamepad2,
+  BarChart3,
+  Wallet
 } from "lucide-react";
 
 const navigationItems = [
@@ -22,6 +24,8 @@ const navigationItems = [
   { href: "/matches", label: "Partidos", icon: Calendar },
   { href: "/monthly-payments", label: "Mensualidades", icon: CreditCard },
   { href: "/championship-payments", label: "Pagos Campeonato", icon: Trophy },
+  { href: "/collection-balance", label: "Recaudación", icon: BarChart3 },
+  { href: "/other-payments", label: "Otros Pagos", icon: Wallet },
   { href: "/users", label: "Usuarios", icon: UserCog },
   { href: "/configuration", label: "Configuración", icon: Settings },
 ];

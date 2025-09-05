@@ -8,6 +8,7 @@ import {
   insertMonthlyPaymentSchema,
   insertChampionshipPaymentSchema,
   insertTeamConfigSchema,
+  insertOtherPaymentSchema,
   loginSchema,
   registerSchema
 } from "@shared/schema";
@@ -355,6 +356,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Other payments routes
+  app.get("/api/other-payments", isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getOtherPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching other payments:", error);
+      res.status(500).json({ message: "Failed to fetch other payments" });
+    }
+  });
+
+  app.get("/api/other-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const payment = await storage.getOtherPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json(payment);
+    } catch (error) {
+      console.error("Error fetching other payment:", error);
+      res.status(500).json({ message: "Failed to fetch other payment" });
+    }
+  });
+
+  app.post("/api/other-payments", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertOtherPaymentSchema.parse(req.body);
+      const payment = await storage.createOtherPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error creating other payment:", error);
+      res.status(500).json({ message: "Failed to create other payment" });
+    }
+  });
+
+  app.patch("/api/other-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertOtherPaymentSchema.partial().parse(req.body);
+      const payment = await storage.updateOtherPayment(req.params.id, validatedData);
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error updating other payment:", error);
+      res.status(500).json({ message: "Failed to update other payment" });
+    }
+  });
+
+  app.delete("/api/other-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteOtherPayment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting other payment:", error);
+      res.status(500).json({ message: "Failed to delete other payment" });
     }
   });
 

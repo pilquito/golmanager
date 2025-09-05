@@ -113,6 +113,19 @@ export const teamConfig = pgTable("team_config", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Other payments table
+export const otherPayments = pgTable("other_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  concept: varchar("concept").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: varchar("type").notNull(), // income, expense
+  paymentDate: date("payment_date"),
+  paymentMethod: varchar("payment_method"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const playersRelations = relations(players, ({ many }) => ({
   monthlyPayments: many(monthlyPayments),
@@ -166,6 +179,12 @@ export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
   updatedAt: true,
 });
 
+export const insertOtherPaymentSchema = createInsertSchema(otherPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -205,3 +224,5 @@ export type ChampionshipPayment = typeof championshipPayments.$inferSelect;
 export type InsertChampionshipPayment = z.infer<typeof insertChampionshipPaymentSchema>;
 export type TeamConfig = typeof teamConfig.$inferSelect;
 export type InsertTeamConfig = z.infer<typeof insertTeamConfigSchema>;
+export type OtherPayment = typeof otherPayments.$inferSelect;
+export type InsertOtherPayment = z.infer<typeof insertOtherPaymentSchema>;

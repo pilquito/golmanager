@@ -5,6 +5,7 @@ import {
   monthlyPayments,
   championshipPayments,
   teamConfig,
+  otherPayments,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -18,6 +19,8 @@ import {
   type InsertChampionshipPayment,
   type TeamConfig,
   type InsertTeamConfig,
+  type OtherPayment,
+  type InsertOtherPayment,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -62,6 +65,13 @@ export interface IStorage {
   // Team configuration operations
   getTeamConfig(): Promise<TeamConfig | undefined>;
   updateTeamConfig(config: InsertTeamConfig): Promise<TeamConfig>;
+
+  // Other payments operations
+  getOtherPayments(): Promise<OtherPayment[]>;
+  getOtherPayment(id: string): Promise<OtherPayment | undefined>;
+  createOtherPayment(payment: InsertOtherPayment): Promise<OtherPayment>;
+  updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>): Promise<OtherPayment>;
+  deleteOtherPayment(id: string): Promise<void>;
 
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -284,45 +294,81 @@ export class DatabaseStorage implements IStorage {
     totalExpenses: number;
     currentBalance: number;
   }> {
-    const [playersStats] = await db
-      .select({
-        totalPlayers: sql<number>`count(*)`,
-        activePlayers: sql<number>`count(*) filter (where ${players.isActive} = true)`,
-      })
+    // Count all players
+    const [totalPlayersResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(players);
 
-    const [matchesStats] = await db
-      .select({
-        upcomingMatches: sql<number>`count(*) filter (where ${matches.status} = 'scheduled' and ${matches.date} > now())`,
-      })
-      .from(matches);
+    // Count active players
+    const [activePlayersResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(players)
+      .where(eq(players.isActive, true));
 
-    const [paymentsStats] = await db
-      .select({
-        pendingPayments: sql<number>`count(*)`,
-        totalIncome: sql<number>`coalesce(sum(${monthlyPayments.amount}), 0) filter (where ${monthlyPayments.status} = 'paid')`,
-      })
+    // Count upcoming matches
+    const [upcomingMatchesResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(matches)
+      .where(and(eq(matches.status, "scheduled"), sql`${matches.date} > now()`));
+
+    // Count pending payments
+    const [pendingPaymentsResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(monthlyPayments)
       .where(eq(monthlyPayments.status, "pending"));
 
-    const [expensesStats] = await db
-      .select({
-        totalExpenses: sql<number>`coalesce(sum(${championshipPayments.amount}), 0) filter (where ${championshipPayments.status} = 'paid')`,
-      })
-      .from(championshipPayments);
+    // Calculate total income from paid monthly payments
+    const [totalIncomeResult] = await db
+      .select({ total: sql<number>`coalesce(sum(${monthlyPayments.amount}), 0)` })
+      .from(monthlyPayments)
+      .where(eq(monthlyPayments.status, "paid"));
 
-    const totalIncome = Number(paymentsStats.totalIncome) || 0;
-    const totalExpenses = Number(expensesStats.totalExpenses) || 0;
+    // Calculate total expenses from paid championship payments
+    const [totalExpensesResult] = await db
+      .select({ total: sql<number>`coalesce(sum(${championshipPayments.amount}), 0)` })
+      .from(championshipPayments)
+      .where(eq(championshipPayments.status, "paid"));
+
+    const totalIncome = Number(totalIncomeResult.total) || 0;
+    const totalExpenses = Number(totalExpensesResult.total) || 0;
 
     return {
-      totalPlayers: playersStats.totalPlayers || 0,
-      activePlayers: playersStats.activePlayers || 0,
-      upcomingMatches: matchesStats.upcomingMatches || 0,
-      pendingPayments: paymentsStats.pendingPayments || 0,
+      totalPlayers: totalPlayersResult.count || 0,
+      activePlayers: activePlayersResult.count || 0,
+      upcomingMatches: upcomingMatchesResult.count || 0,
+      pendingPayments: pendingPaymentsResult.count || 0,
       totalIncome,
       totalExpenses,
       currentBalance: totalIncome - totalExpenses,
     };
+  }
+
+  // Other payments operations
+  async getOtherPayments(): Promise<OtherPayment[]> {
+    return await db.select().from(otherPayments).orderBy(desc(otherPayments.createdAt));
+  }
+
+  async getOtherPayment(id: string): Promise<OtherPayment | undefined> {
+    const [payment] = await db.select().from(otherPayments).where(eq(otherPayments.id, id));
+    return payment;
+  }
+
+  async createOtherPayment(payment: InsertOtherPayment): Promise<OtherPayment> {
+    const [newPayment] = await db.insert(otherPayments).values(payment).returning();
+    return newPayment;
+  }
+
+  async updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>): Promise<OtherPayment> {
+    const [updatedPayment] = await db
+      .update(otherPayments)
+      .set({ ...payment, updatedAt: new Date() })
+      .where(eq(otherPayments.id, id))
+      .returning();
+    return updatedPayment;
+  }
+
+  async deleteOtherPayment(id: string): Promise<void> {
+    await db.delete(otherPayments).where(eq(otherPayments.id, id));
   }
 }
 

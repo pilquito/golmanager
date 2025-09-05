@@ -9,6 +9,8 @@ import Players from "@/pages/players";
 import Matches from "@/pages/matches";
 import MonthlyPayments from "@/pages/monthly-payments";
 import ChampionshipPayments from "@/pages/championship-payments";
+import CollectionBalance from "@/pages/collection-balance";
+import OtherPayments from "@/pages/other-payments";
 import Users from "@/pages/users";
 import Configuration from "@/pages/configuration";
 import PlayerProfile from "@/pages/player-profile";
@@ -27,6 +29,8 @@ function AuthenticatedApp() {
           <Route path="/matches" component={Matches} />
           <Route path="/monthly-payments" component={MonthlyPayments} />
           <Route path="/championship-payments" component={ChampionshipPayments} />
+          <Route path="/collection-balance" component={CollectionBalance} />
+          <Route path="/other-payments" component={OtherPayments} />
           <Route path="/users" component={Users} />
           <Route path="/configuration" component={Configuration} />
           <Route component={NotFound} />
