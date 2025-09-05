@@ -1,0 +1,316 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { 
+  insertPlayerSchema,
+  insertMatchSchema,
+  insertMonthlyPaymentSchema,
+  insertChampionshipPaymentSchema,
+  insertTeamConfigSchema 
+} from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Dashboard routes
+  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard statistics" });
+    }
+  });
+
+  // Player routes
+  app.get("/api/players", isAuthenticated, async (req, res) => {
+    try {
+      const players = await storage.getPlayers();
+      res.json(players);
+    } catch (error) {
+      console.error("Error fetching players:", error);
+      res.status(500).json({ message: "Failed to fetch players" });
+    }
+  });
+
+  app.get("/api/players/:id", isAuthenticated, async (req, res) => {
+    try {
+      const player = await storage.getPlayer(req.params.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      res.json(player);
+    } catch (error) {
+      console.error("Error fetching player:", error);
+      res.status(500).json({ message: "Failed to fetch player" });
+    }
+  });
+
+  app.post("/api/players", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertPlayerSchema.parse(req.body);
+      const player = await storage.createPlayer(validatedData);
+      res.status(201).json(player);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid player data", errors: error.errors });
+      }
+      console.error("Error creating player:", error);
+      res.status(500).json({ message: "Failed to create player" });
+    }
+  });
+
+  app.patch("/api/players/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertPlayerSchema.partial().parse(req.body);
+      const player = await storage.updatePlayer(req.params.id, validatedData);
+      res.json(player);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid player data", errors: error.errors });
+      }
+      console.error("Error updating player:", error);
+      res.status(500).json({ message: "Failed to update player" });
+    }
+  });
+
+  app.delete("/api/players/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deletePlayer(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting player:", error);
+      res.status(500).json({ message: "Failed to delete player" });
+    }
+  });
+
+  // Match routes
+  app.get("/api/matches", isAuthenticated, async (req, res) => {
+    try {
+      const matches = await storage.getMatches();
+      res.json(matches);
+    } catch (error) {
+      console.error("Error fetching matches:", error);
+      res.status(500).json({ message: "Failed to fetch matches" });
+    }
+  });
+
+  app.get("/api/matches/:id", isAuthenticated, async (req, res) => {
+    try {
+      const match = await storage.getMatch(req.params.id);
+      if (!match) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      res.json(match);
+    } catch (error) {
+      console.error("Error fetching match:", error);
+      res.status(500).json({ message: "Failed to fetch match" });
+    }
+  });
+
+  app.post("/api/matches", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertMatchSchema.parse(req.body);
+      const match = await storage.createMatch(validatedData);
+      res.status(201).json(match);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid match data", errors: error.errors });
+      }
+      console.error("Error creating match:", error);
+      res.status(500).json({ message: "Failed to create match" });
+    }
+  });
+
+  app.patch("/api/matches/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertMatchSchema.partial().parse(req.body);
+      const match = await storage.updateMatch(req.params.id, validatedData);
+      res.json(match);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid match data", errors: error.errors });
+      }
+      console.error("Error updating match:", error);
+      res.status(500).json({ message: "Failed to update match" });
+    }
+  });
+
+  app.delete("/api/matches/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteMatch(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting match:", error);
+      res.status(500).json({ message: "Failed to delete match" });
+    }
+  });
+
+  // Monthly payments routes
+  app.get("/api/monthly-payments", isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getMonthlyPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching monthly payments:", error);
+      res.status(500).json({ message: "Failed to fetch monthly payments" });
+    }
+  });
+
+  app.get("/api/players/:playerId/monthly-payments", isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getPlayerMonthlyPayments(req.params.playerId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching player monthly payments:", error);
+      res.status(500).json({ message: "Failed to fetch player monthly payments" });
+    }
+  });
+
+  app.post("/api/monthly-payments", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertMonthlyPaymentSchema.parse(req.body);
+      const payment = await storage.createMonthlyPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error creating monthly payment:", error);
+      res.status(500).json({ message: "Failed to create monthly payment" });
+    }
+  });
+
+  app.patch("/api/monthly-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertMonthlyPaymentSchema.partial().parse(req.body);
+      const payment = await storage.updateMonthlyPayment(req.params.id, validatedData);
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error updating monthly payment:", error);
+      res.status(500).json({ message: "Failed to update monthly payment" });
+    }
+  });
+
+  app.delete("/api/monthly-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteMonthlyPayment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting monthly payment:", error);
+      res.status(500).json({ message: "Failed to delete monthly payment" });
+    }
+  });
+
+  // Championship payments routes
+  app.get("/api/championship-payments", isAuthenticated, async (req, res) => {
+    try {
+      const payments = await storage.getChampionshipPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching championship payments:", error);
+      res.status(500).json({ message: "Failed to fetch championship payments" });
+    }
+  });
+
+  app.post("/api/championship-payments", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertChampionshipPaymentSchema.parse(req.body);
+      const payment = await storage.createChampionshipPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error creating championship payment:", error);
+      res.status(500).json({ message: "Failed to create championship payment" });
+    }
+  });
+
+  app.patch("/api/championship-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertChampionshipPaymentSchema.partial().parse(req.body);
+      const payment = await storage.updateChampionshipPayment(req.params.id, validatedData);
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error updating championship payment:", error);
+      res.status(500).json({ message: "Failed to update championship payment" });
+    }
+  });
+
+  app.delete("/api/championship-payments/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteChampionshipPayment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting championship payment:", error);
+      res.status(500).json({ message: "Failed to delete championship payment" });
+    }
+  });
+
+  // Team configuration routes
+  app.get("/api/team-config", isAuthenticated, async (req, res) => {
+    try {
+      const config = await storage.getTeamConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching team config:", error);
+      res.status(500).json({ message: "Failed to fetch team configuration" });
+    }
+  });
+
+  app.post("/api/team-config", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertTeamConfigSchema.parse(req.body);
+      const config = await storage.updateTeamConfig(validatedData);
+      res.json(config);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid config data", errors: error.errors });
+      }
+      console.error("Error updating team config:", error);
+      res.status(500).json({ message: "Failed to update team configuration" });
+    }
+  });
+
+  // Users management (admin only)
+  app.get("/api/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // This would need additional implementation for user management
+      res.json([currentUser]);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
