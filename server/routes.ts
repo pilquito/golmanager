@@ -9,6 +9,7 @@ import {
   insertChampionshipPaymentSchema,
   insertTeamConfigSchema,
   insertOtherPaymentSchema,
+  insertMatchAttendanceSchema,
   loginSchema,
   registerSchema
 } from "@shared/schema";
@@ -617,6 +618,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching team config:", error);
       res.status(500).json({ message: "Failed to fetch team configuration" });
+    }
+  });
+
+  // Match attendance routes
+  app.get("/api/matches/:matchId/attendances", isAuthenticated, async (req, res) => {
+    try {
+      const attendances = await storage.getMatchAttendances(req.params.matchId);
+      res.json(attendances);
+    } catch (error) {
+      console.error("Error fetching match attendances:", error);
+      res.status(500).json({ message: "Failed to fetch attendances" });
+    }
+  });
+
+  app.get("/api/attendances/user/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const attendances = await storage.getUserAttendances(req.params.userId);
+      res.json(attendances);
+    } catch (error) {
+      console.error("Error fetching user attendances:", error);
+      res.status(500).json({ message: "Failed to fetch user attendances" });
+    }
+  });
+
+  app.post("/api/attendances", isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      const userId = currentUser?.claims?.sub || currentUser?.id;
+      
+      const validatedData = insertMatchAttendanceSchema.parse({
+        ...req.body,
+        userId: userId
+      });
+      
+      const attendance = await storage.createOrUpdateAttendance(validatedData);
+      res.status(201).json(attendance);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid attendance data", errors: error.errors });
+      }
+      console.error("Error creating attendance:", error);
+      res.status(500).json({ message: "Failed to create attendance" });
+    }
+  });
+
+  app.patch("/api/attendances/:id", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertMatchAttendanceSchema.partial().parse(req.body);
+      const attendance = await storage.updateAttendance(req.params.id, validatedData);
+      res.json(attendance);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid attendance data", errors: error.errors });
+      }
+      console.error("Error updating attendance:", error);
+      res.status(500).json({ message: "Failed to update attendance" });
     }
   });
 

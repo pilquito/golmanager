@@ -1,14 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { Calendar, CreditCard, Users, Trophy, User, Target, Zap, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { TeamConfig } from "@shared/schema";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const { data: playerData, isLoading: playerLoading } = useQuery({
     queryKey: [`/api/players/user/${user?.id}`],
@@ -31,6 +35,53 @@ export default function PlayerDashboard() {
   const { data: teamConfig, isLoading: teamConfigLoading } = useQuery<TeamConfig>({
     queryKey: ["/api/team-config"],
   });
+
+  // Mutation para confirmar asistencia
+  const confirmAttendanceMutation = useMutation({
+    mutationFn: async ({ matchId, playerId, status }: { matchId: string; playerId: string; status: string }) => {
+      return apiRequest("/api/attendances", {
+        method: "POST",
+        body: JSON.stringify({
+          matchId,
+          playerId,
+          status,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "¡Asistencia confirmada!",
+        description: "Tu asistencia al partido ha sido registrada exitosamente.",
+      });
+      // Invalidar queries relacionadas si es necesario
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances"] });
+    },
+    onError: (error) => {
+      console.error("Error confirming attendance:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo confirmar tu asistencia. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleConfirmAttendance = (match: any) => {
+    if (!playerInfo?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo encontrar tu perfil de jugador.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    confirmAttendanceMutation.mutate({
+      matchId: match.id,
+      playerId: playerInfo.id,
+      status: "confirmed",
+    });
+  };
 
   if (playerLoading || teamConfigLoading) {
     return (
@@ -318,14 +369,27 @@ export default function PlayerDashboard() {
               <div className="flex items-center justify-center space-x-6 py-4">
                 {/* Equipo local */}
                 <div className="flex flex-col items-center space-y-2">
-                  <div 
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    {teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
-                  </div>
+                  {(teamConfig as any)?.logoUrl ? (
+                    <div className="w-16 h-16 aspect-square flex items-center justify-center bg-white/10 rounded-full shadow-lg">
+                      <img 
+                        src={(teamConfig as any).logoUrl} 
+                        alt={(teamConfig as any)?.teamName || "Team Logo"} 
+                        width={56}
+                        height={56}
+                        className="max-w-14 max-h-14 object-contain drop-shadow-md"
+                        data-testid="next-match-team-logo"
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {(teamConfig as any)?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
+                    </div>
+                  )}
                   <p className="text-sm font-medium text-center text-white">
-                    {teamConfig?.teamName || "Mi Equipo"}
+                    {(teamConfig as any)?.teamName || "Mi Equipo"}
                   </p>
                 </div>
                 
@@ -380,14 +444,16 @@ export default function PlayerDashboard() {
                   </span>
                 </div>
                 
-                {/* Botón de confirmación (preparado para futuro módulo) */}
+                {/* Botón de confirmación funcional */}
                 <Button 
-                  className="w-full mt-4" 
+                  className="w-full mt-4 hover:opacity-90 transition-opacity" 
                   style={{ backgroundColor: primaryColor }}
+                  onClick={() => handleConfirmAttendance(nextMatch)}
+                  disabled={confirmAttendanceMutation.isPending}
                   data-testid="button-confirm-assistance"
                 >
                   <Award className="w-4 h-4 mr-2" />
-                  Confirmar Asistencia
+                  {confirmAttendanceMutation.isPending ? "Confirmando..." : "Confirmar Asistencia"}
                 </Button>
               </div>
             </CardContent>

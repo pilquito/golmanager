@@ -6,6 +6,7 @@ import {
   championshipPayments,
   teamConfig,
   otherPayments,
+  matchAttendances,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -21,6 +22,8 @@ import {
   type InsertTeamConfig,
   type OtherPayment,
   type InsertOtherPayment,
+  type MatchAttendance,
+  type InsertMatchAttendance,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -77,6 +80,12 @@ export interface IStorage {
   createOtherPayment(payment: InsertOtherPayment): Promise<OtherPayment>;
   updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>): Promise<OtherPayment>;
   deleteOtherPayment(id: string): Promise<void>;
+
+  // Match attendance operations
+  getMatchAttendances(matchId: string): Promise<MatchAttendance[]>;
+  getUserAttendances(userId: string): Promise<MatchAttendance[]>;
+  createOrUpdateAttendance(attendance: InsertMatchAttendance): Promise<MatchAttendance>;
+  updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>): Promise<MatchAttendance>;
 
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -539,6 +548,72 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return config;
+  }
+
+  // Match attendance operations
+  async getMatchAttendances(matchId: string): Promise<MatchAttendance[]> {
+    return await db
+      .select()
+      .from(matchAttendances)
+      .where(eq(matchAttendances.matchId, matchId))
+      .orderBy(desc(matchAttendances.createdAt));
+  }
+
+  async getUserAttendances(userId: string): Promise<MatchAttendance[]> {
+    return await db
+      .select()
+      .from(matchAttendances)
+      .where(eq(matchAttendances.userId, userId))
+      .orderBy(desc(matchAttendances.createdAt));
+  }
+
+  async createOrUpdateAttendance(attendance: InsertMatchAttendance): Promise<MatchAttendance> {
+    // Buscar si ya existe una asistencia para este usuario y partido
+    const [existing] = await db
+      .select()
+      .from(matchAttendances)
+      .where(
+        and(
+          eq(matchAttendances.matchId, attendance.matchId),
+          eq(matchAttendances.userId, attendance.userId)
+        )
+      );
+
+    if (existing) {
+      // Actualizar la existente
+      const [updated] = await db
+        .update(matchAttendances)
+        .set({
+          ...attendance,
+          confirmedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(matchAttendances.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Crear nueva
+      const [newAttendance] = await db
+        .insert(matchAttendances)
+        .values({
+          ...attendance,
+          confirmedAt: new Date(),
+        })
+        .returning();
+      return newAttendance;
+    }
+  }
+
+  async updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>): Promise<MatchAttendance> {
+    const [updated] = await db
+      .update(matchAttendances)
+      .set({
+        ...attendance,
+        updatedAt: new Date(),
+      })
+      .where(eq(matchAttendances.id, id))
+      .returning();
+    return updated;
   }
 }
 

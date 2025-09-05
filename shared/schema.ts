@@ -119,6 +119,19 @@ export const teamConfig = pgTable("team_config", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Match attendances table - para confirmar asistencia de jugadores
+export const matchAttendances = pgTable("match_attendances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  matchId: varchar("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Para vincular con usuario autenticado
+  status: varchar("status").notNull().default("pending"), // pending, confirmed, declined
+  confirmedAt: timestamp("confirmed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Other payments table
 export const otherPayments = pgTable("other_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -146,12 +159,28 @@ export const monthlyPaymentsRelations = relations(monthlyPayments, ({ one }) => 
 
 export const matchesRelations = relations(matches, ({ many }) => ({
   championshipPayments: many(championshipPayments),
+  attendances: many(matchAttendances),
 }));
 
 export const championshipPaymentsRelations = relations(championshipPayments, ({ one }) => ({
   match: one(matches, {
     fields: [championshipPayments.matchId],
     references: [matches.id],
+  }),
+}));
+
+export const matchAttendancesRelations = relations(matchAttendances, ({ one }) => ({
+  match: one(matches, {
+    fields: [matchAttendances.matchId],
+    references: [matches.id],
+  }),
+  player: one(players, {
+    fields: [matchAttendances.playerId],
+    references: [players.id],
+  }),
+  user: one(users, {
+    fields: [matchAttendances.userId],
+    references: [users.id],
   }),
 }));
 
@@ -175,6 +204,12 @@ export const insertMonthlyPaymentSchema = createInsertSchema(monthlyPayments).om
 });
 
 export const insertChampionshipPaymentSchema = createInsertSchema(championshipPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMatchAttendanceSchema = createInsertSchema(matchAttendances).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -232,3 +267,5 @@ export type TeamConfig = typeof teamConfig.$inferSelect;
 export type InsertTeamConfig = z.infer<typeof insertTeamConfigSchema>;
 export type OtherPayment = typeof otherPayments.$inferSelect;
 export type InsertOtherPayment = z.infer<typeof insertOtherPaymentSchema>;
+export type MatchAttendance = typeof matchAttendances.$inferSelect;
+export type InsertMatchAttendance = z.infer<typeof insertMatchAttendanceSchema>;
