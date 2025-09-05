@@ -221,11 +221,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player> {
+    console.log(`Storage: Updating player ${id} with:`, player);
+    
     const [updatedPlayer] = await db
       .update(players)
       .set({ ...player, updatedAt: new Date() })
       .where(eq(players.id, id))
       .returning();
+    
+    console.log(`Storage: Player updated successfully:`, updatedPlayer);
     return updatedPlayer;
   }
 

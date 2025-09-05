@@ -141,16 +141,22 @@ export default function PlayerSettings() {
     mutationFn: async (data: any) => {
       return apiRequest(`/api/players/${playerInfo?.id}`, "PATCH", data);
     },
-    onSuccess: () => {
+    onSuccess: async (updatedPlayer) => {
       toast({
         title: "Información actualizada",
         description: "Los datos del jugador han sido actualizados correctamente",
       });
-      // Refresh player data
+      // Force refresh all player-related data immediately
       queryClient.invalidateQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
-      queryClient.refetchQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+      
+      // Also refresh the form with new values
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+      }, 200);
     },
     onError: (error) => {
+      console.error("Player update error:", error);
       toast({
         title: "Error",
         description: "No se pudo actualizar la información del jugador",

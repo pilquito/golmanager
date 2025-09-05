@@ -225,11 +225,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/players/:id", isAuthenticated, async (req, res) => {
     try {
+      console.log(`Updating player ${req.params.id} with data:`, req.body);
       const validatedData = insertPlayerSchema.partial().parse(req.body);
       const player = await storage.updatePlayer(req.params.id, validatedData);
+      console.log(`Player updated successfully:`, player);
       res.json(player);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({ message: "Invalid player data", errors: error.errors });
       }
       console.error("Error updating player:", error);

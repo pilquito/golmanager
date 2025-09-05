@@ -86,7 +86,7 @@ export default function PlayerDashboard() {
             GOLMANAGER FC
           </h2>
           <p className="text-gray-600" data-testid="player-position">
-            {playerData?.position || "Sin posición asignada"}
+            {(playerData as any)?.position || "Sin posición asignada"}
           </p>
         </div>
       </div>
