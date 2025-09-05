@@ -95,7 +95,7 @@ export default function PlayerSettings() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("PATCH", `/api/users/${(user as any)?.id}`, data);
+      return apiRequest(`/api/users/${(user as any)?.id}`, "PATCH", data);
     },
     onSuccess: () => {
       toast({
@@ -143,7 +143,7 @@ export default function PlayerSettings() {
 
   const updatePlayerMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("PATCH", `/api/players/${playerInfo?.id}`, data);
+      return apiRequest(`/api/players/${playerInfo?.id}`, "PATCH", data);
     },
     onSuccess: async (updatedPlayer) => {
       toast({

@@ -91,8 +91,9 @@ export default function PlayerDashboard() {
       });
     },
     onSettled: () => {
-      // Refrescar data desde el servidor
+      // Refrescar data desde el servidor inmediatamente
       queryClient.invalidateQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
+      queryClient.refetchQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
     },
   });
 
@@ -114,9 +115,10 @@ export default function PlayerDashboard() {
 
   // Función para verificar si ya confirmó asistencia para un partido
   const hasConfirmedAttendance = (matchId: string) => {
-    return userAttendances?.some((attendance: any) => 
+    if (!userAttendances) return false;
+    return userAttendances.some((attendance: any) => 
       attendance.matchId === matchId && attendance.status === "confirmed"
-    ) || false;
+    );
   };
 
   if (playerLoading || teamConfigLoading) {
