@@ -210,7 +210,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`Updating player ${req.params.id} with data:`, req.body);
       const validatedData = insertPlayerSchema.partial().parse(req.body);
+      
+      // Get current player to find associated user
+      const currentPlayer = await storage.getPlayer(req.params.id);
+      if (!currentPlayer) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
+      // Update player data
       const player = await storage.updatePlayer(req.params.id, validatedData);
+      
+      // If name is being updated, sync it to the user profile too
+      if (validatedData.name && currentPlayer.email) {
+        const user = await storage.getUserByEmail(currentPlayer.email);
+        if (user) {
+          const nameParts = validatedData.name.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          await storage.updateUser(user.id, {
+            firstName,
+            lastName
+          });
+          
+          console.log(`🔄 Synced name to user: ${firstName} ${lastName}`);
+        }
+      }
+      
       console.log(`Player updated successfully:`, player);
       res.json(player);
     } catch (error) {
