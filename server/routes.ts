@@ -179,10 +179,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/players/user/:userId", isAuthenticated, async (req, res) => {
     try {
       const { userId } = req.params;
-      const player = await storage.getPlayerByUserId(userId);
+      let player = await storage.getPlayerByUserId(userId);
+      
+      if (!player) {
+        // Try to create a default player for the user if none exists
+        const currentUser = req.user as any;
+        if (currentUser && currentUser.role === 'user') {
+          const defaultPlayer = {
+            name: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Jugador',
+            position: 'Mediocampista',
+            jerseyNumber: Math.floor(Math.random() * 99) + 1,
+            phoneNumber: '',
+            email: currentUser.email || '',
+            isActive: true,
+          };
+          
+          player = await storage.createPlayerForExistingUser(defaultPlayer, userId);
+        }
+      }
+      
       if (!player) {
         return res.status(404).json({ message: "Player not found for this user" });
       }
+      
       res.json(player);
     } catch (error) {
       console.error("Error fetching player by user ID:", error);

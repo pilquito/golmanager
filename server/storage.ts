@@ -39,6 +39,7 @@ export interface IStorage {
   getPlayer(id: string): Promise<Player | undefined>;
   getPlayerByUserId(userId: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
+  createPlayerForExistingUser(playerData: InsertPlayer, userId: string): Promise<Player>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
   deletePlayer(id: string): Promise<void>;
 
@@ -230,6 +231,12 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlayer(id: string): Promise<void> {
     await db.delete(players).where(eq(players.id, id));
+  }
+
+  async createPlayerForExistingUser(playerData: InsertPlayer, userId: string): Promise<Player> {
+    // Create the player without trying to create a user (since user already exists)
+    const [newPlayer] = await db.insert(players).values(playerData).returning();
+    return newPlayer;
   }
 
   // Match operations
