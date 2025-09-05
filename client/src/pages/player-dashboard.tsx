@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ export default function PlayerDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [confirmedMatches, setConfirmedMatches] = useState<Set<string>>(new Set());
   
   const { data: playerData, isLoading: playerLoading } = useQuery({
     queryKey: [`/api/players/user/${user?.id}`],
@@ -71,7 +73,10 @@ export default function PlayerDashboard() {
       
       return { previousAttendances };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Marcar como confirmado localmente para que el botón se quede verde
+      setConfirmedMatches(prev => new Set([...prev, variables.matchId]));
+      
       toast({
         title: "¡Asistencia confirmada!",
         description: "Tu asistencia al partido ha sido registrada exitosamente.",
@@ -115,6 +120,10 @@ export default function PlayerDashboard() {
 
   // Función para verificar si ya confirmó asistencia para un partido
   const hasConfirmedAttendance = (matchId: string) => {
+    // Primero verificar el estado local (para mantener el botón verde)
+    if (confirmedMatches.has(matchId)) return true;
+    
+    // Luego verificar los datos del servidor
     if (!userAttendances) return false;
     return userAttendances.some((attendance: any) => 
       attendance.matchId === matchId && attendance.status === "confirmed"

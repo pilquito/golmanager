@@ -21,7 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Users } from "lucide-react";
 import { insertMatchSchema } from "@shared/schema";
 import type { Match } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,6 +36,24 @@ export default function Matches() {
 
   const { data: matches, isLoading } = useQuery<Match[]>({
     queryKey: ["/api/matches"],
+  });
+
+  // Query para obtener todas las asistencias de todos los partidos
+  const { data: allAttendances } = useQuery({
+    queryKey: ["/api/attendances"],
+    queryFn: async () => {
+      const promises = matches?.map(async (match: Match) => {
+        try {
+          const response = await apiRequest(`/api/matches/${match.id}/attendances`, "GET");
+          const attendances = await response.json();
+          return { matchId: match.id, attendances };
+        } catch {
+          return { matchId: match.id, attendances: [] };
+        }
+      }) || [];
+      return Promise.all(promises);
+    },
+    enabled: !!matches && matches.length > 0,
   });
 
   const form = useForm({
@@ -265,6 +283,27 @@ export default function Matches() {
           {getStatusBadge(row.getValue("status"))}
         </div>
       ),
+    },
+    {
+      id: "attendances",
+      header: "Convocados",
+      cell: ({ row }: any) => {
+        const match = row.original;
+        const matchAttendances = allAttendances?.find((a: any) => a.matchId === match.id)?.attendances || [];
+        const confirmedCount = matchAttendances.filter((a: any) => a.status === 'confirmed').length;
+        
+        return (
+          <div className="flex items-center space-x-1" data-testid={`match-attendances-${match.id}`}>
+            <Users className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-green-600">
+              {confirmedCount}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              confirmado{confirmedCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+        );
+      },
     },
     {
       id: "actions",
