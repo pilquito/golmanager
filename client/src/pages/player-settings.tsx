@@ -114,37 +114,35 @@ export default function PlayerSettings() {
     const file = event.target.files?.[0];
     if (file) {
       try {
-        // Create FormData for file upload
-        const formData = new FormData();
-        formData.append('image', file);
-
-        // Upload to server
-        const response = await apiRequest('/api/upload/profile-image', 'POST', formData);
-        
-        // Update local preview
+        // Convert image to base64 for simple storage
         const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileImage(reader.result as string);
+        reader.onloadend = async () => {
+          const base64String = reader.result as string;
+          setProfileImage(base64String);
+
+          try {
+            // Update user profile with base64 image
+            await updateProfileMutation.mutateAsync({
+              profileImageUrl: base64String
+            });
+
+            toast({
+              title: "Foto actualizada",
+              description: "Tu foto de perfil ha sido actualizada correctamente",
+            });
+          } catch (error) {
+            toast({
+              title: "Error",
+              description: "No se pudo actualizar la foto de perfil",
+              variant: "destructive",
+            });
+          }
         };
         reader.readAsDataURL(file);
-
-        // Update user profile with new image URL and refresh auth user data
-        if (response.imageUrl) {
-          await updateProfileMutation.mutateAsync({
-            profileImageUrl: response.imageUrl
-          });
-          // Force refresh auth user data
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        }
-
-        toast({
-          title: "Foto actualizada",
-          description: "Tu foto de perfil ha sido actualizada correctamente",
-        });
       } catch (error) {
         toast({
           title: "Error",
-          description: "No se pudo subir la imagen",
+          description: "No se pudo procesar la imagen",
           variant: "destructive",
         });
       }

@@ -106,22 +106,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple profile image upload endpoint
-  app.post('/api/upload/profile-image', isAuthenticated, async (req, res) => {
-    try {
-      const currentUser = req.user as any;
-      // For now, just return a dummy URL since we need to integrate object storage properly
-      const imageUrl = `/api/placeholder-profile-image/${currentUser.id}?t=${Date.now()}`;
-      
-      // Also update the user's profile image URL in the database
-      await storage.updateUser(currentUser.id, { profileImageUrl: imageUrl });
-      
-      res.json({ imageUrl });
-    } catch (error) {
-      console.error("Error uploading profile image:", error);
-      res.status(500).json({ message: "Failed to upload image" });
-    }
-  });
 
   // Serve placeholder profile image
   app.get('/api/placeholder-profile-image/:userId', (req, res) => {
