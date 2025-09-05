@@ -168,51 +168,51 @@ export default function PlayerDashboard() {
         {/* Stats Cards con estilo futbolero */}
         <div className="grid grid-cols-3 gap-3">
           {/* Pagos Pendientes */}
-          <Card className="bg-gradient-to-br from-red-500/90 to-red-600/90 border-none shadow-lg">
+          <Card className="bg-red-500/30 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold" data-testid="pending-payments-count">
+                  <p className="text-xl font-bold drop-shadow-lg" data-testid="pending-payments-count">
                     {pendingPayments.length}
                   </p>
-                  <p className="text-xs opacity-90">Pagos</p>
+                  <p className="text-xs opacity-90 drop-shadow-md">Pagos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Partidos Totales */}
-          <Card className="bg-gradient-to-br from-blue-500/90 to-blue-600/90 border-none shadow-lg">
+          <Card className="bg-blue-500/30 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold" data-testid="total-matches-count">
+                  <p className="text-xl font-bold drop-shadow-lg" data-testid="total-matches-count">
                     {(upcomingMatches as any)?.length || 0}
                   </p>
-                  <p className="text-xs opacity-90">Partidos</p>
+                  <p className="text-xs opacity-90 drop-shadow-md">Partidos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Rendimiento (placeholder) */}
-          <Card className="bg-gradient-to-br from-green-500/90 to-green-600/90 border-none shadow-lg">
+          <Card className="bg-green-500/30 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center">
                   <Target className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold" data-testid="player-performance">
+                  <p className="text-xl font-bold drop-shadow-lg" data-testid="player-performance">
                     100%
                   </p>
-                  <p className="text-xs opacity-90">Activo</p>
+                  <p className="text-xs opacity-90 drop-shadow-md">Activo</p>
                 </div>
               </div>
             </CardContent>
@@ -266,10 +266,7 @@ export default function PlayerDashboard() {
         {/* PRÓXIMO PARTIDO - Solo el siguiente */}
         {nextMatch ? (
           <Card 
-            className="relative overflow-hidden border-none shadow-xl"
-            style={{
-              background: `linear-gradient(135deg, ${primaryColor}20 0%, ${primaryColor}10 100%)`
-            }}
+            className="relative overflow-hidden backdrop-blur-lg bg-white/20 border border-white/30 shadow-xl"
           >
             <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
@@ -330,7 +327,7 @@ export default function PlayerDashboard() {
               </div>
               
               {/* Detalles del partido */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 space-y-3">
+              <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 space-y-3 border border-white/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-gray-600" />
