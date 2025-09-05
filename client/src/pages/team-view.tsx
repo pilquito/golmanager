@@ -18,8 +18,12 @@ export default function TeamView() {
     queryKey: ["/api/matches"],
   });
 
-  const activePlayersList = players?.filter((p: any) => p.isActive) || [];
-  const upcomingMatches = matches?.filter((m: any) => m.status === 'scheduled') || [];
+  const { data: teamConfig, isLoading: configLoading } = useQuery({
+    queryKey: ["/api/team-config"],
+  });
+
+  const activePlayersList = (players as any)?.filter((p: any) => p.isActive) || [];
+  const upcomingMatches = (matches as any)?.filter((m: any) => m.status === 'scheduled') || [];
 
   return (
     <div 
@@ -52,11 +56,24 @@ export default function TeamView() {
       {/* Team Info */}
       <div className="relative bg-white/20 backdrop-blur-md border-b border-white/20 text-white p-6 text-center">
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white font-bold text-xl border border-white/30">
-            GFC
-          </div>
+          {(teamConfig as any)?.logoUrl ? (
+            <div className="w-20 h-20 aspect-square flex items-center justify-center">
+              <img 
+                src={(teamConfig as any).logoUrl} 
+                alt={(teamConfig as any).teamName || "Team Logo"} 
+                width={80}
+                height={80}
+                className="max-w-20 max-h-20 object-contain drop-shadow-lg"
+                data-testid="team-logo"
+              />
+            </div>
+          ) : (
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white font-bold text-xl border border-white/30">
+              {(teamConfig as any)?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
+            </div>
+          )}
           <h2 className="text-2xl font-bold" data-testid="team-name">
-            GOLMANAGER FC
+            {(teamConfig as any)?.teamName || "GOLMANAGER FC"}
           </h2>
         </div>
       </div>
@@ -123,7 +140,7 @@ export default function TeamView() {
                             <Users className="w-8 h-8 text-gray-400" />
                           )}
                           {player.jerseyNumber && (
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg">
                               {player.jerseyNumber}
                             </div>
                           )}
@@ -163,11 +180,11 @@ export default function TeamView() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                            GFC
+                          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                            {(teamConfig as any)?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
                           </div>
-                          <span className="text-lg font-bold">VS</span>
-                          <div className="w-10 h-10 bg-gray-300 rounded-lg flex items-center justify-center text-gray-600 font-bold text-xs">
+                          <span className="text-lg font-bold text-yellow-400">VS</span>
+                          <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg">
                             {match.opponent.slice(0, 3).toUpperCase()}
                           </div>
                         </div>
@@ -190,10 +207,10 @@ export default function TeamView() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline" className="bg-white/20 text-white border-white/30" data-testid={`match-competition-${match.id}`}>
+                        <Badge variant="outline" className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-white border-purple-300/30" data-testid={`match-competition-${match.id}`}>
                           {match.competition}
                         </Badge>
-                        <p className="text-xs text-white/60 mt-1">
+                        <p className="text-xs text-green-300 mt-1 font-medium">
                           {match.status === 'scheduled' ? 'Programado' : match.status}
                         </p>
                       </div>
