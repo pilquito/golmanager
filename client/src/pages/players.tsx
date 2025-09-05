@@ -271,14 +271,38 @@ export default function Players() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header title="Jugadores" subtitle="Gestión de plantilla del equipo">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-player">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Jugador
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        <div className="space-x-2">
+          <Button 
+            variant="destructive"
+            onClick={async () => {
+              try {
+                const response = await apiRequest("POST", "/api/players/cleanup-all");
+                toast({
+                  title: "Limpieza masiva completada",
+                  description: `${response.message}. Eliminados: ${response.totalDeleted}`,
+                });
+                queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+              } catch (error) {
+                console.error("Cleanup error:", error);
+                toast({
+                  title: "Error",
+                  description: "Error al limpiar jugadores duplicados",
+                  variant: "destructive",
+                });
+              }
+            }}
+            data-testid="button-cleanup-all"
+          >
+            🗑️ Limpiar Duplicados
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-player">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Jugador
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>
                 {editingPlayer ? "Editar Jugador" : "Nuevo Jugador"}
@@ -397,8 +421,9 @@ export default function Players() {
                 </DialogFooter>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </Header>
 
       <main className="flex-1 overflow-auto bg-background p-3 md:p-6">

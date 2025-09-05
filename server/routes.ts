@@ -233,6 +233,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clean ALL duplicate players in the system
+  app.post("/api/players/cleanup-all", isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      if (currentUser.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const allPlayers = await storage.getPlayers();
+      console.log(`Total players before cleanup: ${allPlayers.length}`);
+      
+      // Group players by name
+      const groupedByName = allPlayers.reduce((groups, player) => {
+        const name = player.name;
+        if (!groups[name]) {
+          groups[name] = [];
+        }
+        groups[name].push(player);
+        return groups;
+      }, {} as Record<string, any[]>);
+      
+      let totalDeleted = 0;
+      let groupsProcessed = 0;
+      
+      for (const [name, players] of Object.entries(groupedByName)) {
+        if (players.length > 1) {
+          groupsProcessed++;
+          console.log(`Found ${players.length} players with name: ${name}`);
+          
+          // Keep the most recent one, delete the rest
+          const sorted = players.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+          const toKeep = sorted[0];
+          const toDelete = sorted.slice(1);
+          
+          console.log(`Keeping player ${toKeep.id}, deleting ${toDelete.length} duplicates`);
+          
+          for (const player of toDelete) {
+            await storage.deletePlayer(player.id);
+            totalDeleted++;
+            console.log(`Deleted duplicate: ${player.id} - ${player.name}`);
+          }
+        }
+      }
+      
+      const remainingPlayers = await storage.getPlayers();
+      console.log(`Total players after cleanup: ${remainingPlayers.length}`);
+      
+      res.json({ 
+        message: `Cleanup completed! Deleted ${totalDeleted} duplicate players from ${groupsProcessed} groups`,
+        totalDeleted,
+        groupsProcessed,
+        totalBefore: allPlayers.length,
+        totalAfter: remainingPlayers.length
+      });
+    } catch (error) {
+      console.error("Error cleaning up all players:", error);
+      res.status(500).json({ message: "Failed to cleanup players" });
+    }
+  });
+
   // Clean duplicate players for user
   app.post("/api/players/cleanup/:userId", isAuthenticated, async (req, res) => {
     try {
