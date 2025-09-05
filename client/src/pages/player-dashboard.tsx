@@ -55,24 +55,20 @@ export default function PlayerDashboard() {
   const nextMatch = (upcomingMatches as any)?.filter((m: any) => m.status === 'scheduled')?.[0] || null; // Solo el próximo partido
 
   return (
-    <div className="min-h-screen relative" style={{
-      background: `
-        linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.03) 50%),
-        linear-gradient(90deg, #1e7e34 0%, #28a745 20%, #1e7e34 40%, #28a745 60%, #1e7e34 80%, #28a745 100%),
-        repeating-linear-gradient(
-          90deg,
-          transparent,
-          transparent 2px,
-          rgba(255,255,255,0.05) 2px,
-          rgba(255,255,255,0.05) 4px
-        )
-      `,
-      backgroundSize: '100px 100%, 100% 100%, 4px 100%'
-    }}>
-      {/* Overlay con color del equipo */}
-      <div className="absolute inset-0" style={{
-        background: `linear-gradient(135deg, ${primaryColor}30 0%, ${primaryColor}20 50%, ${primaryColor}10 100%)`
-      }} />
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: `
+          linear-gradient(135deg, ${primaryColor}40 0%, ${primaryColor}20 50%, transparent 100%),
+          url('https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=2070&auto=format&fit=crop')
+        `,
+        backgroundSize: 'cover, cover',
+        backgroundPosition: 'center, center',
+        backgroundRepeat: 'no-repeat, no-repeat'
+      }}
+    >
+      {/* Overlay adicional para mejor contraste */}
+      <div className="absolute inset-0 bg-black/10" />
       
       {/* Header con efecto de estadio */}
       <div className="relative overflow-hidden">
