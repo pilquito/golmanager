@@ -123,8 +123,7 @@ export const teamConfig = pgTable("team_config", {
 export const matchAttendances = pgTable("match_attendances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   matchId: varchar("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
-  playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Para vincular con usuario autenticado
+  userId: varchar("user_id").notNull().references(() => players.id, { onDelete: "cascade" }), // Usando players.id directamente
   status: varchar("status").notNull().default("pending"), // pending, confirmed, declined
   confirmedAt: timestamp("confirmed_at"),
   notes: text("notes"),
@@ -175,12 +174,8 @@ export const matchAttendancesRelations = relations(matchAttendances, ({ one }) =
     references: [matches.id],
   }),
   player: one(players, {
-    fields: [matchAttendances.playerId],
-    references: [players.id],
-  }),
-  user: one(users, {
     fields: [matchAttendances.userId],
-    references: [users.id],
+    references: [players.id],
   }),
 }));
 

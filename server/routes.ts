@@ -655,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertMatchAttendanceSchema.parse({
         ...req.body,
-        userId: player.id // Use player ID, not user ID
+        userId: player.id // Use player ID directly
       });
       
       const attendance = await storage.createOrUpdateAttendance(validatedData);
