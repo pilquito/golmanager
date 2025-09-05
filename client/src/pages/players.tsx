@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Eye, Pencil, Trash2, Archive } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Archive, User } from "lucide-react";
 import { insertPlayerSchema } from "@shared/schema";
 import type { Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -222,6 +222,29 @@ export default function Players() {
   };
 
   const columns = [
+    {
+      accessorKey: "photo",
+      header: "Foto",
+      cell: ({ row }: any) => {
+        const player = row.original;
+        return (
+          <div className="flex items-center justify-center w-10 h-10">
+            {player.profileImageUrl ? (
+              <img 
+                src={player.profileImageUrl} 
+                alt={player.name}
+                className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+                data-testid={`player-photo-${player.id}`}
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-gray-400" />
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "jerseyNumber",
       header: "#",

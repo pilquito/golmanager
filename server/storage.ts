@@ -167,8 +167,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Player operations
-  async getPlayers(): Promise<Player[]> {
-    return await db.select().from(players).orderBy(desc(players.createdAt));
+  async getPlayers(): Promise<(Player & { profileImageUrl?: string })[]> {
+    const result = await db
+      .select({
+        id: players.id,
+        name: players.name,
+        jerseyNumber: players.jerseyNumber,
+        position: players.position,
+        phoneNumber: players.phoneNumber,
+        email: players.email,
+        birthDate: players.birthDate,
+        isActive: players.isActive,
+        createdAt: players.createdAt,
+        updatedAt: players.updatedAt,
+        profileImageUrl: users.profileImageUrl
+      })
+      .from(players)
+      .leftJoin(users, eq(players.email, users.email))
+      .orderBy(desc(players.createdAt));
+    
+    return result;
   }
 
   async getPlayer(id: string): Promise<Player | undefined> {
