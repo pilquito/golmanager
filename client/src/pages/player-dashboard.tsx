@@ -58,9 +58,10 @@ export default function PlayerDashboard() {
     <div 
       className="min-h-screen relative"
       style={{
+        backgroundColor: '#2d5016', // Fallback color
         backgroundImage: `
           linear-gradient(135deg, ${primaryColor}40 0%, ${primaryColor}20 50%, transparent 100%),
-          url('https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=2070&auto=format&fit=crop')
+          url('${(teamConfig?.backgroundImageUrl && teamConfig.backgroundImageUrl.trim() && (teamConfig.backgroundImageUrl.startsWith('http://') || teamConfig.backgroundImageUrl.startsWith('https://'))) ? teamConfig.backgroundImageUrl : 'https://images.unsplash.com/photo-1574263867128-4d0d8dfaeb48?q=80&w=2070&auto=format&fit=crop'}')
         `,
         backgroundSize: 'cover, cover',
         backgroundPosition: 'center, center',

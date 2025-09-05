@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,7 @@ export default function Configuration() {
       teamName: "",
       teamColors: "",
       logoUrl: "",
+      backgroundImageUrl: "",
       monthlyFee: "15.00",
       paymentDueDay: 1,
       contactEmail: "",
@@ -37,19 +38,20 @@ export default function Configuration() {
   });
 
   // Update form when config is loaded
-  useState(() => {
+  useEffect(() => {
     if (config) {
       form.reset({
         teamName: config.teamName || "",
         teamColors: config.teamColors || "",
         logoUrl: config.logoUrl || "",
+        backgroundImageUrl: config.backgroundImageUrl || "",
         monthlyFee: config.monthlyFee || "15.00",
         paymentDueDay: config.paymentDueDay || 1,
         contactEmail: config.contactEmail || "",
         contactPhone: config.contactPhone || "",
       });
     }
-  });
+  }, [config, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -93,6 +95,7 @@ export default function Configuration() {
         teamName: config.teamName || "",
         teamColors: config.teamColors || "",
         logoUrl: config.logoUrl || "",
+        backgroundImageUrl: config.backgroundImageUrl || "",
         monthlyFee: config.monthlyFee || "15.00",
         paymentDueDay: config.paymentDueDay || 1,
         contactEmail: config.contactEmail || "",
@@ -157,7 +160,7 @@ export default function Configuration() {
                         <FormLabel>Colores del Equipo</FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="Por ejemplo: 'Azul y Blanco'" 
+                            placeholder="#dc2626,#ffffff" 
                             {...field} 
                             data-testid="input-team-colors"
                           />
@@ -179,6 +182,37 @@ export default function Configuration() {
                             data-testid="input-logo-url"
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="backgroundImageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Imagen de Fondo del Dashboard</FormLabel>
+                        <div className="space-y-2">
+                          <FormControl>
+                            <Input 
+                              placeholder="https://images.unsplash.com/photo-1574263867128..." 
+                              {...field} 
+                              data-testid="input-background-image-url"
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => field.onChange("https://images.unsplash.com/photo-1574263867128-4d0d8dfaeb48?q=80&w=2070&auto=format&fit=crop")}
+                            data-testid="button-reset-background"
+                          >
+                            Usar imagen por defecto
+                          </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Recomendamos imágenes de césped desde Unsplash para mejor apariencia.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
