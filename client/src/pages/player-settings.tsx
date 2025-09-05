@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,12 @@ const updateProfileSchema = z.object({
   lastName: z.string().min(1, "Apellido requerido"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   username: z.string().min(3, "Usuario debe tener al menos 3 caracteres"),
+});
+
+const updatePlayerSchema = z.object({
+  phoneNumber: z.string().optional(),
+  position: z.string().min(1, "Posición requerida"),
+  jerseyNumber: z.number().min(1).max(99).optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -68,6 +75,20 @@ export default function PlayerSettings() {
     },
   });
 
+  const playerForm = useForm({
+    resolver: zodResolver(updatePlayerSchema),
+    defaultValues: {
+      phoneNumber: playerInfo?.phoneNumber || "",
+      position: playerInfo?.position || "",
+      jerseyNumber: playerInfo?.jerseyNumber || undefined,
+    },
+    values: {
+      phoneNumber: playerInfo?.phoneNumber || "",
+      position: playerInfo?.position || "",
+      jerseyNumber: playerInfo?.jerseyNumber || undefined,
+    },
+  });
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest(`/api/users/${(user as any)?.id}`, "PATCH", data);
@@ -111,6 +132,28 @@ export default function PlayerSettings() {
       toast({
         title: "Error",
         description: "No se pudo cambiar la contraseña. Verifica tu contraseña actual.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePlayerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/players/${playerInfo?.id}`, "PATCH", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Información actualizada",
+        description: "Los datos del jugador han sido actualizados correctamente",
+      });
+      // Refresh player data
+      queryClient.invalidateQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+      queryClient.refetchQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la información del jugador",
         variant: "destructive",
       });
     },
@@ -203,6 +246,10 @@ export default function PlayerSettings() {
       currentPassword: data.currentPassword,
       newPassword: data.newPassword,
     });
+  };
+
+  const onPlayerSubmit = (data: any) => {
+    updatePlayerMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -465,36 +512,83 @@ export default function PlayerSettings() {
                 </div>
               </div>
               
-              {/* Editar teléfono del jugador */}
+              {/* Formulario para editar información del jugador */}
               <Separator />
-              <div className="space-y-3">
-                <h4 className="font-medium">Información de Contacto</h4>
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Número de teléfono"
-                    value={playerInfo?.phoneNumber || ""}
-                    onChange={(e) => {
-                      // Actualizar teléfono del jugador
-                      // TODO: Implementar actualización
-                    }}
-                    data-testid="input-player-phone"
+              <Form {...playerForm}>
+                <form onSubmit={playerForm.handleSubmit(onPlayerSubmit)} className="space-y-4">
+                  <h4 className="font-medium">Información del Jugador</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={playerForm.control}
+                      name="jerseyNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dorsal</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="number" 
+                              min="1" 
+                              max="99"
+                              value={field.value || ''}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              data-testid="input-jersey-number" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={playerForm.control}
+                      name="position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Posición</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-position">
+                                <SelectValue placeholder="Seleccionar posición" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Portero">Portero</SelectItem>
+                              <SelectItem value="Defensa">Defensa</SelectItem>
+                              <SelectItem value="Mediocampista">Mediocampista</SelectItem>
+                              <SelectItem value="Delantero">Delantero</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={playerForm.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Número de teléfono" data-testid="input-player-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      // TODO: Implementar actualización de teléfono
-                      toast({
-                        title: "Información",
-                        description: "Contacta con el administrador para cambiar tu teléfono",
-                      });
-                    }}
-                    data-testid="button-update-phone"
+
+                  <Button 
+                    type="submit" 
+                    disabled={updatePlayerMutation.isPending}
+                    data-testid="button-save-player"
                   >
-                    Actualizar
+                    {updatePlayerMutation.isPending ? "Guardando..." : "Guardar Información del Jugador"}
                   </Button>
-                </div>
-              </div>
+                </form>
+              </Form>
               
               <Separator />
               <p className="text-sm text-muted-foreground">
