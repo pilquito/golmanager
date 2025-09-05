@@ -18,6 +18,7 @@ const updateProfileSchema = z.object({
   firstName: z.string().min(1, "Nombre requerido"),
   lastName: z.string().min(1, "Apellido requerido"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
+  username: z.string().min(3, "Usuario debe tener al menos 3 caracteres"),
 });
 
 const changePasswordSchema = z.object({
@@ -48,11 +49,13 @@ export default function PlayerSettings() {
       firstName: (user as any)?.firstName || "",
       lastName: (user as any)?.lastName || "",
       email: (user as any)?.email || "",
+      username: (user as any)?.username || "",
     },
     values: {
       firstName: (user as any)?.firstName || "",
       lastName: (user as any)?.lastName || "",
       email: (user as any)?.email || "",
+      username: (user as any)?.username || "",
     },
   });
 
@@ -74,7 +77,9 @@ export default function PlayerSettings() {
         title: "Perfil actualizado",
         description: "Tus datos han sido actualizados correctamente",
       });
+      // Force refresh all user-related data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/user/${(user as any)?.id}`] });
     },
     onError: (error) => {
       toast({
@@ -123,11 +128,13 @@ export default function PlayerSettings() {
         };
         reader.readAsDataURL(file);
 
-        // Update user profile with new image URL
+        // Update user profile with new image URL and refresh auth user data
         if (response.imageUrl) {
           await updateProfileMutation.mutateAsync({
             profileImageUrl: response.imageUrl
           });
+          // Force refresh auth user data
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         }
 
         toast({
@@ -197,9 +204,9 @@ export default function PlayerSettings() {
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center space-y-4">
               <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                {profileImage || playerInfo?.profileImageUrl ? (
+                {profileImage || (user as any)?.profileImageUrl ? (
                   <img 
-                    src={profileImage || playerInfo?.profileImageUrl} 
+                    src={profileImage || (user as any)?.profileImageUrl} 
                     alt="Profile" 
                     className="w-32 h-32 object-cover"
                     data-testid="current-profile-image"
@@ -265,6 +272,20 @@ export default function PlayerSettings() {
                       <FormLabel>Apellido</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-last-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={profileForm.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre de Usuario</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-username" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -400,6 +421,38 @@ export default function PlayerSettings() {
                   </p>
                 </div>
               </div>
+              
+              {/* Editar teléfono del jugador */}
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="font-medium">Información de Contacto</h4>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="Número de teléfono"
+                    value={playerInfo?.phoneNumber || ""}
+                    onChange={(e) => {
+                      // Actualizar teléfono del jugador
+                      // TODO: Implementar actualización
+                    }}
+                    data-testid="input-player-phone"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      // TODO: Implementar actualización de teléfono
+                      toast({
+                        title: "Información",
+                        description: "Contacta con el administrador para cambiar tu teléfono",
+                      });
+                    }}
+                    data-testid="button-update-phone"
+                  >
+                    Actualizar
+                  </Button>
+                </div>
+              </div>
+              
               <Separator />
               <p className="text-sm text-muted-foreground">
                 Para cambios en la información del jugador (dorsal, posición, etc.), 

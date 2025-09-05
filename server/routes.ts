@@ -109,8 +109,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Simple profile image upload endpoint
   app.post('/api/upload/profile-image', isAuthenticated, async (req, res) => {
     try {
+      const currentUser = req.user as any;
       // For now, just return a dummy URL since we need to integrate object storage properly
-      const imageUrl = `/api/placeholder-profile-image/${(req.user as any).id}`;
+      const imageUrl = `/api/placeholder-profile-image/${currentUser.id}?t=${Date.now()}`;
+      
+      // Also update the user's profile image URL in the database
+      await storage.updateUser(currentUser.id, { profileImageUrl: imageUrl });
+      
       res.json({ imageUrl });
     } catch (error) {
       console.error("Error uploading profile image:", error);
@@ -120,14 +125,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve placeholder profile image
   app.get('/api/placeholder-profile-image/:userId', (req, res) => {
-    // Return a simple SVG placeholder
+    const userId = req.params.userId;
+    // Create a unique color based on user ID
+    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+    const colorIndex = userId.length % colors.length;
+    const color = colors[colorIndex];
+    
+    // Return a simple SVG placeholder with user initials if available
     const svg = `<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="100" cy="100" r="90" fill="#e2e8f0"/>
-      <circle cx="100" cy="70" r="25" fill="#64748b"/>
-      <path d="M100 120 Q70 150 40 180 Q70 160 100 160 Q130 160 160 180 Q130 150 100 120" fill="#64748b"/>
+      <circle cx="100" cy="100" r="90" fill="${color}"/>
+      <circle cx="100" cy="70" r="25" fill="white" opacity="0.9"/>
+      <path d="M100 120 Q70 150 40 180 Q70 160 100 160 Q130 160 160 180 Q130 150 100 120" fill="white" opacity="0.9"/>
+      <text x="100" y="140" text-anchor="middle" fill="white" font-size="14" font-family="Arial">Foto</text>
     </svg>`;
     
     res.set('Content-Type', 'image/svg+xml');
+    res.set('Cache-Control', 'no-cache');
     res.send(svg);
   });
 

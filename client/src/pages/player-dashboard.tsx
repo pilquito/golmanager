@@ -51,9 +51,9 @@ export default function PlayerDashboard() {
       <div className="bg-blue-900 text-white p-6 text-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-            {playerInfo?.profileImageUrl ? (
+            {(user as any)?.profileImageUrl ? (
               <img 
-                src={playerInfo.profileImageUrl} 
+                src={(user as any).profileImageUrl} 
                 alt="Profile" 
                 className="w-24 h-24 rounded-full object-cover"
                 data-testid="player-profile-image"
