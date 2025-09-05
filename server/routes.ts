@@ -393,11 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Users management (admin only)
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
-      if (!req.user || !req.user.claims || !req.user.claims.sub) {
-        return res.status(401).json({ message: "Invalid authentication" });
-      }
-      
-      const currentUser = await storage.getUser(req.user.claims.sub);
+      const currentUser = req.user as any;
       if (!currentUser || currentUser.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }

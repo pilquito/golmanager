@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { insertPlayerSchema } from "@shared/schema";
 import type { Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -252,7 +252,7 @@ export default function Players() {
               onClick={() => handleEdit(player)}
               data-testid={`button-edit-${player.id}`}
             >
-              <Edit className="h-4 w-4 text-yellow-600" />
+              <Pencil className="h-4 w-4 text-yellow-600" />
             </Button>
             <Button
               variant="ghost"
