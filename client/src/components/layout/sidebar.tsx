@@ -1,6 +1,9 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Home, 
   Users, 
@@ -26,9 +29,29 @@ const navigationItems = [
 export default function Sidebar() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/auth/logout", "POST");
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente",
+      });
+    },
+    onError: () => {
+      // Force logout even on error
+      queryClient.clear();
+      window.location.reload();
+    },
+  });
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logoutMutation.mutate();
   };
 
   return (

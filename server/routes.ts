@@ -1,26 +1,73 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin, loginUser, registerUser } from "./auth";
 import { 
   insertPlayerSchema,
   insertMatchSchema,
   insertMonthlyPaymentSchema,
   insertChampionshipPaymentSchema,
-  insertTeamConfigSchema 
+  insertTeamConfigSchema,
+  loginSchema,
+  registerSchema
 } from "@shared/schema";
 import { z } from "zod";
+import "./types";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const user = await loginUser(req.body);
+      req.session.userId = user.id;
+      
+      // Don't send password in response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      res.status(401).json({ message: error instanceof Error ? error.message : "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const user = await registerUser(req.body);
+      req.session.userId = user.id;
+      
+      // Don't send password in response
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Register error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      res.status(400).json({ message: error instanceof Error ? error.message : "Registration failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Could not log out" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+    try {
+      // req.user is already populated by isAuthenticated middleware  
+      const user = req.user!;
+      const { password, ...userWithoutPassword } = user as any;
+      res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

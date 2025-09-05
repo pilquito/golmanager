@@ -7,6 +7,7 @@ import {
   teamConfig,
   type User,
   type UpsertUser,
+  type InsertUser,
   type Player,
   type InsertPlayer,
   type Match,
@@ -18,13 +19,16 @@ import {
   type TeamConfig,
   type InsertTeamConfig,
 } from "@shared/schema";
+import bcrypt from "bcrypt";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  validateUserCredentials(username: string, password: string): Promise<User | null>;
 
   // Player operations
   getPlayers(): Promise<Player[]>;
@@ -81,18 +85,36 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
     const [user] = await db
       .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+      .values({
+        ...userData,
+        password: hashedPassword,
       })
       .returning();
+    return user;
+  }
+
+  async validateUserCredentials(username: string, password: string): Promise<User | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user) {
+      return null;
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return null;
+    }
+    
+    // Update last access
+    await db.update(users).set({ lastAccess: new Date() }).where(eq(users.id, user.id));
     return user;
   }
 

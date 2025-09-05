@@ -25,13 +25,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (mandatory for Replit Auth)
+// User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username").unique().notNull(),
+  password: varchar("password").notNull(),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").default("user"),
   isActive: boolean("is_active").default(true),
   lastAccess: timestamp("last_access"),
@@ -165,9 +166,35 @@ export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
   updatedAt: true,
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+});
+
+export const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const registerSchema = insertUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginData = z.infer<typeof loginSchema>;
+export type RegisterData = z.infer<typeof registerSchema>;
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type Match = typeof matches.$inferSelect;

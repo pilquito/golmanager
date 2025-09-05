@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Players from "@/pages/players";
 import Matches from "@/pages/matches";
@@ -14,7 +13,7 @@ import Users from "@/pages/users";
 import Configuration from "@/pages/configuration";
 import PlayerProfile from "@/pages/player-profile";
 import Sidebar from "@/components/layout/sidebar";
-import { useAuth } from "@/hooks/useAuth";
+import AuthWrapper from "@/components/auth/auth-wrapper";
 
 function AuthenticatedApp() {
   return (
@@ -38,17 +37,10 @@ function AuthenticatedApp() {
 }
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
   return (
-    <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <Route path="*" component={AuthenticatedApp} />
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <AuthWrapper>
+      <AuthenticatedApp />
+    </AuthWrapper>
   );
 }
 
