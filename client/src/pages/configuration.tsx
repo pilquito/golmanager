@@ -195,7 +195,7 @@ export default function Configuration() {
                         <div className="space-y-2">
                           <FormControl>
                             <Input 
-                              placeholder="https://images.unsplash.com/photo-1574263867128..." 
+                              placeholder="/attached_assets/stadium-background.png" 
                               {...field} 
                               data-testid="input-background-image-url"
                             />
@@ -204,14 +204,14 @@ export default function Configuration() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => field.onChange("https://images.unsplash.com/photo-1574263867128-4d0d8dfaeb48?q=80&w=2070&auto=format&fit=crop")}
+                            onClick={() => field.onChange("/attached_assets/stadium-background.png")}
                             data-testid="button-reset-background"
                           >
                             Usar imagen por defecto
                           </Button>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Recomendamos imágenes de césped desde Unsplash para mejor apariencia.
+                          Usa imágenes de estadios o campos de fútbol para mejor apariencia.
                         </p>
                         <FormMessage />
                       </FormItem>

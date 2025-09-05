@@ -33,12 +33,12 @@ export default function PlayerNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-md border-t border-white/20 z-50">
       <div className="grid grid-cols-4 h-16">
         <Button
           variant="ghost"
           className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
-            location === "/" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+            location === "/" ? "text-white bg-white/20 backdrop-blur-sm border-t-2 border-white/50" : "text-white/70 hover:text-white hover:bg-white/10"
           }`}
           onClick={() => setLocation("/")}
           data-testid="nav-home"
@@ -50,7 +50,7 @@ export default function PlayerNav() {
         <Button
           variant="ghost"
           className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
-            location === "/team" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+            location === "/team" ? "text-white bg-white/20 backdrop-blur-sm border-t-2 border-white/50" : "text-white/70 hover:text-white hover:bg-white/10"
           }`}
           onClick={() => setLocation("/team")}
           data-testid="nav-team"
@@ -62,7 +62,7 @@ export default function PlayerNav() {
         <Button
           variant="ghost"
           className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
-            location === "/settings" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+            location === "/settings" ? "text-white bg-white/20 backdrop-blur-sm border-t-2 border-white/50" : "text-white/70 hover:text-white hover:bg-white/10"
           }`}
           onClick={() => setLocation("/settings")}
           data-testid="nav-settings"
@@ -73,7 +73,7 @@ export default function PlayerNav() {
         
         <Button
           variant="ghost"
-          className="flex flex-col items-center justify-center space-y-1 h-full rounded-none text-red-600"
+          className="flex flex-col items-center justify-center space-y-1 h-full rounded-none text-red-200 hover:text-red-100 hover:bg-white/10"
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
           data-testid="nav-logout"

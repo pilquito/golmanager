@@ -27,8 +27,18 @@ export default function PaymentsHistory() {
 
   if (playerLoading || paymentsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 p-6">
-        <div className="container mx-auto max-w-2xl space-y-6">
+      <div 
+        className="min-h-screen relative p-6"
+        style={{
+          backgroundColor: '#2d5016',
+          backgroundImage: "url('/attached_assets/stadium-background.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/15" />
+        <div className="relative container mx-auto max-w-2xl space-y-6">
           <div className="flex items-center gap-4 text-white mb-6">
             <Skeleton className="h-10 w-10" />
             <Skeleton className="h-8 w-48" />
@@ -105,15 +115,25 @@ export default function PaymentsHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 p-6">
-      <div className="container mx-auto max-w-2xl space-y-6">
+    <div 
+      className="min-h-screen relative p-6"
+      style={{
+        backgroundColor: '#2d5016',
+        backgroundImage: "url('/attached_assets/stadium-background.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/10" />
+      <div className="relative container mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 text-white mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleGoBack}
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/10 bg-white/20 backdrop-blur-sm border border-white/30"
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -122,7 +142,7 @@ export default function PaymentsHistory() {
             <h1 className="text-2xl font-bold" data-testid="page-title">
               Historial de Pagos
             </h1>
-            <p className="text-blue-200">
+            <p className="text-white/70">
               Resumen completo de tus cuotas mensuales
             </p>
           </div>
@@ -130,33 +150,33 @@ export default function PaymentsHistory() {
 
         {/* Resumen */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="bg-green-100 border-green-200">
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20">
             <CardContent className="p-4 text-center">
-              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-800" data-testid="paid-count">
+              <CheckCircle className="h-8 w-8 text-green-200 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white" data-testid="paid-count">
                 {paidPayments.length}
               </p>
-              <p className="text-sm text-green-700">Pagados</p>
+              <p className="text-sm text-white/70">Pagados</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-yellow-100 border-yellow-200">
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20">
             <CardContent className="p-4 text-center">
-              <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-yellow-800" data-testid="pending-count">
+              <Clock className="h-8 w-8 text-yellow-200 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white" data-testid="pending-count">
                 {pendingPayments.length}
               </p>
-              <p className="text-sm text-yellow-700">Pendientes</p>
+              <p className="text-sm text-white/70">Pendientes</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-red-100 border-red-200">
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20">
             <CardContent className="p-4 text-center">
-              <XCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-red-800" data-testid="overdue-count">
+              <XCircle className="h-8 w-8 text-red-200 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white" data-testid="overdue-count">
                 {overduePayments.length}
               </p>
-              <p className="text-sm text-red-700">Vencidos</p>
+              <p className="text-sm text-white/70">Vencidos</p>
             </CardContent>
           </Card>
         </div>

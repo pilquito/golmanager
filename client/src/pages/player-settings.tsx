@@ -264,8 +264,18 @@ export default function PlayerSettings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 p-6">
-        <div className="container mx-auto max-w-2xl">
+      <div 
+        className="min-h-screen relative p-6"
+        style={{
+          backgroundColor: '#2d5016',
+          backgroundImage: "url('/attached_assets/stadium-background.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/15" />
+        <div className="relative container mx-auto max-w-2xl">
           <Card>
             <CardContent className="p-6">
               <div className="animate-pulse space-y-4">
@@ -281,22 +291,32 @@ export default function PlayerSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700 p-6">
-      <div className="container mx-auto max-w-2xl space-y-6">
+    <div 
+      className="min-h-screen relative p-6"
+      style={{
+        backgroundColor: '#2d5016',
+        backgroundImage: "url('/attached_assets/stadium-background.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/10" />
+      <div className="relative container mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center text-white mb-6">
           <h1 className="text-2xl font-bold" data-testid="settings-title">
             Configuración de Perfil
           </h1>
-          <p className="text-blue-200">
+          <p className="text-white/70">
             Actualiza tu información personal y configuración
           </p>
         </div>
 
         {/* Foto de Perfil */}
-        <Card>
+        <Card className="bg-white/30 backdrop-blur-md border border-white/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <Camera className="h-5 w-5" />
               Foto de Perfil
             </CardTitle>
@@ -331,7 +351,7 @@ export default function PlayerSettings() {
                   onChange={handleImageChange}
                   className="hidden"
                 />
-                <p className="text-sm text-muted-foreground text-center">
+                <p className="text-sm text-white/60 text-center">
                   Formatos soportados: JPG, PNG, GIF (máx. 5MB)
                 </p>
               </div>
@@ -340,9 +360,9 @@ export default function PlayerSettings() {
         </Card>
 
         {/* Información Personal */}
-        <Card>
+        <Card className="bg-white/30 backdrop-blur-md border border-white/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <User className="h-5 w-5" />
               Información Personal
             </CardTitle>

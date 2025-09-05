@@ -68,24 +68,24 @@ export default function Sidebar() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+    <div className="flex flex-col h-full bg-black/20 backdrop-blur-md text-white border-r border-white/20">
       {/* Logo and Brand */}
-      <div className="p-4 md:p-6 border-b border-sidebar-border">
+      <div className="p-4 md:p-6 border-b border-white/20">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Gamepad2 className="text-sidebar-primary-foreground text-sm md:text-lg" />
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/30">
+            <Gamepad2 className="text-white text-sm md:text-lg" />
           </div>
           <div>
-            <h1 className="text-lg md:text-xl font-bold">GolManager</h1>
-            <p className="text-xs md:text-sm text-sidebar-accent-foreground">Team Manager</p>
+            <h1 className="text-lg md:text-xl font-bold text-white">GolManager</h1>
+            <p className="text-xs md:text-sm text-white/70">Team Manager</p>
           </div>
         </div>
       </div>
 
       {/* User Profile */}
-      <div className="p-3 md:p-4 border-b border-sidebar-border">
+      <div className="p-3 md:p-4 border-b border-white/20">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-sidebar-accent rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
             {user?.profileImageUrl ? (
               <img 
                 src={user.profileImageUrl} 
@@ -94,14 +94,14 @@ export default function Sidebar() {
                 data-testid="user-profile-image"
               />
             ) : (
-              <Users className="text-sidebar-foreground text-sm md:text-base" />
+              <Users className="text-white text-sm md:text-base" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-sm md:text-base truncate" data-testid="user-name">
+            <p className="font-medium text-sm md:text-base truncate text-white" data-testid="user-name">
               {user?.firstName || user?.email || "Usuario"}
             </p>
-            <p className="text-xs md:text-sm text-sidebar-accent-foreground">
+            <p className="text-xs md:text-sm text-white/70">
               {user?.role === "admin" ? "Admin" : "Usuario"}
             </p>
           </div>
@@ -121,8 +121,8 @@ export default function Sidebar() {
                 variant="ghost"
                 className={`w-full justify-start mb-1 md:mb-2 h-10 md:h-auto text-sm md:text-base ${
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
                 }`}
                 onClick={() => handleNavigation(item.href)}
                 data-testid={`nav-${item.href.replace('/', '') || 'home'}`}
@@ -136,10 +136,10 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout Button */}
-      <div className="mt-auto p-3 md:p-4 border-t border-sidebar-border">
+      <div className="mt-auto p-3 md:p-4 border-t border-white/20">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 md:h-auto text-sm md:text-base"
+          className="w-full justify-start text-white/80 hover:bg-white/10 hover:text-white h-10 md:h-auto text-sm md:text-base"
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
           data-testid="button-logout"

@@ -22,15 +22,25 @@ export default function TeamView() {
   const upcomingMatches = matches?.filter((m: any) => m.status === 'scheduled') || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700">
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundColor: '#2d5016',
+        backgroundImage: "url('/attached_assets/stadium-background.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/15" />
       {/* Header */}
-      <div className="bg-blue-900 text-white p-4">
+      <div className="relative bg-black/20 backdrop-blur-md border-b border-white/20 text-white p-4">
         <div className="flex items-center space-x-4">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => setLocation('/')}
-            className="text-white hover:bg-blue-800"
+            className="text-white hover:bg-white/10"
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -40,9 +50,9 @@ export default function TeamView() {
       </div>
 
       {/* Team Info */}
-      <div className="bg-blue-800 text-white p-6 text-center">
+      <div className="relative bg-white/20 backdrop-blur-md border-b border-white/20 text-white p-6 text-center">
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-20 h-20 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white font-bold text-xl border border-white/30">
             GFC
           </div>
           <h2 className="text-2xl font-bold" data-testid="team-name">
@@ -52,11 +62,11 @@ export default function TeamView() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-blue-600 flex">
+      <div className="relative bg-white/10 backdrop-blur-sm border-b border-white/20 flex">
         <Button
           variant="ghost"
           className={`flex-1 py-4 text-white font-medium rounded-none ${
-            activeTab === 'players' ? 'bg-blue-500' : 'hover:bg-blue-700'
+            activeTab === 'players' ? 'bg-white/20 backdrop-blur-sm border-t-2 border-white/50' : 'hover:bg-white/10'
           }`}
           onClick={() => setActiveTab('players')}
           data-testid="tab-players"
@@ -67,7 +77,7 @@ export default function TeamView() {
         <Button
           variant="ghost"
           className={`flex-1 py-4 text-white font-medium rounded-none ${
-            activeTab === 'matches' ? 'bg-blue-500' : 'hover:bg-blue-700'
+            activeTab === 'matches' ? 'bg-white/20 backdrop-blur-sm border-t-2 border-white/50' : 'hover:bg-white/10'
           }`}
           onClick={() => setActiveTab('matches')}
           data-testid="tab-matches"
@@ -78,7 +88,7 @@ export default function TeamView() {
       </div>
 
       {/* Content */}
-      <div className="container mx-auto p-4">
+      <div className="relative container mx-auto p-4">
         {activeTab === 'players' && (
           <div className="space-y-4">
             {playersLoading ? (
@@ -96,7 +106,7 @@ export default function TeamView() {
                 {activePlayersList.map((player: any) => (
                   <Card 
                     key={player.id} 
-                    className="text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="text-center cursor-pointer hover:bg-white/20 transition-colors bg-white/30 backdrop-blur-md border border-white/20 text-white"
                     onClick={() => alert(`Jugador: ${player.name}\nPosición: ${player.position}\nDorsal: #${player.jerseyNumber || 'N/A'}\nEmail: ${player.email || 'N/A'}`)}
                     data-testid={`card-player-${player.id}`}
                   >
@@ -119,10 +129,10 @@ export default function TeamView() {
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-sm" data-testid={`player-name-${player.id}`}>
+                          <p className="font-medium text-sm text-white" data-testid={`player-name-${player.id}`}>
                             {player.name.split(' ').slice(0, 2).join(' ')}
                           </p>
-                          <p className="text-xs text-gray-600" data-testid={`player-position-${player.id}`}>
+                          <p className="text-xs text-white/70" data-testid={`player-position-${player.id}`}>
                             {player.position}
                           </p>
                         </div>
@@ -148,7 +158,7 @@ export default function TeamView() {
               </div>
             ) : upcomingMatches.length > 0 ? (
               upcomingMatches.map((match: any) => (
-                <Card key={match.id}>
+                <Card key={match.id} className="bg-white/30 backdrop-blur-md border border-white/20 text-white">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -162,10 +172,10 @@ export default function TeamView() {
                           </div>
                         </div>
                         <div className="mt-3">
-                          <p className="font-medium" data-testid={`match-opponent-${match.id}`}>
+                          <p className="font-medium text-white" data-testid={`match-opponent-${match.id}`}>
                             vs {match.opponent}
                           </p>
-                          <p className="text-sm text-gray-600" data-testid={`match-datetime-${match.id}`}>
+                          <p className="text-sm text-white/70" data-testid={`match-datetime-${match.id}`}>
                             {new Date(match.date).toLocaleDateString('es-ES', {
                               weekday: 'long',
                               day: '2-digit',
@@ -174,16 +184,16 @@ export default function TeamView() {
                               minute: '2-digit'
                             })}
                           </p>
-                          <p className="text-sm text-gray-600" data-testid={`match-venue-${match.id}`}>
+                          <p className="text-sm text-white/70" data-testid={`match-venue-${match.id}`}>
                             📍 {match.venue}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline" data-testid={`match-competition-${match.id}`}>
+                        <Badge variant="outline" className="bg-white/20 text-white border-white/30" data-testid={`match-competition-${match.id}`}>
                           {match.competition}
                         </Badge>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-white/60 mt-1">
                           {match.status === 'scheduled' ? 'Programado' : match.status}
                         </p>
                       </div>
@@ -192,10 +202,10 @@ export default function TeamView() {
                 </Card>
               ))
             ) : (
-              <Card>
+              <Card className="bg-white/30 backdrop-blur-md border border-white/20">
                 <CardContent className="p-8 text-center">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500">No hay partidos programados</p>
+                  <Calendar className="w-12 h-12 mx-auto mb-3 text-white/50" />
+                  <p className="text-white/70">No hay partidos programados</p>
                 </CardContent>
               </Card>
             )}

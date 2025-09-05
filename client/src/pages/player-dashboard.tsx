@@ -34,8 +34,18 @@ export default function PlayerDashboard() {
 
   if (playerLoading || teamConfigLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-700 to-green-600">
-        <div className="container mx-auto p-4 space-y-6">
+      <div 
+        className="min-h-screen relative"
+        style={{
+          backgroundColor: '#2d5016',
+          backgroundImage: "url('/attached_assets/stadium-background.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/15" />
+        <div className="relative container mx-auto p-4 space-y-6">
           <Skeleton className="h-48 w-full" />
           <div className="grid grid-cols-2 gap-4">
             <Skeleton className="h-24" />
@@ -61,7 +71,7 @@ export default function PlayerDashboard() {
         backgroundColor: '#2d5016', // Fallback color
         backgroundImage: `
           linear-gradient(135deg, ${primaryColor}40 0%, ${primaryColor}20 50%, transparent 100%),
-          url('${(teamConfig?.backgroundImageUrl && teamConfig.backgroundImageUrl.trim() && (teamConfig.backgroundImageUrl.startsWith('http://') || teamConfig.backgroundImageUrl.startsWith('https://'))) ? teamConfig.backgroundImageUrl : 'https://images.unsplash.com/photo-1574263867128-4d0d8dfaeb48?q=80&w=2070&auto=format&fit=crop'}')
+          url('${(teamConfig?.backgroundImageUrl && teamConfig.backgroundImageUrl.trim()) ? teamConfig.backgroundImageUrl : '/attached_assets/stadium-background.png'}')
         `,
         backgroundSize: 'cover, cover',
         backgroundPosition: 'center, center',
@@ -69,7 +79,7 @@ export default function PlayerDashboard() {
       }}
     >
       {/* Overlay adicional para mejor contraste */}
-      <div className="absolute inset-0 bg-black/10" />
+      <div className="absolute inset-0 bg-black/15" />
       
       {/* Header con efecto de estadio */}
       <div className="relative overflow-hidden">
