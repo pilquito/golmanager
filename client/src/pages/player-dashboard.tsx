@@ -129,7 +129,7 @@ export default function PlayerDashboard() {
 
             {/* Perfil del jugador */}
             <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 w-full max-w-sm border border-white/20">
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col items-center text-center space-y-3">
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30">
                   {(user as any)?.profileImageUrl ? (
                     <img 
@@ -142,14 +142,14 @@ export default function PlayerDashboard() {
                     <User className="w-8 h-8 text-white" />
                   )}
                 </div>
-                <div className="text-left">
+                <div>
                   <h2 className="text-lg font-bold" data-testid="player-name">
                     {`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim() || "Jugador"}
                   </h2>
                   <p className="text-white/80 text-sm" data-testid="player-nickname">
                     {playerInfo?.tagline || 'Deportista'}
                   </p>
-                  <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex items-center justify-center space-x-2 mt-2">
                     <Badge 
                       variant="outline" 
                       className="text-xs bg-white/20 text-white border-white/30"

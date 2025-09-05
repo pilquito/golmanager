@@ -140,9 +140,14 @@ export default function Configuration() {
       const uploadedFile = result.successful[0];
       // Use the object path returned by the server
       form.setValue("logoUrl", uploadedFile.objectPath);
+      // Automatically save just the logo URL to avoid validation issues
+      updateMutation.mutate({
+        ...form.getValues(),
+        logoUrl: uploadedFile.objectPath
+      });
       toast({
         title: "Logo subido",
-        description: "El logo se ha subido correctamente",
+        description: "Guardando configuración...",
       });
     }
   };
@@ -152,9 +157,14 @@ export default function Configuration() {
       const uploadedFile = result.successful[0];
       // Use the object path returned by the server
       form.setValue("backgroundImageUrl", uploadedFile.objectPath);
+      // Automatically save just the background URL to avoid validation issues
+      updateMutation.mutate({
+        ...form.getValues(),
+        backgroundImageUrl: uploadedFile.objectPath
+      });
       toast({
         title: "Imagen de fondo subida",
-        description: "La imagen de fondo se ha subido correctamente",
+        description: "Guardando configuración...",
       });
     }
   };
@@ -265,6 +275,20 @@ export default function Configuration() {
                             <Upload className="h-4 w-4 mr-2" />
                             Subir Logo
                           </ObjectUploader>
+                          {field.value && (
+                            <div className="flex items-center space-x-2 p-2 bg-muted rounded-md">
+                              <img 
+                                src={field.value} 
+                                alt="Vista previa del logo" 
+                                className="w-8 h-8 rounded object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              <span className="text-sm text-muted-foreground">Logo actual</span>
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Formatos soportados: PNG, JPG, SVG (máx. 5MB)
@@ -311,6 +335,20 @@ export default function Configuration() {
                               Usar por defecto
                             </Button>
                           </div>
+                          {field.value && (
+                            <div className="flex items-center space-x-2 p-2 bg-muted rounded-md">
+                              <img 
+                                src={field.value} 
+                                alt="Vista previa del fondo" 
+                                className="w-12 h-8 rounded object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              <span className="text-sm text-muted-foreground">Imagen de fondo actual</span>
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Usa imágenes de estadios o campos de fútbol para mejor apariencia. (máx. 10MB)
