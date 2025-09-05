@@ -163,7 +163,7 @@ export default function PlayerDashboard() {
                   <div className="flex items-center justify-center space-x-2 mt-2">
                     <Badge 
                       variant="outline" 
-                      className="text-xs bg-gradient-to-r from-orange-400/30 to-red-400/30 text-white border-orange-300/50 shadow-sm"
+                      className="text-xs bg-gradient-to-r from-orange-500/30 to-red-500/30 text-white border-orange-300/50 shadow-sm"
                       data-testid="player-position"
                     >
                       {(playerData as any)?.position || "Sin posición"}
@@ -171,7 +171,7 @@ export default function PlayerDashboard() {
                     {playerInfo?.jerseyNumber && (
                       <Badge 
                         variant="outline" 
-                        className="text-xs bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border-blue-300/50 shadow-sm"
+                        className="text-xs bg-gradient-to-r from-blue-500/30 to-pink-500/30 text-white border-blue-300/50 shadow-sm"
                         data-testid="player-number"
                       >
                         #{playerInfo.jerseyNumber}
@@ -190,7 +190,7 @@ export default function PlayerDashboard() {
         {/* Stats Cards con estilo futbolero */}
         <div className="grid grid-cols-3 gap-3">
           {/* Pagos Pendientes */}
-          <Card className="bg-gradient-to-br from-red-500/40 to-pink-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-red-500/40 to-orange-500/40 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
                 <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
@@ -207,7 +207,7 @@ export default function PlayerDashboard() {
           </Card>
 
           {/* Partidos Totales */}
-          <Card className="bg-gradient-to-br from-blue-500/40 to-cyan-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-600/40 to-blue-500/40 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
                 <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
@@ -224,7 +224,7 @@ export default function PlayerDashboard() {
           </Card>
 
           {/* Rendimiento (placeholder) */}
-          <Card className="bg-gradient-to-br from-green-500/40 to-emerald-500/40 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card className="bg-gradient-to-br from-pink-500/40 to-rose-500/40 backdrop-blur-md border border-white/20 shadow-lg">
             <CardContent className="p-3 text-center text-white">
               <div className="flex flex-col items-center space-y-1">
                 <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center shadow-md">
@@ -271,7 +271,7 @@ export default function PlayerDashboard() {
             <CardContent className="space-y-3">
               <Button 
                 variant="ghost" 
-                className="w-full justify-between h-12 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20 transition-all duration-300"
+                className="w-full justify-between h-12 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-pink-500/20 transition-all duration-300"
                 data-testid="button-classification"
               >
                 <span>Clasificación</span>
@@ -279,7 +279,7 @@ export default function PlayerDashboard() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="w-full justify-between h-12 hover:bg-gradient-to-r hover:from-green-500/20 hover:to-emerald-500/20 transition-all duration-300"
+                className="w-full justify-between h-12 hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-red-500/20 transition-all duration-300"
                 data-testid="button-calendar"
               >
                 <span>Calendario</span>

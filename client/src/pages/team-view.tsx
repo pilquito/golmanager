@@ -207,10 +207,10 @@ export default function TeamView() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline" className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-white border-purple-300/30" data-testid={`match-competition-${match.id}`}>
+                        <Badge variant="outline" className="bg-gradient-to-r from-blue-500/20 to-pink-500/20 text-white border-blue-300/30" data-testid={`match-competition-${match.id}`}>
                           {match.competition}
                         </Badge>
-                        <p className="text-xs text-green-300 mt-1 font-medium">
+                        <p className="text-xs text-orange-300 mt-1 font-medium">
                           {match.status === 'scheduled' ? 'Programado' : match.status}
                         </p>
                       </div>
