@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +17,8 @@ import {
   LogOut,
   Gamepad2,
   BarChart3,
-  Wallet
+  Wallet,
+  Menu
 } from "lucide-react";
 
 const navigationItems = [
@@ -32,6 +35,7 @@ const navigationItems = [
 
 export default function Sidebar() {
   const [location, setLocation] = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -58,41 +62,46 @@ export default function Sidebar() {
     logoutMutation.mutate();
   };
 
-  return (
-    <div className="w-64 bg-sidebar text-sidebar-foreground flex-shrink-0">
+  const handleNavigation = (href: string) => {
+    setLocation(href);
+    setIsOpen(false);
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Logo and Brand */}
-      <div className="p-6 border-b border-sidebar-border">
+      <div className="p-4 md:p-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Gamepad2 className="text-sidebar-primary-foreground text-lg" />
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
+            <Gamepad2 className="text-sidebar-primary-foreground text-sm md:text-lg" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">GolManager</h1>
-            <p className="text-sm text-sidebar-accent-foreground">Team Manager</p>
+            <h1 className="text-lg md:text-xl font-bold">GolManager</h1>
+            <p className="text-xs md:text-sm text-sidebar-accent-foreground">Team Manager</p>
           </div>
         </div>
       </div>
 
       {/* User Profile */}
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="p-3 md:p-4 border-b border-sidebar-border">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-sidebar-accent rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-sidebar-accent rounded-full flex items-center justify-center">
             {user?.profileImageUrl ? (
               <img 
                 src={user.profileImageUrl} 
                 alt="Profile" 
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
                 data-testid="user-profile-image"
               />
             ) : (
-              <Users className="text-sidebar-foreground" />
+              <Users className="text-sidebar-foreground text-sm md:text-base" />
             )}
           </div>
-          <div>
-            <p className="font-medium" data-testid="user-name">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm md:text-base truncate" data-testid="user-name">
               {user?.firstName || user?.email || "Usuario"}
             </p>
-            <p className="text-sm text-sidebar-accent-foreground">
+            <p className="text-xs md:text-sm text-sidebar-accent-foreground">
               {user?.role === "admin" ? "Admin" : "Usuario"}
             </p>
           </div>
@@ -100,8 +109,8 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="mt-6">
-        <div className="px-4">
+      <nav className="flex-1 mt-4 md:mt-6">
+        <div className="px-3 md:px-4">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href;
@@ -110,33 +119,64 @@ export default function Sidebar() {
               <Button
                 key={item.href}
                 variant="ghost"
-                className={`w-full justify-start mb-2 ${
+                className={`w-full justify-start mb-1 md:mb-2 h-10 md:h-auto text-sm md:text-base ${
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
-                    : "text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
-                onClick={() => setLocation(item.href)}
-                data-testid={`nav-${item.href.replace("/", "") || "dashboard"}`}
+                onClick={() => handleNavigation(item.href)}
+                data-testid={`nav-${item.href.replace('/', '') || 'home'}`}
               >
-                <Icon className="w-5 h-5 mr-3" />
+                <Icon className="mr-2 md:mr-3 h-4 w-4" />
                 {item.label}
               </Button>
             );
           })}
         </div>
-        
-        <div className="mt-8 px-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-red-400 hover:bg-red-900/20 hover:text-red-300"
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Cerrar Sesión
-          </Button>
-        </div>
       </nav>
+
+      {/* Logout Button */}
+      <div className="mt-auto p-3 md:p-4 border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 md:h-auto text-sm md:text-base"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          data-testid="button-logout"
+        >
+          <LogOut className="mr-2 md:mr-3 h-4 w-4" />
+          {logoutMutation.isPending ? "Cerrando..." : "Cerrar Sesión"}
+        </Button>
+      </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Header with Hamburger */}
+      <div className="lg:hidden bg-sidebar border-b border-sidebar-border p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
+            <Gamepad2 className="text-sidebar-primary-foreground text-sm" />
+          </div>
+          <h1 className="text-lg font-bold text-sidebar-foreground">GolManager</h1>
+        </div>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-sidebar-foreground">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-80 p-0 bg-sidebar">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex w-64 bg-sidebar text-sidebar-foreground flex-shrink-0">
+        <SidebarContent />
+      </div>
+    </>
   );
 }

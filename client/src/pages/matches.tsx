@@ -478,14 +478,16 @@ export default function Matches() {
         </Dialog>
       </Header>
 
-      <main className="flex-1 overflow-auto bg-background p-6">
+      <main className="flex-1 overflow-auto bg-background p-3 md:p-6">
         <Card>
           <CardContent className="p-0">
-            <DataTable
-              columns={columns}
-              data={matches || []}
-              isLoading={isLoading}
-            />
+            <div className="overflow-x-auto">
+              <DataTable
+                columns={columns}
+                data={matches || []}
+                isLoading={isLoading}
+              />
+            </div>
           </CardContent>
         </Card>
       </main>

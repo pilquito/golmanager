@@ -53,23 +53,23 @@ export default function Dashboard() {
         </div>
       </Header>
 
-      <main className="flex-1 overflow-auto bg-background p-6">
+      <main className="flex-1 overflow-auto bg-background p-3 md:p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-muted-foreground text-sm">Jugadores</p>
-                  <p className="text-3xl font-bold text-foreground" data-testid="stat-total-players">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs md:text-sm">Jugadores</p>
+                  <p className="text-xl md:text-3xl font-bold text-foreground truncate" data-testid="stat-total-players">
                     {stats?.totalPlayers || 0}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1" data-testid="stat-active-players">
+                  <p className="text-xs text-muted-foreground mt-1 hidden md:block" data-testid="stat-active-players">
                     {stats?.activePlayers || 0} activos
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="text-blue-600 text-xl" />
+                <div className="w-8 h-8 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="text-blue-600 text-sm md:text-xl" />
                 </div>
               </div>
             </CardContent>

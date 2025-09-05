@@ -19,22 +19,24 @@ import AuthWrapper from "@/components/auth/auth-wrapper";
 
 function AuthenticatedApp() {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/players" component={Players} />
-          <Route path="/players/:id" component={PlayerProfile} />
-          <Route path="/matches" component={Matches} />
-          <Route path="/monthly-payments" component={MonthlyPayments} />
-          <Route path="/championship-payments" component={ChampionshipPayments} />
-          <Route path="/collection-balance" component={CollectionBalance} />
-          <Route path="/other-payments" component={OtherPayments} />
-          <Route path="/users" component={Users} />
-          <Route path="/configuration" component={Configuration} />
-          <Route component={NotFound} />
-        </Switch>
+        <main className="flex-1 overflow-y-auto">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/players" component={Players} />
+            <Route path="/players/:id" component={PlayerProfile} />
+            <Route path="/matches" component={Matches} />
+            <Route path="/monthly-payments" component={MonthlyPayments} />
+            <Route path="/championship-payments" component={ChampionshipPayments} />
+            <Route path="/collection-balance" component={CollectionBalance} />
+            <Route path="/other-payments" component={OtherPayments} />
+            <Route path="/users" component={Users} />
+            <Route path="/configuration" component={Configuration} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
       </div>
     </div>
   );
