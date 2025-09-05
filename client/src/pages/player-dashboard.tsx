@@ -47,7 +47,7 @@ export default function PlayerDashboard() {
   // Mutation para confirmar asistencia
   const confirmAttendanceMutation = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
-      return apiRequest("/api/attendances", "POST", {
+      return apiRequest("POST", "/api/attendances", {
         matchId,
         status,
       });
@@ -98,7 +98,8 @@ export default function PlayerDashboard() {
     onSettled: () => {
       // Refrescar data desde el servidor inmediatamente
       queryClient.invalidateQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
-      queryClient.refetchQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
+      // También invalidar data de admin para actualizar contadores
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances"] });
     },
   });
 
@@ -120,14 +121,15 @@ export default function PlayerDashboard() {
 
   // Función para verificar si ya confirmó asistencia para un partido
   const hasConfirmedAttendance = (matchId: string) => {
-    // Primero verificar el estado local (para mantener el botón verde)
-    if (confirmedMatches.has(matchId)) return true;
-    
-    // Luego verificar los datos del servidor
-    if (!userAttendances) return false;
-    return userAttendances.some((attendance: any) => 
+    // Verificar los datos del servidor (persiste después de refresh)
+    if (userAttendances && userAttendances.some((attendance: any) => 
       attendance.matchId === matchId && attendance.status === "confirmed"
-    );
+    )) {
+      return true;
+    }
+    
+    // También verificar el estado local (para respuesta inmediata)
+    return confirmedMatches.has(matchId);
   };
 
   if (playerLoading || teamConfigLoading) {
@@ -507,11 +509,11 @@ export default function PlayerDashboard() {
                     className="w-full mt-4 hover:opacity-90 transition-opacity" 
                     style={{ backgroundColor: primaryColor }}
                     onClick={() => handleConfirmAttendance(nextMatch)}
-                    disabled={confirmAttendanceMutation.isPending && confirmAttendanceMutation.variables?.matchId === nextMatch.id}
+                    disabled={confirmAttendanceMutation.isPending || hasConfirmedAttendance(nextMatch.id)}
                     data-testid="button-confirm-assistance"
                   >
                     <Award className="w-4 h-4 mr-2" />
-                    {(confirmAttendanceMutation.isPending && confirmAttendanceMutation.variables?.matchId === nextMatch.id) ? "Confirmando..." : "Confirmar Asistencia"}
+                    {confirmAttendanceMutation.isPending ? "Confirmando..." : "Confirmar Asistencia"}
                   </Button>
                 )}
               </div>

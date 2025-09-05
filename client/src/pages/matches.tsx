@@ -40,11 +40,11 @@ export default function Matches() {
 
   // Query para obtener todas las asistencias de todos los partidos
   const { data: allAttendances } = useQuery({
-    queryKey: ["/api/attendances"],
+    queryKey: ["/api/attendances", matches?.map((m: Match) => m.id) || []],
     queryFn: async () => {
       const promises = matches?.map(async (match: Match) => {
         try {
-          const response = await apiRequest(`/api/matches/${match.id}/attendances`, "GET");
+          const response = await apiRequest("GET", `/api/matches/${match.id}/attendances`);
           const attendances = await response.json();
           return { matchId: match.id, attendances };
         } catch {
