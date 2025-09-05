@@ -14,13 +14,15 @@ export default function PlayerDashboard() {
     enabled: !!user?.id,
   });
 
+  const playerInfo = playerData as any;
+
   const { data: upcomingMatches, isLoading: matchesLoading } = useQuery({
     queryKey: ["/api/matches"],
   });
 
   const { data: playerPayments, isLoading: paymentsLoading } = useQuery({
-    queryKey: [`/api/monthly-payments/player/${playerData?.id}`],
-    enabled: !!playerData?.id,
+    queryKey: [`/api/monthly-payments/player/${playerInfo?.id}`],
+    enabled: !!playerInfo?.id,
   });
 
   if (playerLoading) {
@@ -38,8 +40,8 @@ export default function PlayerDashboard() {
     );
   }
 
-  const pendingPayments = playerPayments?.filter((p: any) => p.status === 'pending') || [];
-  const nextMatches = upcomingMatches?.filter((m: any) => m.status === 'scheduled').slice(0, 3) || [];
+  const pendingPayments = (playerPayments as any)?.filter((p: any) => p.status === 'pending') || [];
+  const nextMatches = (upcomingMatches as any)?.filter((m: any) => m.status === 'scheduled').slice(0, 3) || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-700">
@@ -47,9 +49,9 @@ export default function PlayerDashboard() {
       <div className="bg-blue-900 text-white p-6 text-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-            {playerData?.profileImageUrl ? (
+            {playerInfo?.profileImageUrl ? (
               <img 
-                src={playerData.profileImageUrl} 
+                src={playerInfo.profileImageUrl} 
                 alt="Profile" 
                 className="w-24 h-24 rounded-full object-cover"
                 data-testid="player-profile-image"
@@ -60,13 +62,13 @@ export default function PlayerDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold" data-testid="player-name">
-              {playerData?.name || user?.firstName || "Jugador"}
+              {playerInfo?.name || user?.firstName || "Jugador"}
             </h1>
             <p className="text-blue-200 text-sm" data-testid="player-age">
-              {playerData?.age ? `${playerData.age} años` : ""}
+              {playerInfo?.age ? `${playerInfo.age} años` : ""}
             </p>
             <p className="text-blue-300 font-medium" data-testid="player-nickname">
-              "{playerData?.nickname || 'Deportista'}"
+              "{playerInfo?.nickname || 'Deportista'}"
             </p>
           </div>
         </div>

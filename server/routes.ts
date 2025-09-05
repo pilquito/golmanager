@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const validatedData = insertUserSchema.parse(req.body);
+      const validatedData = req.body;
       const user = await storage.createUser(validatedData);
       const { password, ...userWithoutPassword } = user as any;
       res.status(201).json(userWithoutPassword);
@@ -81,6 +81,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating user:", error);
       res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Change password endpoint
+  app.post('/api/auth/change-password', isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      const success = await storage.changePassword(currentUser.id, currentPassword, newPassword);
+      if (!success) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
 
@@ -404,6 +426,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/users/:id", isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      const userId = req.params.id;
+      
+      // Users can only update their own profile (unless admin)
+      if (currentUser.role !== "admin" && currentUser.id !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updatedUser = await storage.updateUser(userId, req.body);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser as any;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 

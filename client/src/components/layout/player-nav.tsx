@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, Users, LogOut } from "lucide-react";
+import { Home, Users, LogOut, Settings } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +34,7 @@ export default function PlayerNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div className="grid grid-cols-3 h-16">
+      <div className="grid grid-cols-4 h-16">
         <Button
           variant="ghost"
           className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
@@ -57,6 +57,18 @@ export default function PlayerNav() {
         >
           <Users className="w-5 h-5" />
           <span className="text-xs">Equipo</span>
+        </Button>
+        
+        <Button
+          variant="ghost"
+          className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
+            location === "/settings" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+          }`}
+          onClick={() => setLocation("/settings")}
+          data-testid="nav-settings"
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-xs">Perfil</span>
         </Button>
         
         <Button

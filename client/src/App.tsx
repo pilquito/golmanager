@@ -16,6 +16,7 @@ import Configuration from "@/pages/configuration";
 import PlayerProfile from "@/pages/player-profile";
 import PlayerDashboard from "@/pages/player-dashboard";
 import TeamView from "@/pages/team-view";
+import PlayerSettings from "@/pages/player-settings";
 import CreatePlayersBatch from "@/pages/create-players-batch";
 import FixPlayersUsers from "@/pages/fix-players-users";
 import Sidebar from "@/components/layout/sidebar";
@@ -34,6 +35,7 @@ function AuthenticatedApp() {
         <Switch>
           <Route path="/" component={PlayerDashboard} />
           <Route path="/team" component={TeamView} />
+          <Route path="/settings" component={PlayerSettings} />
           <Route component={() => <PlayerDashboard />} />
         </Switch>
         <PlayerNav />
