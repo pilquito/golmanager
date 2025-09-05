@@ -221,16 +221,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlayerByUserId(userId: string): Promise<Player | undefined> {
-    // First get the user to get their username
+    // First get the user to get their email
     const user = await this.getUser(userId);
-    if (!user) return undefined;
+    if (!user || !user.email) return undefined;
     
-    // Find player by matching the generated username pattern (name -> username)
+    // Find player by matching email
     const allPlayers = await this.getPlayers();
-    const player = allPlayers.find(p => {
-      const expectedUsername = p.name.toLowerCase().replace(/\s+/g, '.');
-      return expectedUsername === user.username;
-    });
+    const player = allPlayers.find(p => 
+      p.email && p.email.toLowerCase() === user.email!.toLowerCase()
+    );
     
     return player;
   }

@@ -647,9 +647,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = req.user as any;
       const userId = currentUser?.claims?.sub || currentUser?.id;
       
+      // Find the player associated with this user
+      const player = await storage.getPlayerByUserId(userId);
+      if (!player) {
+        return res.status(404).json({ message: "Player profile not found for this user" });
+      }
+      
       const validatedData = insertMatchAttendanceSchema.parse({
         ...req.body,
-        userId: userId
+        userId: player.id // Use player ID, not user ID
       });
       
       const attendance = await storage.createOrUpdateAttendance(validatedData);

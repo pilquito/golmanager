@@ -38,12 +38,11 @@ export default function PlayerDashboard() {
 
   // Mutation para confirmar asistencia
   const confirmAttendanceMutation = useMutation({
-    mutationFn: async ({ matchId, playerId, status }: { matchId: string; playerId: string; status: string }) => {
+    mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
       return apiRequest("/api/attendances", {
         method: "POST",
         body: JSON.stringify({
           matchId,
-          playerId,
           status,
         }),
       });
@@ -67,10 +66,10 @@ export default function PlayerDashboard() {
   });
 
   const handleConfirmAttendance = (match: any) => {
-    if (!playerInfo?.id) {
+    if (!user?.id) {
       toast({
         title: "Error",
-        description: "No se pudo encontrar tu perfil de jugador.",
+        description: "Debes estar autenticado para confirmar asistencia.",
         variant: "destructive",
       });
       return;
@@ -78,7 +77,6 @@ export default function PlayerDashboard() {
     
     confirmAttendanceMutation.mutate({
       matchId: match.id,
-      playerId: playerInfo.id,
       status: "confirmed",
     });
   };
