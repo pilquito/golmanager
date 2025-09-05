@@ -12,6 +12,8 @@ export default function PlayerDashboard() {
   const { data: playerData, isLoading: playerLoading } = useQuery({
     queryKey: [`/api/players/user/${user?.id}`],
     enabled: !!user?.id,
+    refetchInterval: 2000, // Refetch every 2 seconds
+    staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
