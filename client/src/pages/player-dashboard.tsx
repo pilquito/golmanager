@@ -221,25 +221,25 @@ export default function PlayerDashboard() {
         </div>
 
         {/* Estadísticas del jugador */}
-        <Card className="bg-white/70 backdrop-blur-md border border-white/30 shadow-lg">
+        <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-gray-800">
+            <CardTitle className="flex items-center space-x-2 text-white">
               <Trophy className="w-5 h-5" />
               <span>Estadísticas de jugador</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <div className="text-center py-8 text-white/70">
+              <Trophy className="w-12 h-12 mx-auto mb-3 text-white/50" />
               <p>No hay datos para mostrar</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Mi competición */}
-        <Card className="bg-white/70 backdrop-blur-md border border-white/30 shadow-lg">
+        <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-gray-800">
+            <CardTitle className="flex items-center space-x-2 text-white">
               <Users className="w-5 h-5" />
               <span>Mi competición</span>
             </CardTitle>
@@ -267,7 +267,7 @@ export default function PlayerDashboard() {
         {/* PRÓXIMO PARTIDO - Solo el siguiente */}
         {nextMatch ? (
           <Card 
-            className="relative overflow-hidden backdrop-blur-lg bg-white/20 border border-white/30 shadow-xl"
+            className="relative overflow-hidden backdrop-blur-md bg-white/30 border border-white/20 shadow-lg"
           >
             <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
@@ -277,7 +277,7 @@ export default function PlayerDashboard() {
             </div>
             
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center space-x-2 text-lg">
+              <CardTitle className="flex items-center space-x-2 text-lg text-white">
                 <div 
                   className="w-6 h-6 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: primaryColor }}
@@ -299,17 +299,17 @@ export default function PlayerDashboard() {
                   >
                     {teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
                   </div>
-                  <p className="text-sm font-medium text-center">
+                  <p className="text-sm font-medium text-center text-white">
                     {teamConfig?.teamName || "Mi Equipo"}
                   </p>
                 </div>
                 
                 {/* VS */}
                 <div className="flex flex-col items-center space-y-2">
-                  <div className="text-2xl font-bold text-gray-600">VS</div>
+                  <div className="text-2xl font-bold text-white">VS</div>
                   <Badge 
                     variant="outline" 
-                    className="text-xs"
+                    className="text-xs bg-white/20 text-white border-white/30"
                     data-testid={`match-competition-${nextMatch.id}`}
                   >
                     {nextMatch.competition}
@@ -321,7 +321,7 @@ export default function PlayerDashboard() {
                   <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-xs shadow-lg">
                     {nextMatch.opponent.substring(0, 3).toUpperCase()}
                   </div>
-                  <p className="text-sm font-medium text-center" data-testid={`match-opponent-${nextMatch.id}`}>
+                  <p className="text-sm font-medium text-center text-white" data-testid={`match-opponent-${nextMatch.id}`}>
                     {nextMatch.opponent}
                   </p>
                 </div>
@@ -331,8 +331,8 @@ export default function PlayerDashboard() {
               <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 space-y-3 border border-white/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium" data-testid={`match-date-${nextMatch.id}`}>
+                    <Calendar className="w-4 h-4 text-white/70" />
+                    <span className="text-sm font-medium text-white" data-testid={`match-date-${nextMatch.id}`}>
                       {new Date(nextMatch.date).toLocaleDateString('es-ES', {
                         weekday: 'long',
                         day: '2-digit',
@@ -340,7 +340,7 @@ export default function PlayerDashboard() {
                       })}
                     </span>
                   </div>
-                  <span className="text-lg font-bold">
+                  <span className="text-lg font-bold text-white">
                     {new Date(nextMatch.date).toLocaleTimeString('es-ES', {
                       hour: '2-digit',
                       minute: '2-digit'
@@ -349,8 +349,8 @@ export default function PlayerDashboard() {
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm" data-testid={`match-venue-${nextMatch.id}`}>
+                  <Users className="w-4 h-4 text-white/70" />
+                  <span className="text-sm text-white" data-testid={`match-venue-${nextMatch.id}`}>
                     {nextMatch.venue || "Por confirmar"}
                   </span>
                 </div>
@@ -368,18 +368,18 @@ export default function PlayerDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="text-center py-8">
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg text-center py-8">
             <CardContent>
-              <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">No hay partidos programados</p>
+              <Calendar className="w-12 h-12 mx-auto mb-3 text-white/50" />
+              <p className="text-white/70">No hay partidos programados</p>
             </CardContent>
           </Card>
         )}
 
         {/* Pagos pendientes */}
-        <Card>
+        <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-orange-600">
+            <CardTitle className="text-orange-200">
               Pagos Pendientes ({pendingPayments.length})
             </CardTitle>
           </CardHeader>
@@ -387,33 +387,33 @@ export default function PlayerDashboard() {
             {pendingPayments.length > 0 ? (
               <>
                 {pendingPayments.map((payment: any) => (
-                  <div key={payment.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div key={payment.id} className="flex items-center justify-between p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
                     <div>
-                      <p className="font-medium" data-testid={`payment-month-${payment.id}`}>
+                      <p className="font-medium text-white" data-testid={`payment-month-${payment.id}`}>
                         {payment.month}
                       </p>
-                      <p className="text-sm text-gray-600" data-testid={`payment-due-${payment.id}`}>
+                      <p className="text-sm text-white/70" data-testid={`payment-due-${payment.id}`}>
                         Vence: {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString('es-ES') : 'Sin fecha'}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-orange-600" data-testid={`payment-amount-${payment.id}`}>
+                      <p className="font-bold text-orange-200" data-testid={`payment-amount-${payment.id}`}>
                         €{parseFloat(payment.amount).toFixed(2)}
                       </p>
-                      <Badge variant="secondary">Pendiente</Badge>
+                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30">Pendiente</Badge>
                     </div>
                   </div>
                 ))}
               </>
             ) : (
-              <p className="text-green-600 text-center py-4">
+              <p className="text-green-200 text-center py-4">
                 ¡No tienes pagos pendientes!
               </p>
             )}
-            <div className="pt-3 border-t">
+            <div className="pt-3 border-t border-white/20">
               <button 
                 onClick={() => window.location.href = '/payments-history'}
-                className="w-full text-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="w-full text-center text-blue-200 hover:text-blue-100 text-sm font-medium"
                 data-testid="button-view-payment-history"
               >
                 Ver historial completo de pagos →
