@@ -36,6 +36,12 @@ export default function PlayerDashboard() {
     queryKey: ["/api/team-config"],
   });
 
+  // Query para verificar si ya confirmó asistencia
+  const { data: userAttendances } = useQuery({
+    queryKey: [`/api/attendances/user/${user?.id}`],
+    enabled: !!user?.id,
+  });
+
   // Mutation para confirmar asistencia
   const confirmAttendanceMutation = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
@@ -49,7 +55,8 @@ export default function PlayerDashboard() {
         title: "¡Asistencia confirmada!",
         description: "Tu asistencia al partido ha sido registrada exitosamente.",
       });
-      // Invalidar queries relacionadas si es necesario
+      // Invalidar queries para actualizar el estado del botón
+      queryClient.invalidateQueries({ queryKey: [`/api/attendances/user/${user?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/attendances"] });
     },
     onError: (error) => {
@@ -76,6 +83,13 @@ export default function PlayerDashboard() {
       matchId: match.id,
       status: "confirmed",
     });
+  };
+
+  // Función para verificar si ya confirmó asistencia para un partido
+  const hasConfirmedAttendance = (matchId: string) => {
+    return userAttendances?.some((attendance: any) => 
+      attendance.matchId === matchId && attendance.status === "confirmed"
+    ) || false;
   };
 
   if (playerLoading || teamConfigLoading) {
@@ -440,16 +454,28 @@ export default function PlayerDashboard() {
                 </div>
                 
                 {/* Botón de confirmación funcional */}
-                <Button 
-                  className="w-full mt-4 hover:opacity-90 transition-opacity" 
-                  style={{ backgroundColor: primaryColor }}
-                  onClick={() => handleConfirmAttendance(nextMatch)}
-                  disabled={confirmAttendanceMutation.isPending}
-                  data-testid="button-confirm-assistance"
-                >
-                  <Award className="w-4 h-4 mr-2" />
-                  {confirmAttendanceMutation.isPending ? "Confirmando..." : "Confirmar Asistencia"}
-                </Button>
+                {hasConfirmedAttendance(nextMatch.id) ? (
+                  <Button 
+                    className="w-full mt-4" 
+                    style={{ backgroundColor: '#10b981' }}
+                    disabled
+                    data-testid="button-attendance-confirmed"
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    ¡Asistencia Confirmada!
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full mt-4 hover:opacity-90 transition-opacity" 
+                    style={{ backgroundColor: primaryColor }}
+                    onClick={() => handleConfirmAttendance(nextMatch)}
+                    disabled={confirmAttendanceMutation.isPending}
+                    data-testid="button-confirm-assistance"
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    {confirmAttendanceMutation.isPending ? "Confirmando..." : "Confirmar Asistencia"}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
