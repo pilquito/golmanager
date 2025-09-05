@@ -233,62 +233,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clean ALL duplicate players in the system - EXECUTE IMMEDIATELY
-  app.post("/api/players/cleanup-now", async (req, res) => {
+  // NUCLEAR OPTION - DELETE ALL OSCAR MARTÍN
+  app.post("/api/players/nuke-oscar", async (req, res) => {
     try {
+      console.log(`💥 NUCLEAR CLEANUP INITIATED`);
+      
       const allPlayers = await storage.getPlayers();
-      console.log(`🧹 STARTING IMMEDIATE CLEANUP - Total players: ${allPlayers.length}`);
+      const oscarCount = allPlayers.filter(p => p.name === "Oscar Martín").length;
+      console.log(`Found ${oscarCount} Oscar Martín players - DELETING ALL`);
       
-      // Find all Oscar Martín duplicates specifically
-      const oscarDuplicates = allPlayers.filter(p => p.name === "Oscar Martín");
-      console.log(`Found ${oscarDuplicates.length} Oscar Martín players`);
-      
-      if (oscarDuplicates.length > 1) {
-        // Keep the most recent one, delete the rest
-        const sorted = oscarDuplicates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        const toKeep = sorted[0];
-        const toDelete = sorted.slice(1);
-        
-        console.log(`🔥 DELETING ${toDelete.length} Oscar Martín duplicates, keeping ${toKeep.id}`);
-        
-        for (const player of toDelete) {
+      let deleted = 0;
+      for (const player of allPlayers) {
+        if (player.name === "Oscar Martín") {
           await storage.deletePlayer(player.id);
-          console.log(`💀 DELETED: ${player.id} - ${player.name}`);
-        }
-      }
-      
-      // Also clean any other duplicates
-      const groupedByName = allPlayers.reduce((groups, player) => {
-        const name = player.name;
-        if (!groups[name]) groups[name] = [];
-        groups[name].push(player);
-        return groups;
-      }, {} as Record<string, any[]>);
-      
-      let totalDeleted = 0;
-      for (const [name, players] of Object.entries(groupedByName)) {
-        if (players.length > 1 && name !== "Oscar Martín") {
-          const sorted = players.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-          const toDelete = sorted.slice(1);
-          
-          for (const player of toDelete) {
-            await storage.deletePlayer(player.id);
-            totalDeleted++;
-            console.log(`💀 DELETED OTHER: ${player.id} - ${player.name}`);
-          }
+          deleted++;
+          console.log(`💀 NUKED: ${player.id} - ${player.name} - Jersey: ${player.jerseyNumber}`);
         }
       }
       
       const remaining = await storage.getPlayers();
-      console.log(`✅ CLEANUP COMPLETE - Remaining players: ${remaining.length}`);
+      const oscarRemaining = remaining.filter(p => p.name === "Oscar Martín").length;
+      
+      console.log(`✅ NUCLEAR CLEANUP COMPLETE:`);
+      console.log(`   - Deleted: ${deleted} Oscar Martín players`);
+      console.log(`   - Remaining Oscar Martín: ${oscarRemaining}`);
+      console.log(`   - Total players left: ${remaining.length}`);
       
       res.json({ 
-        message: `All duplicates deleted! Oscar Martín copies removed.`,
-        totalAfter: remaining.length
+        message: `NUCLEAR CLEANUP: Deleted ${deleted} Oscar Martín players`,
+        deleted,
+        oscarRemaining,
+        totalRemaining: remaining.length
       });
     } catch (error) {
-      console.error("❌ CLEANUP ERROR:", error);
-      res.status(500).json({ message: "Failed" });
+      console.error("❌ NUCLEAR CLEANUP ERROR:", error);
+      res.status(500).json({ message: "Nuclear cleanup failed" });
     }
   });
 
