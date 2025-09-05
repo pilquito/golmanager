@@ -645,27 +645,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/attendances", isAuthenticated, async (req, res) => {
     try {
       const currentUser = req.user as any;
-      const userId = currentUser?.claims?.sub || currentUser?.id;
+      const userId = currentUser?.id;
+      
+      console.log('User ID:', userId);
+      console.log('Request body:', req.body);
       
       // Find the player associated with this user
       const player = await storage.getPlayerByUserId(userId);
       if (!player) {
+        console.log('No player found for user:', userId);
         return res.status(404).json({ message: "Player profile not found for this user" });
       }
       
-      const validatedData = insertMatchAttendanceSchema.parse({
-        ...req.body,
-        userId: player.id // Use player ID directly
-      });
+      console.log('Player found:', player.id);
       
-      const attendance = await storage.createOrUpdateAttendance(validatedData);
+      const attendanceData = {
+        matchId: req.body.matchId,
+        status: req.body.status,
+        userId: player.id
+      };
+      
+      console.log('Creating attendance with data:', attendanceData);
+      
+      const attendance = await storage.createOrUpdateAttendance(attendanceData);
       res.status(201).json(attendance);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid attendance data", errors: error.errors });
-      }
       console.error("Error creating attendance:", error);
-      res.status(500).json({ message: "Failed to create attendance" });
+      res.status(500).json({ message: "Failed to create attendance", error: error.message });
     }
   });
 
