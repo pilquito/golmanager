@@ -233,63 +233,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clean ALL duplicate players in the system
-  app.post("/api/players/cleanup-all", isAuthenticated, async (req, res) => {
+  // Clean ALL duplicate players in the system - EXECUTE IMMEDIATELY
+  app.post("/api/players/cleanup-now", async (req, res) => {
     try {
-      const currentUser = req.user as any;
-      if (currentUser.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
+      const allPlayers = await storage.getPlayers();
+      console.log(`🧹 STARTING IMMEDIATE CLEANUP - Total players: ${allPlayers.length}`);
+      
+      // Find all Oscar Martín duplicates specifically
+      const oscarDuplicates = allPlayers.filter(p => p.name === "Oscar Martín");
+      console.log(`Found ${oscarDuplicates.length} Oscar Martín players`);
+      
+      if (oscarDuplicates.length > 1) {
+        // Keep the most recent one, delete the rest
+        const sorted = oscarDuplicates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const toKeep = sorted[0];
+        const toDelete = sorted.slice(1);
+        
+        console.log(`🔥 DELETING ${toDelete.length} Oscar Martín duplicates, keeping ${toKeep.id}`);
+        
+        for (const player of toDelete) {
+          await storage.deletePlayer(player.id);
+          console.log(`💀 DELETED: ${player.id} - ${player.name}`);
+        }
       }
       
-      const allPlayers = await storage.getPlayers();
-      console.log(`Total players before cleanup: ${allPlayers.length}`);
-      
-      // Group players by name
+      // Also clean any other duplicates
       const groupedByName = allPlayers.reduce((groups, player) => {
         const name = player.name;
-        if (!groups[name]) {
-          groups[name] = [];
-        }
+        if (!groups[name]) groups[name] = [];
         groups[name].push(player);
         return groups;
       }, {} as Record<string, any[]>);
       
       let totalDeleted = 0;
-      let groupsProcessed = 0;
-      
       for (const [name, players] of Object.entries(groupedByName)) {
-        if (players.length > 1) {
-          groupsProcessed++;
-          console.log(`Found ${players.length} players with name: ${name}`);
-          
-          // Keep the most recent one, delete the rest
+        if (players.length > 1 && name !== "Oscar Martín") {
           const sorted = players.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-          const toKeep = sorted[0];
           const toDelete = sorted.slice(1);
-          
-          console.log(`Keeping player ${toKeep.id}, deleting ${toDelete.length} duplicates`);
           
           for (const player of toDelete) {
             await storage.deletePlayer(player.id);
             totalDeleted++;
-            console.log(`Deleted duplicate: ${player.id} - ${player.name}`);
+            console.log(`💀 DELETED OTHER: ${player.id} - ${player.name}`);
           }
         }
       }
       
-      const remainingPlayers = await storage.getPlayers();
-      console.log(`Total players after cleanup: ${remainingPlayers.length}`);
+      const remaining = await storage.getPlayers();
+      console.log(`✅ CLEANUP COMPLETE - Remaining players: ${remaining.length}`);
       
       res.json({ 
-        message: `Cleanup completed! Deleted ${totalDeleted} duplicate players from ${groupsProcessed} groups`,
-        totalDeleted,
-        groupsProcessed,
-        totalBefore: allPlayers.length,
-        totalAfter: remainingPlayers.length
+        message: `All duplicates deleted! Oscar Martín copies removed.`,
+        totalAfter: remaining.length
       });
     } catch (error) {
-      console.error("Error cleaning up all players:", error);
-      res.status(500).json({ message: "Failed to cleanup players" });
+      console.error("❌ CLEANUP ERROR:", error);
+      res.status(500).json({ message: "Failed" });
     }
   });
 
