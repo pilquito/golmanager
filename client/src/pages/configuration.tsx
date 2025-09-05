@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -36,6 +37,8 @@ export default function Configuration() {
       paymentDueDay: 1,
       contactEmail: "",
       contactPhone: "",
+      playerStatsEnabled: true,
+      myCompetitionEnabled: true,
     },
   });
 
@@ -51,6 +54,8 @@ export default function Configuration() {
         paymentDueDay: config.paymentDueDay || 1,
         contactEmail: config.contactEmail || "",
         contactPhone: config.contactPhone || "",
+        playerStatsEnabled: config.playerStatsEnabled ?? true,
+        myCompetitionEnabled: config.myCompetitionEnabled ?? true,
       });
     }
   }, [config, form]);
@@ -457,6 +462,57 @@ export default function Configuration() {
                           />
                         </FormControl>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Player Mode Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuración del Modo Jugador</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="playerStatsEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Estadísticas de jugador</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            Permite mostrar la sección "Estadísticas de jugador" en el dashboard del jugador
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-player-stats"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="myCompetitionEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Mi competición</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            Permite mostrar la sección "Mi competición" en el dashboard del jugador
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-my-competition"
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />

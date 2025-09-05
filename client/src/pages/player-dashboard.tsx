@@ -97,22 +97,33 @@ export default function PlayerDashboard() {
           <div className="flex flex-col items-center space-y-6">
             {/* Logo del equipo */}
             <div className="relative">
-              <div 
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-2xl border-4 border-white/30"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {teamConfig?.logoUrl ? (
-                  <img 
-                    src={teamConfig.logoUrl} 
-                    alt={teamConfig.teamName} 
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                ) : (
-                  teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"
-                )}
-              </div>
-              {/* Efecto de estadio */}
-              <div className="absolute -inset-2 rounded-full bg-white/20 animate-pulse" />
+              {teamConfig?.logoUrl ? (
+                <div className="relative">
+                  <div className="w-20 h-20 aspect-square flex items-center justify-center">
+                    <img 
+                      src={teamConfig.logoUrl} 
+                      alt={teamConfig.teamName} 
+                      width={80}
+                      height={80}
+                      className="max-w-20 max-h-20 object-contain drop-shadow-lg"
+                      data-testid="team-logo"
+                    />
+                  </div>
+                  {/* Efecto de estadio */}
+                  <div className="absolute -inset-2 rounded-full bg-white/20 animate-pulse" />
+                </div>
+              ) : (
+                <div className="relative">
+                  <div 
+                    className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-2xl border-4 border-white/30"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {teamConfig?.teamName?.substring(0, 3).toUpperCase() || "GFC"}
+                  </div>
+                  {/* Efecto de estadio */}
+                  <div className="absolute -inset-2 rounded-full bg-white/20 animate-pulse" />
+                </div>
+              )}
             </div>
 
             {/* Nombre del equipo */}
@@ -230,49 +241,53 @@ export default function PlayerDashboard() {
           </Card>
         </div>
 
-        {/* Estadísticas del jugador */}
-        <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-white">
-              <Trophy className="w-5 h-5" />
-              <span>Estadísticas de jugador</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-white/70">
-              <Trophy className="w-12 h-12 mx-auto mb-3 text-white/50" />
-              <p>No hay datos para mostrar</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Estadísticas del jugador - solo mostrar si está habilitado */}
+        {(teamConfig?.playerStatsEnabled ?? true) && (
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg" data-testid="card-player-stats">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-white">
+                <Trophy className="w-5 h-5" />
+                <span>Estadísticas de jugador</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-white/70">
+                <Trophy className="w-12 h-12 mx-auto mb-3 text-white/50" />
+                <p>No hay datos para mostrar</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Mi competición */}
-        <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-white">
-              <Users className="w-5 h-5" />
-              <span>Mi competición</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-between h-12 hover:bg-white/20"
-              data-testid="button-classification"
-            >
-              <span>Clasificación</span>
-              <span>→</span>
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-between h-12 hover:bg-white/20"
-              data-testid="button-calendar"
-            >
-              <span>Calendario</span>
-              <span>→</span>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Mi competición - solo mostrar si está habilitado */}
+        {(teamConfig?.myCompetitionEnabled ?? true) && (
+          <Card className="bg-white/30 backdrop-blur-md border border-white/20 shadow-lg" data-testid="card-my-competition">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-white">
+                <Users className="w-5 h-5" />
+                <span>Mi competición</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between h-12 hover:bg-white/20"
+                data-testid="button-classification"
+              >
+                <span>Clasificación</span>
+                <span>→</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between h-12 hover:bg-white/20"
+                data-testid="button-calendar"
+              >
+                <span>Calendario</span>
+                <span>→</span>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* PRÓXIMO PARTIDO - Solo el siguiente */}
         {nextMatch ? (
