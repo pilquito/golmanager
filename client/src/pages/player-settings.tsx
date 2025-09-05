@@ -113,17 +113,51 @@ export default function PlayerSettings() {
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file size (limit to 1MB)
+      if (file.size > 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "La imagen es demasiado grande. Máximo 1MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
-        // Convert image to base64 for simple storage
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64String = reader.result as string;
-          setProfileImage(base64String);
+        // Convert image to base64 with compression
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = async () => {
+          // Resize image to max 200x200
+          const maxSize = 200;
+          let { width, height } = img;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height *= maxSize / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width *= maxSize / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setProfileImage(compressedBase64);
 
           try {
-            // Update user profile with base64 image
+            // Update user profile with compressed image
             await updateProfileMutation.mutateAsync({
-              profileImageUrl: base64String
+              profileImageUrl: compressedBase64
             });
 
             toast({
@@ -138,7 +172,8 @@ export default function PlayerSettings() {
             });
           }
         };
-        reader.readAsDataURL(file);
+        
+        img.src = URL.createObjectURL(file);
       } catch (error) {
         toast({
           title: "Error",

@@ -28,11 +28,12 @@ export const sessions = pgTable(
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: varchar("username").unique().notNull(),
-  password: varchar("password").notNull(),
-  email: varchar("email").unique(),
+  username: varchar("username").unique(),
+  password: varchar("password"),
+  email: varchar("email"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  profileImageUrl: text("profile_image_url"), // Use text for base64 images
   role: varchar("role").default("user"),
   isActive: boolean("is_active").default(true),
   lastAccess: timestamp("last_access"),
