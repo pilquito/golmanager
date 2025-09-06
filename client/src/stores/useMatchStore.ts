@@ -40,6 +40,7 @@ interface MatchStore extends MatchState {
   // New methods for click system
   getAvailableBenchPlayers: () => PlayerRef[];
   swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => void;
+  moveToBench: (playerId: string) => void;
   
   // Helpers
   findPlayerPosition: (playerId: string) => { position: string; slotIndex?: number } | null;
@@ -296,5 +297,34 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       lineup: createInitialLineup(),
       attendances: {}
     }));
+  },
+
+  moveToBench: (playerId: string) => {
+    set(state => {
+      const newLineup = { ...state.lineup };
+      
+      // Find and remove player from field
+      let playerToMove: PlayerRef | null = null;
+      
+      for (const position of ['POR', 'DEF', 'MED', 'DEL'] as const) {
+        const slots = newLineup[position];
+        for (let i = 0; i < slots.length; i++) {
+          if (slots[i].player?.playerId === playerId) {
+            playerToMove = slots[i].player;
+            slots[i].player = null; // Clear the slot
+            break;
+          }
+        }
+        if (playerToMove) break;
+      }
+      
+      // Add to bench if found
+      if (playerToMove) {
+        newLineup.BENCH.players.push(playerToMove);
+        newLineup.BENCH.players.sort((a, b) => parseInt(a.playerNumber) - parseInt(b.playerNumber));
+      }
+      
+      return { ...state, lineup: newLineup };
+    });
   }
 }));
