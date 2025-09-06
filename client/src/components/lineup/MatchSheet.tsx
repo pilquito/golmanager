@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
+import { useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,6 @@ export function MatchSheet({
   } = useMatchStore();
   
   const { toast } = useToast();
-  const [draggedPlayer, setDraggedPlayer] = useState<PlayerRef | null>(null);
   const { confirmAttendance, isConfirming } = useAttendanceConfirmation();
 
   // Handle attendance changes from admin controls
