@@ -27,6 +27,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 export default function Players() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,12 +51,13 @@ export default function Players() {
       tagline: "",
       birthDate: "",
       isActive: true,
+      profileImageUrl: "",
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/players", data);
+      const response = await apiRequest("/api/players", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -89,7 +91,7 @@ export default function Players() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await apiRequest("PATCH", `/api/players/${id}`, data);
+      const response = await apiRequest(`/api/players/${id}`, "PATCH", data);
       return response.json();
     },
     onSuccess: () => {
@@ -124,7 +126,7 @@ export default function Players() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest("DELETE", `/api/players/${id}`);
+      const response = await apiRequest(`/api/players/${id}`, "DELETE");
       return response;
     },
     onSuccess: () => {
@@ -156,7 +158,7 @@ export default function Players() {
 
   const archiveMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest("PATCH", `/api/players/${id}`, { isActive: false });
+      const response = await apiRequest(`/api/players/${id}`, "PATCH", { isActive: false });
       return response;
     },
     onSuccess: () => {
@@ -205,8 +207,43 @@ export default function Players() {
       tagline: player.tagline || "",
       birthDate: player.birthDate ? new Date(player.birthDate).toISOString().slice(0, 10) : "",
       isActive: player.isActive ?? true,
+      profileImageUrl: player.profileImageUrl || "",
     });
     setIsDialogOpen(true);
+  };
+
+  // Handle photo upload
+  const handlePhotoUpload = async (file: File, purpose?: string) => {
+    try {
+      const response = await apiRequest("/api/upload/url", "POST", {
+        fileName: file.name,
+        contentType: file.type,
+        purpose: purpose || 'profile'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+        objectPath: data.objectPath,
+      };
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      throw error;
+    }
+  };
+
+  const onPhotoUploadComplete = (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      form.setValue("profileImageUrl", uploadedFile.objectPath);
+      toast({
+        title: "Foto subida",
+        description: "La foto se guardará cuando actualices el jugador.",
+      });
+    }
   };
 
   const handleView = (player: Player) => {
@@ -470,6 +507,46 @@ export default function Players() {
                       <FormControl>
                         <Input type="date" {...field} data-testid="input-birth-date" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Foto del jugador */}
+                <FormField
+                  control={form.control}
+                  name="profileImageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Foto del Jugador</FormLabel>
+                      <div className="space-y-3">
+                        {field.value && (
+                          <div className="flex items-center space-x-3">
+                            <img 
+                              src={field.value} 
+                              alt="Foto del jugador" 
+                              className="w-16 h-16 rounded-full object-cover border"
+                            />
+                            <div className="text-sm text-muted-foreground">
+                              Foto actual del jugador
+                            </div>
+                          </div>
+                        )}
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={5242880} // 5MB
+                          onGetUploadParameters={handlePhotoUpload}
+                          onComplete={onPhotoUploadComplete}
+                          acceptedFileTypes="image/*"
+                          purpose="profile"
+                          buttonClassName="w-full"
+                        >
+                          <div className="flex items-center justify-center space-x-2">
+                            <User className="h-4 w-4" />
+                            <span>{field.value ? "Cambiar Foto" : "Subir Foto"}</span>
+                          </div>
+                        </ObjectUploader>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

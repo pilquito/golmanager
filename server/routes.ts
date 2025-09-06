@@ -373,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const players = await storage.getPlayers();
         const attendancePromises = players.map(player => 
-          storage.createMatchAttendance({
+          storage.createOrUpdateAttendance({
             matchId: match.id,
             userId: player.id, // Use player ID as user ID
             status: "pending"
@@ -689,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(attendance);
     } catch (error) {
       console.error("Error creating attendance:", error);
-      res.status(500).json({ message: "Failed to create attendance", error: error.message });
+      res.status(500).json({ message: "Failed to create attendance", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -745,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating attendance (admin):", error);
       res.status(500).json({ 
         message: "Failed to update attendance", 
-        error: error.message 
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
