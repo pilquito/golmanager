@@ -368,6 +368,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertMatchSchema.parse(req.body);
       const match = await storage.createMatch(validatedData);
+      
+      // Auto-convocate all players (create pending attendances)
+      try {
+        const players = await storage.getPlayers();
+        const attendancePromises = players.map(player => 
+          storage.createMatchAttendance({
+            matchId: match.id,
+            userId: player.id, // Use player ID as user ID
+            status: "pending"
+          })
+        );
+        await Promise.all(attendancePromises);
+        console.log(`Auto-convocated ${players.length} players for match ${match.id}`);
+      } catch (error) {
+        console.warn('Failed to auto-convocate players:', error);
+        // Don't fail match creation if convocation fails
+      }
+      
       res.status(201).json(match);
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -20,6 +20,7 @@ import PlayerSettings from "@/pages/player-settings";
 import PaymentsHistory from "@/pages/payments-history";
 import CreatePlayersBatch from "@/pages/create-players-batch";
 import FixPlayersUsers from "@/pages/fix-players-users";
+import MatchSheetPage from "@/pages/match-sheet";
 import Sidebar from "@/components/layout/sidebar";
 import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
@@ -56,6 +57,7 @@ function AuthenticatedApp() {
             <Route path="/players" component={Players} />
             <Route path="/players/:id" component={PlayerProfile} />
             <Route path="/matches" component={Matches} />
+            <Route path="/match-sheet/:id" component={MatchSheetPage} />
             <Route path="/monthly-payments" component={MonthlyPayments} />
             <Route path="/championship-payments" component={ChampionshipPayments} />
             <Route path="/collection-balance" component={CollectionBalance} />

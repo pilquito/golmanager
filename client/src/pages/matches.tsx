@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -21,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Eye, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Users, FileText } from "lucide-react";
 import { insertMatchSchema } from "@shared/schema";
 import type { Match } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,6 +34,7 @@ export default function Matches() {
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const { data: matches, isLoading } = useQuery<Match[]>({
     queryKey: ["/api/matches"],
@@ -312,6 +314,15 @@ export default function Matches() {
         const match = row.original;
         return (
           <div className="flex space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/match-sheet/${match.id}`)}
+              data-testid={`button-match-sheet-${match.id}`}
+              title="Ficha de Partido"
+            >
+              <FileText className="h-4 w-4 text-green-600" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
