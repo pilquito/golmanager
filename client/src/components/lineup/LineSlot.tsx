@@ -43,8 +43,11 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
       // Slot vacío: asignar jugador
       assignPlayerToSlot(selectedPlayer, position, slotIndex);
     } else {
-      // Slot ocupado: sustituir jugador
-      assignPlayerToSlot(selectedPlayer, position, slotIndex);
+      // Slot ocupado: hacer sustitución usando swap
+      const success = useMatchStore.getState().swapPlayerWithBench(slot.player!.playerId, selectedPlayer.playerId);
+      if (!success) {
+        console.warn('Failed to substitute player due to position incompatibility');
+      }
     }
   };
 
@@ -150,6 +153,7 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
         title={isEmpty ? "Seleccionar jugador" : "Sustituir jugador"}
         currentPlayer={slot.player}
         onMoveToBench={handleMoveToBench}
+        overrideOutOfPosition={overrideOutOfPosition}
       />
     </>
     );

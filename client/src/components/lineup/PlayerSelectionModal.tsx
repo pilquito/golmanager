@@ -12,6 +12,7 @@ interface PlayerSelectionModalProps {
   title: string;
   currentPlayer?: PlayerRef | null; // Jugador actual en el slot (para sustitución)
   onMoveToBench?: () => void; // Función para mover al banquillo sin sustitución
+  overrideOutOfPosition?: boolean; // Para filtrar jugadores según compatibilidad
 }
 
 export function PlayerSelectionModal({
@@ -22,11 +23,15 @@ export function PlayerSelectionModal({
   position,
   title,
   currentPlayer,
-  onMoveToBench
+  onMoveToBench,
+  overrideOutOfPosition = false
 }: PlayerSelectionModalProps) {
   // Filter players by position if not overriding
   const compatiblePlayers = availablePlayers.filter(player => {
     if (position === 'BENCH') return true;
+    
+    // If override is enabled, show all players
+    if (overrideOutOfPosition) return true;
     
     const positionMap: Record<string, string> = {
       'PORTERO': 'POR',
