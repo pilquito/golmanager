@@ -113,7 +113,7 @@ export function PlayerCard({
             {/* Jersey Number */}
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-white text-lg font-bold drop-shadow-lg">
-                {player.playerNumber || '0'}
+                {player.playerNumber?.toString() || '0'}
               </span>
             </div>
           </div>

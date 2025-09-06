@@ -24,10 +24,10 @@ export function Pitch({ className }: PitchProps) {
 
         {/* Field Branding - Top Corners */}
         <div className="absolute top-4 left-4 text-white/80 font-bold text-sm">
-          LINEUP
+          Alineación
         </div>
         <div className="absolute top-4 right-4 text-white/80 font-bold text-sm">
-          LINEUP
+          Alineación
         </div>
 
         {/* Field Lines - More realistic like LINEUP11 */}
@@ -112,7 +112,7 @@ export function Pitch({ className }: PitchProps) {
 
         {/* Formation Label - Bottom Right */}
         <div className="absolute bottom-4 right-4">
-          <span className="text-white font-bold text-lg">#LINEUP</span>
+          <span className="text-white font-bold text-lg">#Alineación</span>
         </div>
       </div>
     </div>
