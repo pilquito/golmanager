@@ -82,8 +82,9 @@ export function MatchSheet({
               const playerRef: PlayerRef = {
                 playerId: player.id,
                 playerName: player.name || 'Sin nombre',
-                playerNumber: (player.number || '0').toString(),
-                playerPosition: (player.position || 'DEFENSA').toUpperCase()
+                playerNumber: (player.jerseyNumber || 0).toString(),
+                playerPosition: (player.position || 'DEFENSA').toUpperCase(),
+                profileImageUrl: player.profileImageUrl
               };
               
               const currentPosition = useMatchStore.getState().findPlayerPosition(player.id);
@@ -157,7 +158,7 @@ export function MatchSheet({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Pitch - Takes up 3 columns on large screens */}
         <div className="lg:col-span-3">
-          <Pitch />
+          <Pitch players={players} />
         </div>
 
         {/* Bench - 1 column on large screens */}

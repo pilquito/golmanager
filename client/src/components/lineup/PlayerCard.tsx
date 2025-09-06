@@ -158,7 +158,7 @@ export function PlayerCard({
       {/* Player Photo */}
       <div className="relative">
         <img
-          src={`/api/placeholder-profile-image/${player.playerId}`}
+          src={player.profileImageUrl || `/api/placeholder-profile-image/${player.playerId}`}
           alt={`Foto de ${player.playerName}`}
           className={cn(
             "rounded-full object-cover border-2 border-gray-200 dark:border-gray-600",

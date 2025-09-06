@@ -4,9 +4,10 @@ import { cn } from '@/lib/utils';
 
 interface PitchProps {
   className?: string;
+  players?: any[];
 }
 
-export function Pitch({ className }: PitchProps) {
+export function Pitch({ className, players = [] }: PitchProps) {
   const { lineup, getSlotOccupancy } = useMatchStore();
 
   return (
@@ -63,7 +64,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
-                  players={[]}
+                  players={players}
                 />
               ))}
             </div>
@@ -79,7 +80,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
-                  players={[]}
+                  players={players}
                 />
               ))}
             </div>
@@ -95,7 +96,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
-                  players={[]}
+                  players={players}
                 />
               ))}
             </div>

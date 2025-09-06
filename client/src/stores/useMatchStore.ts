@@ -6,6 +6,7 @@ export interface PlayerRef {
   playerName: string;
   playerNumber: string;
   playerPosition: string;
+  profileImageUrl?: string;
 }
 
 export interface Slot {

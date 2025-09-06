@@ -117,8 +117,9 @@ export function useAttendanceConfirmation() {
             const playerRef = {
               playerId: player.id,
               playerName: player.name || 'Sin nombre',
-              playerNumber: (player.number || '0').toString(),
-              playerPosition: (player.position || 'DEFENSA').toUpperCase()
+              playerNumber: (player.jerseyNumber || 0).toString(),
+              playerPosition: (player.position || 'DEFENSA').toUpperCase(),
+              profileImageUrl: player.profileImageUrl
             };
             
             const currentPosition = useMatchStore.getState().findPlayerPosition(player.id);

@@ -28,7 +28,7 @@ export function CallupList({
   const categorizedPlayers = useMemo(() => {
     const filtered = players.filter(player =>
       player.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (player.number && player.number.toString().includes(searchTerm))
+      (player.jerseyNumber && player.jerseyNumber.toString().includes(searchTerm))
     );
 
     return {
@@ -63,8 +63,9 @@ export function CallupList({
             player={{
               playerId: player.id,
               playerName: player.name || 'Sin nombre',
-              playerNumber: (player.number || '0').toString(),
-              playerPosition: (player.position || 'DEFENSA').toUpperCase()
+              playerNumber: (player.jerseyNumber || 0).toString(),
+              playerPosition: (player.position || 'DEFENSA').toUpperCase(),
+              profileImageUrl: player.profileImageUrl
             }}
             attendanceStatus={attendances[player.id] || 'pending'}
             size="sm"

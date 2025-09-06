@@ -51,6 +51,7 @@ export const players = pgTable("players", {
   email: varchar("email"),
   birthDate: date("birth_date"),
   tagline: varchar("tagline"), // Campo "deportista" - sub-eslogan
+  profileImageUrl: text("profile_image_url"), // Campo para foto del jugador
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
