@@ -8,7 +8,7 @@ import { Pitch } from './Pitch';
 import { Bench } from './Bench';
 import { CallupList } from './CallupList';
 import { PlayerCard } from './PlayerCard';
-import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
+import { useMatchStore, PlayerRef, LineupState } from '@/stores/useMatchStore';
 import { useAttendanceConfirmation } from '@/hooks/useAttendanceConfirmation';
 import { cn } from '@/lib/utils';
 import { RefreshCw, Settings } from 'lucide-react';
@@ -30,8 +30,8 @@ export function MatchSheet({
     setMatch, 
     overrideOutOfPosition, 
     setOverrideOutOfPosition,
-    placePlayer,
-    canDropInSlot,
+    assignPlayerToSlot,
+    canPlaceInSlot,
     resetLineup,
     autoAssignPlayer,
     attendances,
@@ -137,32 +137,32 @@ export function MatchSheet({
     if (!player) return;
 
     // Check if drop is allowed (includes position and capacity validation)
-    if (!canDropInSlot(position, slotIndex, player.position)) {
-      const store = useMatchStore.getState();
-      const slots = store.lineup[position as keyof Omit<LineupState, 'BENCH'>];
-      
-      if (position !== 'BENCH' && slots && slots[slotIndex]?.players.length >= 2) {
-        toast({
-          title: "Posición completa",
-          description: "Esta posición ya tiene el máximo de jugadores (2)",
-          variant: "destructive",
-        });
-      } else if (!overrideOutOfPosition && position !== 'BENCH') {
+    if (!canPlaceInSlot(position, slotIndex, player.position)) {
+      if (!overrideOutOfPosition && position !== 'BENCH') {
         toast({
           title: "Posición incompatible",
           description: `${player.name} es ${player.position}, no puede jugar en ${position}. Activa "Permitir fuera de posición" para ignorar esto.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Posición ocupada",
+          description: "Esta posición ya está ocupada",
           variant: "destructive",
         });
       }
       return;
     }
 
-    // Find current position to determine drag source
-    const currentPosition = useMatchStore.getState().findPlayerPosition(playerId);
-    const fromPosition = currentPosition?.position || 'external';
+    // Create player reference and assign to slot
+    const playerRef: PlayerRef = {
+      playerId: player.id,
+      playerName: player.name || 'Sin nombre',
+      playerNumber: (player.number || '0').toString(),
+      playerPosition: (player.position || 'DEFENSA').toUpperCase()
+    };
 
-    // Place the player
-    placePlayer(playerId, fromPosition, position, slotIndex);
+    assignPlayerToSlot(playerRef, position, slotIndex);
 
     toast({
       title: "Jugador movido",

@@ -20,8 +20,8 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
     data: { position, slotIndex }
   });
 
-  const canAcceptMore = slot.players.length < 2;
-  const isEmpty = slot.players.length === 0;
+  const canAcceptMore = slot.player === null;
+  const isEmpty = slot.player === null;
 
   // Check if players are out of position
   const getPlayerOutOfPosition = (player: PlayerRef) => {
@@ -70,7 +70,7 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
       {/* Slot capacity indicator - Hide for LINEUP11 style */}
       {!isLineup11Style && (
         <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-          {slot.players.length}
+          {slot.player ? 1 : 0}
         </div>
       )}
 
@@ -94,22 +94,19 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
         </div>
       )}
 
-      {/* Player cards - LINEUP11 style */}
-      <div className="flex flex-col gap-1 w-full">
-        {slot.players.map((player, index) => (
+      {/* Player card - single player per slot */}
+      {slot.player && (
+        <div className="w-full">
           <PlayerCard
-            key={player.playerId}
-            player={player}
-            isOutOfPosition={getPlayerOutOfPosition(player)}
-            attendanceStatus={attendances[player.playerId] || 'pending'}
+            key={slot.player.playerId}
+            player={slot.player}
+            isOutOfPosition={getPlayerOutOfPosition(slot.player)}
+            attendanceStatus={attendances[slot.player.playerId] || 'pending'}
             size={isLineup11Style ? 'lineup11' : size}
-            className={cn(
-              index > 0 && "mt-[-4px]", // Slight overlap for stacking effect
-              "z-10"
-            )}
+            className="z-10"
           />
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Full slot warning */}
       {!canAcceptMore && isOver && (

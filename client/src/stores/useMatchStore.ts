@@ -9,7 +9,7 @@ export interface PlayerRef {
 }
 
 export interface Slot {
-  players: PlayerRef[];
+  player: PlayerRef | null; // Solo un jugador por slot
 }
 
 export interface LineupState {
@@ -17,7 +17,7 @@ export interface LineupState {
   DEF: [Slot, Slot, Slot, Slot];
   MED: [Slot, Slot, Slot, Slot];
   DEL: [Slot, Slot];
-  BENCH: Slot;
+  BENCH: { players: PlayerRef[] }; // El banquillo sí puede tener múltiples jugadores
 }
 
 export interface MatchState {
@@ -31,26 +31,30 @@ interface MatchStore extends MatchState {
   // Actions
   setMatch: (matchId: string) => void;
   setOverrideOutOfPosition: (enabled: boolean) => void;
-  placePlayer: (playerId: string, fromPosition: string, toPosition: string, slotIndex?: number) => void;
+  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex?: number) => void;
   removePlayerFromSlot: (playerId: string) => void;
   updateAttendance: (playerId: string, status: 'pending' | 'confirmed' | 'absent') => void;
   autoAssignPlayer: (playerRef: PlayerRef) => void;
   resetLineup: () => void;
   
+  // New methods for click system
+  getAvailableBenchPlayers: () => PlayerRef[];
+  swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => void;
+  
   // Helpers
   findPlayerPosition: (playerId: string) => { position: string; slotIndex?: number } | null;
-  canDropInSlot: (position: string, slotIndex?: number) => boolean;
+  canPlaceInSlot: (position: string, slotIndex?: number, playerPosition?: string) => boolean;
   getSlotOccupancy: (position: string) => number;
 }
 
-const createEmptySlot = (): Slot => ({ players: [] });
+const createEmptySlot = (): Slot => ({ player: null });
 
 const createInitialLineup = (): LineupState => ({
   POR: [createEmptySlot()],
   DEF: [createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot()],
   MED: [createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot()],
   DEL: [createEmptySlot(), createEmptySlot()],
-  BENCH: createEmptySlot()
+  BENCH: { players: [] }
 });
 
 export const useMatchStore = create<MatchStore>((set, get) => ({
@@ -58,6 +62,40 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
   lineup: createInitialLineup(),
   overrideOutOfPosition: false,
   attendances: {},
+
+  // New methods for click system
+  getAvailableBenchPlayers: () => {
+    const { lineup } = get();
+    return lineup.BENCH.players;
+  },
+
+  swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => {
+    const { findPlayerPosition, lineup } = get();
+    
+    const fieldPosition = findPlayerPosition(fieldPlayerId);
+    if (!fieldPosition || fieldPosition.position === 'BENCH') return;
+    
+    const benchPlayer = lineup.BENCH.players.find(p => p.playerId === benchPlayerId);
+    if (!benchPlayer) return;
+    
+    set(state => {
+      const newLineup = { ...state.lineup };
+      
+      // Remove field player from their slot
+      const fieldSlots = newLineup[fieldPosition.position as keyof Omit<LineupState, 'BENCH'>];
+      const fieldPlayerRef = fieldSlots[fieldPosition.slotIndex!].player;
+      if (fieldPlayerRef) {
+        fieldSlots[fieldPosition.slotIndex!].player = benchPlayer;
+        
+        // Remove bench player from bench and add field player
+        newLineup.BENCH.players = newLineup.BENCH.players.filter(p => p.playerId !== benchPlayerId);
+        newLineup.BENCH.players.push(fieldPlayerRef);
+        newLineup.BENCH.players.sort((a, b) => parseInt(a.playerNumber) - parseInt(b.playerNumber));
+      }
+      
+      return { ...state, lineup: newLineup };
+    });
+  },
 
   setMatch: (matchId: string) => {
     set({ 
@@ -79,7 +117,7 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     for (const position of ['POR', 'DEF', 'MED', 'DEL'] as const) {
       const slots = lineup[position];
       for (let i = 0; i < slots.length; i++) {
-        if (slots[i].players.some(p => p.playerId === playerId)) {
+        if (slots[i].player?.playerId === playerId) {
           return { position, slotIndex: i };
         }
       }
@@ -93,7 +131,7 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     return null;
   },
 
-  canDropInSlot: (position: string, slotIndex = 0, playerPosition?: string) => {
+  canPlaceInSlot: (position: string, slotIndex = 0, playerPosition?: string) => {
     const { lineup, overrideOutOfPosition } = get();
     
     if (position === 'BENCH') {
@@ -103,8 +141,8 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     const slots = lineup[position as keyof Omit<LineupState, 'BENCH'>];
     if (!slots || !slots[slotIndex]) return false;
     
-    // Check capacity first
-    if (slots[slotIndex].players.length >= 2) return false;
+    // Check capacity first - now single player per slot
+    if (slots[slotIndex].player !== null) return false;
     
     // Check position compatibility unless override is enabled
     if (!overrideOutOfPosition && playerPosition) {
@@ -134,65 +172,42 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     const slots = lineup[position as keyof Omit<LineupState, 'BENCH'>];
     if (!slots) return 0;
     
-    return slots.reduce((total, slot) => total + slot.players.length, 0);
+    return slots.reduce((total, slot) => total + (slot.player ? 1 : 0), 0);
   },
 
-  placePlayer: (playerId: string, fromPosition: string, toPosition: string, slotIndex = 0) => {
-    const { lineup, canDropInSlot } = get();
+  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex = 0) => {
+    const { canPlaceInSlot } = get();
     
-    // Can't drop in full slot
-    if (!canDropInSlot(toPosition, slotIndex)) {
+    // Check if we can place the player
+    if (!canPlaceInSlot(position, slotIndex, playerRef.playerPosition)) {
       return;
     }
     
     set(state => {
       const newLineup = { ...state.lineup };
       
-      // FIRST: Find and capture player reference BEFORE removing it
-      let playerRef: PlayerRef | null = null;
-      
-      // Search in field positions
-      for (const position of ['POR', 'DEF', 'MED', 'DEL'] as const) {
-        const slots = newLineup[position];
-        for (const slot of slots) {
-          const found = slot.players.find(p => p.playerId === playerId);
-          if (found) {
-            playerRef = found;
-            break;
-          }
-        }
-        if (playerRef) break;
-      }
-      
-      // Search in bench if not found in field
-      if (!playerRef) {
-        playerRef = newLineup.BENCH.players.find(p => p.playerId === playerId) || null;
-      }
-      
-      if (!playerRef) return state; // Player not found
-      
-      // SECOND: Remove player from current position
-      const currentPos = state.findPlayerPosition(playerId);
+      // Remove player from current position first
+      const currentPos = state.findPlayerPosition(playerRef.playerId);
       if (currentPos) {
         if (currentPos.position === 'BENCH') {
-          newLineup.BENCH.players = newLineup.BENCH.players.filter(p => p.playerId !== playerId);
+          newLineup.BENCH.players = newLineup.BENCH.players.filter(p => p.playerId !== playerRef.playerId);
         } else {
           const slots = newLineup[currentPos.position as keyof Omit<LineupState, 'BENCH'>];
           if (slots && currentPos.slotIndex !== undefined) {
-            slots[currentPos.slotIndex].players = slots[currentPos.slotIndex].players.filter(p => p.playerId !== playerId);
+            slots[currentPos.slotIndex].player = null;
           }
         }
       }
       
-      // THIRD: Add player to new position using captured reference
-      if (toPosition === 'BENCH') {
+      // Add player to new position
+      if (position === 'BENCH') {
         newLineup.BENCH.players.push(playerRef);
         // Sort bench by player number
         newLineup.BENCH.players.sort((a, b) => parseInt(a.playerNumber) - parseInt(b.playerNumber));
       } else {
-        const slots = newLineup[toPosition as keyof Omit<LineupState, 'BENCH'>];
+        const slots = newLineup[position as keyof Omit<LineupState, 'BENCH'>];
         if (slots && slots[slotIndex]) {
-          slots[slotIndex].players.push(playerRef);
+          slots[slotIndex].player = playerRef;
         }
       }
       
@@ -208,7 +223,9 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       for (const position of ['POR', 'DEF', 'MED', 'DEL'] as const) {
         const slots = newLineup[position];
         for (let i = 0; i < slots.length; i++) {
-          slots[i].players = slots[i].players.filter(p => p.playerId !== playerId);
+          if (slots[i].player?.playerId === playerId) {
+            slots[i].player = null;
+          }
         }
       }
       
@@ -235,7 +252,7 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
   },
 
   autoAssignPlayer: (playerRef: PlayerRef) => {
-    const { lineup, canDropInSlot } = get();
+    const { lineup, canPlaceInSlot } = get();
     const position = playerRef.playerPosition.toUpperCase();
     
     // Map player positions to lineup positions
@@ -252,10 +269,10 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       // Try to place in first available slot of player's position
       const slots = lineup[lineupPosition];
       for (let i = 0; i < slots.length; i++) {
-        if (canDropInSlot(lineupPosition, i)) {
+        if (canPlaceInSlot(lineupPosition, i)) {
           set(state => {
             const newLineup = { ...state.lineup };
-            newLineup[lineupPosition][i].players.push(playerRef);
+            newLineup[lineupPosition][i].player = playerRef;
             return { ...state, lineup: newLineup };
           });
           return;
