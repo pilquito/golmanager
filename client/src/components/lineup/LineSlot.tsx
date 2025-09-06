@@ -66,8 +66,11 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
 
       {/* Empty slot placeholder */}
       {isEmpty && (
-        <div className="text-gray-400 text-xs font-medium">
-          {position}
+        <div className="text-gray-400 text-xs font-medium text-center">
+          <div className="w-8 h-8 mx-auto mb-1 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+            <div className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full opacity-50"></div>
+          </div>
+          <div>{position}</div>
         </div>
       )}
 

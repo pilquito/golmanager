@@ -48,9 +48,15 @@ export function PlayerCard({
 
   const positionColor = positionColors[player.playerPosition.toUpperCase() as keyof typeof positionColors] || 'bg-gray-500';
   const sizeClasses = {
-    sm: 'h-12 px-2 text-xs',
-    md: 'h-14 px-3 text-sm',
-    lg: 'h-16 px-4 text-base'
+    sm: 'h-14 px-2 text-xs',
+    md: 'h-16 px-3 text-sm', 
+    lg: 'h-18 px-4 text-base'
+  };
+
+  const photoSizes = {
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12'
   };
 
   return (
@@ -67,18 +73,29 @@ export function PlayerCard({
       )}
       data-testid={`player-card-${player.playerId}`}
     >
-      {/* Jersey Number */}
-      <div 
-        className={cn(
-          "flex items-center justify-center rounded-full text-white font-bold min-w-[24px] h-6",
-          positionColor
-        )}
-      >
-        {player.playerNumber}
+      {/* Player Photo */}
+      <div className="relative">
+        <img
+          src={`/api/placeholder-profile-image/${player.playerId}`}
+          alt={`Foto de ${player.playerName}`}
+          className={cn(
+            "rounded-full object-cover border-2 border-gray-200 dark:border-gray-600",
+            photoSizes[size]
+          )}
+        />
+        {/* Jersey Number Badge */}
+        <div 
+          className={cn(
+            "absolute -bottom-1 -right-1 flex items-center justify-center rounded-full text-white font-bold text-xs min-w-[18px] h-[18px]",
+            positionColor
+          )}
+        >
+          {player.playerNumber}
+        </div>
       </div>
       
       {/* Player Name */}
-      <div className="flex-1 font-medium text-gray-900 truncate">
+      <div className="flex-1 font-medium text-gray-900 dark:text-gray-100 truncate">
         {player.playerName}
       </div>
 
