@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMatchStore } from "@/stores/useMatchStore";
 
 export function useAttendanceConfirmation() {
   const { toast } = useToast();
+  const { updateAttendance } = useMatchStore();
 
   const confirmAttendanceMutation = useMutation({
     mutationFn: async ({ 
@@ -22,18 +24,22 @@ export function useAttendanceConfirmation() {
       });
     },
     onMutate: async ({ matchId, playerId, status }) => {
-      // Cancelar queries en progreso
+      // Cancelar queries en progreso con query key segmentado
       await queryClient.cancelQueries({ 
-        queryKey: [`/api/matches/${matchId}/attendances`] 
+        queryKey: ['/api/matches', matchId, 'attendances'] 
       });
       
       // Snapshot del estado anterior
       const previousAttendances = queryClient.getQueryData([
-        `/api/matches/${matchId}/attendances`
+        '/api/matches', matchId, 'attendances'
       ]);
+      const previousStoreState = useMatchStore.getState().attendances[playerId];
       
-      // Actualización optimista
-      queryClient.setQueryData([`/api/matches/${matchId}/attendances`], (old: any) => {
+      // Actualizar el store optimistamente (para UI inmediato)
+      updateAttendance(playerId, status);
+      
+      // Actualización optimista de la caché de React Query
+      queryClient.setQueryData(['/api/matches', matchId, 'attendances'], (old: any) => {
         if (!old) return [];
         
         // Buscar si ya existe la asistencia
@@ -60,7 +66,7 @@ export function useAttendanceConfirmation() {
         }
       });
       
-      return { previousAttendances };
+      return { previousAttendances, previousStoreState };
     },
     onSuccess: (data, variables) => {
       const statusMessages = {
@@ -75,11 +81,16 @@ export function useAttendanceConfirmation() {
       });
     },
     onError: (error, variables, context) => {
-      // Revertir cambios optimistas
+      // Revertir cambios optimistas en React Query
       if (context?.previousAttendances) {
         queryClient.setQueryData([
-          `/api/matches/${variables.matchId}/attendances`
+          '/api/matches', variables.matchId, 'attendances'
         ], context.previousAttendances);
+      }
+      
+      // Revertir cambios optimistas en el store
+      if (context?.previousStoreState !== undefined) {
+        updateAttendance(variables.playerId, context.previousStoreState);
       }
       
       console.error("Error updating attendance:", error);
@@ -90,9 +101,9 @@ export function useAttendanceConfirmation() {
       });
     },
     onSettled: (data, error, variables) => {
-      // Refrescar data desde el servidor
+      // Refrescar data desde el servidor con query key segmentado
       queryClient.invalidateQueries({ 
-        queryKey: [`/api/matches/${variables.matchId}/attendances`] 
+        queryKey: ['/api/matches', variables.matchId, 'attendances'] 
       });
     },
   });
