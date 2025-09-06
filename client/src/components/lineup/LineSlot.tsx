@@ -14,7 +14,7 @@ interface LineSlotProps {
 }
 
 export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md', players }: LineSlotProps) {
-  const { overrideOutOfPosition, attendances, assignPlayerToSlot, removePlayerFromSlot, getAvailableBenchPlayers } = useMatchStore();
+  const { overrideOutOfPosition, attendances, assignPlayerToSlot, moveToBench, getAvailableBenchPlayers } = useMatchStore();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   
   const isEmpty = slot.player === null;
@@ -29,17 +29,30 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
     }
   };
 
-  // Manejar clic en jugador existente - mover al banquillo
+  // Manejar clic en jugador existente - abrir modal para sustituir o mover al banquillo
   const handlePlayerClick = () => {
     if (slot.player) {
-      // Mover jugador al banquillo
-      removePlayerFromSlot(slot.player.playerId);
+      // Abrir modal para sustituir el jugador o moverlo al banquillo
+      setShowPlayerModal(true);
     }
   };
 
   // Manejar selección de jugador del modal
   const handlePlayerSelection = (selectedPlayer: PlayerRef) => {
-    assignPlayerToSlot(selectedPlayer, position, slotIndex);
+    if (isEmpty) {
+      // Slot vacío: asignar jugador
+      assignPlayerToSlot(selectedPlayer, position, slotIndex);
+    } else {
+      // Slot ocupado: sustituir jugador
+      assignPlayerToSlot(selectedPlayer, position, slotIndex);
+    }
+  };
+
+  // Función para mover el jugador actual al banquillo (sin sustitución)
+  const handleMoveToBench = () => {
+    if (slot.player) {
+      moveToBench(slot.player.playerId);
+    }
   };
 
   // Check if players are out of position
@@ -135,6 +148,8 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
         availablePlayers={availablePlayers}
         position={position}
         title={isEmpty ? "Seleccionar jugador" : "Sustituir jugador"}
+        currentPlayer={slot.player}
+        onMoveToBench={handleMoveToBench}
       />
     </>
     );
