@@ -9,7 +9,7 @@ interface PlayerCardProps {
   player: PlayerRef;
   isOutOfPosition?: boolean;
   attendanceStatus?: 'pending' | 'confirmed' | 'absent';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'lineup11';
   className?: string;
   showAttendanceControls?: boolean;
   onAttendanceChange?: (playerId: string, status: 'confirmed' | 'absent' | 'pending') => void;
@@ -55,18 +55,92 @@ export function PlayerCard({
   } : undefined;
 
   const positionColor = positionColors[player.playerPosition.toUpperCase() as keyof typeof positionColors] || 'bg-gray-500';
+  // LINEUP11 Style Check
+  const isLineup11Style = size === 'lineup11';
+  
   const sizeClasses = {
     sm: 'h-14 px-2 text-xs',
     md: 'h-16 px-3 text-sm', 
-    lg: 'h-18 px-4 text-base'
+    lg: 'h-18 px-4 text-base',
+    lineup11: 'h-16 w-12 p-0 text-xs' // Jersey dimensions
   };
 
   const photoSizes = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
-    lg: 'w-12 h-12'
+    lg: 'w-12 h-12',
+    lineup11: 'w-8 h-8'
   };
 
+  if (isLineup11Style) {
+    // LINEUP11 Jersey Style
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "relative flex flex-col items-center justify-center cursor-grab active:cursor-grabbing select-none transition-all duration-200",
+          isDragging && "rotate-2 scale-105 shadow-lg z-50 opacity-75",
+          className
+        )}
+        data-testid={`player-card-${player.playerId}`}
+      >
+        {/* Jersey Container */}
+        <div className="relative">
+          {/* Jersey Body - Different colors by position */}
+          <div className={cn(
+            "w-12 h-16 rounded-t-lg relative overflow-hidden shadow-lg",
+            player.playerPosition.toUpperCase() === 'PORTERO' 
+              ? "bg-green-600" // Green for goalkeeper
+              : "bg-red-600" // Red for field players
+          )}>
+            {/* Jersey Sleeves */}
+            <div className={cn(
+              "absolute -left-1 top-2 w-3 h-6 rounded-l-full",
+              player.playerPosition.toUpperCase() === 'PORTERO' 
+                ? "bg-green-600" 
+                : "bg-red-600"
+            )}></div>
+            <div className={cn(
+              "absolute -right-1 top-2 w-3 h-6 rounded-r-full",
+              player.playerPosition.toUpperCase() === 'PORTERO' 
+                ? "bg-green-600" 
+                : "bg-red-600"
+            )}></div>
+            
+            {/* Jersey Number */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-white text-lg font-bold drop-shadow-lg">
+                {player.playerNumber || '0'}
+              </span>
+            </div>
+          </div>
+          
+          {/* Jersey Shorts */}
+          <div className={cn(
+            "w-12 h-4 rounded-b-sm shadow-sm",
+            player.playerPosition.toUpperCase() === 'PORTERO' 
+              ? "bg-green-700" 
+              : "bg-red-700"
+          )}></div>
+        </div>
+        
+        {/* Player Name - Below Jersey */}
+        <div className="text-white text-xs font-medium mt-1 text-center max-w-[60px] truncate drop-shadow-lg">
+          {player.playerName.split(' ')[0]}
+        </div>
+        
+        {/* Position Badge for Out of Position */}
+        {isOutOfPosition && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border border-white"></div>
+        )}
+      </div>
+    );
+  }
+  
+  // Original Style
   return (
     <div
       ref={setNodeRef}

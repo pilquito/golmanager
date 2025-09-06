@@ -8,7 +8,7 @@ interface LineSlotProps {
   slotIndex?: number;
   slot: Slot;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'lineup11' | 'lineup11-gk';
 }
 
 export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md' }: LineSlotProps) {
@@ -38,43 +38,63 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
     return positionMap[playerPos] !== position;
   };
 
+  // LINEUP11 Style - No visible slot borders, just the shirts
+  const isLineup11Style = size === 'lineup11' || size === 'lineup11-gk';
+  
   const sizeClasses = {
     sm: 'min-h-[60px] gap-1',
     md: 'min-h-[70px] gap-2', 
-    lg: 'min-h-[80px] gap-2'
+    lg: 'min-h-[80px] gap-2',
+    lineup11: 'min-h-[80px] gap-2',
+    'lineup11-gk': 'min-h-[90px] gap-2'
   };
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-2 transition-all",
+        "relative flex flex-col items-center justify-center transition-all",
         sizeClasses[size],
-        isEmpty 
-          ? "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50" 
-          : "border-gray-400 dark:border-gray-500 bg-white/20 dark:bg-gray-700/20",
+        // LINEUP11 style has no visible borders when empty, just transparent
+        isLineup11Style
+          ? "border-2 border-transparent rounded-lg p-2"
+          : "rounded-lg border-2 border-dashed p-2",
+        !isLineup11Style && isEmpty && "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50",
+        !isLineup11Style && !isEmpty && "border-gray-400 dark:border-gray-500 bg-white/20 dark:bg-gray-700/20",
         isOver && canAcceptMore && "border-blue-500 bg-blue-50/70 scale-105",
         isOver && !canAcceptMore && "border-red-500 bg-red-50/70",
         className
       )}
       data-testid={`slot-${dropId}`}
     >
-      {/* Slot capacity indicator */}
-      <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-        {slot.players.length}
-      </div>
-
-      {/* Empty slot placeholder */}
-      {isEmpty && (
-        <div className="text-gray-400 text-xs font-medium text-center">
-          <div className="w-8 h-8 mx-auto mb-1 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
-            <div className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full opacity-50"></div>
-          </div>
-          <div>{position}</div>
+      {/* Slot capacity indicator - Hide for LINEUP11 style */}
+      {!isLineup11Style && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+          {slot.players.length}
         </div>
       )}
 
-      {/* Player cards - stacked vertically */}
+      {/* Empty slot placeholder - Different for LINEUP11 style */}
+      {isEmpty && (
+        <div className="text-gray-400 text-xs font-medium text-center">
+          {isLineup11Style ? (
+            // LINEUP11 style empty slot - minimal
+            <div className="w-12 h-16 mx-auto bg-white/20 rounded-lg border-2 border-dashed border-white/40 flex items-center justify-center">
+              <div className="w-3 h-3 bg-white/40 rounded-full"></div>
+            </div>
+          ) : (
+            // Original style
+            <>
+              <div className="w-8 h-8 mx-auto mb-1 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                <div className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full opacity-50"></div>
+              </div>
+              <div>{position}</div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Player cards - LINEUP11 style */}
       <div className="flex flex-col gap-1 w-full">
         {slot.players.map((player, index) => (
           <PlayerCard
@@ -82,7 +102,7 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
             player={player}
             isOutOfPosition={getPlayerOutOfPosition(player)}
             attendanceStatus={attendances[player.playerId] || 'pending'}
-            size={size}
+            size={isLineup11Style ? 'lineup11' : size}
             className={cn(
               index > 0 && "mt-[-4px]", // Slight overlap for stacking effect
               "z-10"

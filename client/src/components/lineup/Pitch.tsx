@@ -11,33 +11,58 @@ export function Pitch({ className }: PitchProps) {
 
   return (
     <div className={cn("relative", className)}>
-      {/* Field Background */}
-      <div className="relative bg-gradient-to-b from-green-400 to-green-500 rounded-lg p-6 shadow-lg min-h-[500px]">
+      {/* LINEUP11 Style Field Background */}
+      <div className="relative min-h-[600px] bg-gradient-to-br from-green-400 via-green-500 to-green-600 rounded-2xl shadow-2xl overflow-hidden">
         
-        {/* Field Lines */}
-        <div className="absolute inset-4 border-2 border-white/60 rounded">
-          {/* Center Circle */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/60 rounded-full"></div>
-          {/* Center Line */}
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/60"></div>
-          {/* Penalty Areas */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-16 h-12 border-2 border-white/60 border-t-0"></div>
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-12 border-2 border-white/60 border-b-0"></div>
+        {/* Grass Pattern Overlay */}
+        <div className="absolute inset-0 opacity-30" 
+             style={{
+               background: `linear-gradient(90deg, transparent 48%, rgba(255,255,255,0.1) 49%, rgba(255,255,255,0.1) 51%, transparent 52%)`,
+               backgroundSize: '100px 100px'
+             }}>
         </div>
 
-        {/* Formation Layout - 4-4-2 */}
-        <div className="relative h-full flex flex-col justify-between py-8">
+        {/* Field Branding - Top Corners */}
+        <div className="absolute top-4 left-4 text-white/80 font-bold text-sm">
+          LINEUP
+        </div>
+        <div className="absolute top-4 right-4 text-white/80 font-bold text-sm">
+          LINEUP
+        </div>
+
+        {/* Field Lines - More realistic like LINEUP11 */}
+        <div className="absolute inset-6 border-2 border-white/70 rounded-lg">
+          {/* Center Circle */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/70 rounded-full"></div>
+          {/* Center Dot */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
+          {/* Center Line */}
+          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/70"></div>
+          
+          {/* Top Goal Area */}
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-20 h-16 border-2 border-white/70 border-t-0 rounded-b-sm"></div>
+          {/* Top Small Box */}
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-12 h-8 border-2 border-white/70 border-t-0"></div>
+          
+          {/* Bottom Goal Area */}
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-20 h-16 border-2 border-white/70 border-b-0 rounded-t-sm"></div>
+          {/* Bottom Small Box */}
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-8 border-2 border-white/70 border-b-0"></div>
+        </div>
+
+        {/* Formation Layout - 4-4-2 LINEUP11 Style */}
+        <div className="relative h-full flex flex-col justify-between py-12">
           
           {/* Forwards (DEL) - Top */}
           <div className="flex justify-center">
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-12">
               {lineup.DEL.map((slot, index) => (
                 <LineSlot
                   key={`del-${index}`}
                   position="DEL"
                   slotIndex={index}
                   slot={slot}
-                  size="md"
+                  size="lineup11"
                 />
               ))}
             </div>
@@ -45,14 +70,14 @@ export function Pitch({ className }: PitchProps) {
 
           {/* Midfielders (MED) */}
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-6">
               {lineup.MED.map((slot, index) => (
                 <LineSlot
                   key={`med-${index}`}
                   position="MED"
                   slotIndex={index}
                   slot={slot}
-                  size="md"
+                  size="lineup11"
                 />
               ))}
             </div>
@@ -60,14 +85,14 @@ export function Pitch({ className }: PitchProps) {
 
           {/* Defenders (DEF) */}
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-6">
               {lineup.DEF.map((slot, index) => (
                 <LineSlot
                   key={`def-${index}`}
                   position="DEF"
                   slotIndex={index}
                   slot={slot}
-                  size="md"
+                  size="lineup11"
                 />
               ))}
             </div>
@@ -80,24 +105,14 @@ export function Pitch({ className }: PitchProps) {
               position="POR"
               slotIndex={0}
               slot={lineup.POR[0]}
-              size="lg"
+              size="lineup11-gk"
             />
           </div>
         </div>
 
-        {/* Position Statistics */}
-        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 text-xs">
-          <div className="grid grid-cols-2 gap-1 text-center">
-            <div className="text-red-600 font-medium">DEL: {getSlotOccupancy('DEL')}/4</div>
-            <div className="text-green-600 font-medium">MED: {getSlotOccupancy('MED')}/8</div>
-            <div className="text-blue-600 font-medium">DEF: {getSlotOccupancy('DEF')}/8</div>
-            <div className="text-yellow-600 font-medium">POR: {getSlotOccupancy('POR')}/2</div>
-          </div>
-        </div>
-
-        {/* Formation Label */}
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1">
-          <span className="text-sm font-bold text-green-800">4-4-2</span>
+        {/* Formation Label - Bottom Right */}
+        <div className="absolute bottom-4 right-4">
+          <span className="text-white font-bold text-lg">#LINEUP</span>
         </div>
       </div>
     </div>
