@@ -1,7 +1,9 @@
 import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PlayerRef } from '@/stores/useMatchStore';
 import { cn } from '@/lib/utils';
+import { Check, X, Clock } from 'lucide-react';
 
 interface PlayerCardProps {
   player: PlayerRef;
@@ -9,6 +11,9 @@ interface PlayerCardProps {
   attendanceStatus?: 'pending' | 'confirmed' | 'absent';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  showAttendanceControls?: boolean;
+  onAttendanceChange?: (playerId: string, status: 'confirmed' | 'absent' | 'pending') => void;
+  isConfirming?: boolean;
 }
 
 const positionColors = {
@@ -35,7 +40,10 @@ export function PlayerCard({
   isOutOfPosition = false,
   attendanceStatus = 'pending',
   size = 'md',
-  className 
+  className,
+  showAttendanceControls = false,
+  onAttendanceChange,
+  isConfirming = false
 }: PlayerCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: player.playerId,
@@ -99,13 +107,66 @@ export function PlayerCard({
         {player.playerName}
       </div>
 
-      {/* Attendance Status */}
-      <div className={cn(
-        "flex items-center justify-center w-5 h-5 rounded-full border text-xs font-medium",
-        statusColors[attendanceStatus]
-      )}>
-        {statusIcons[attendanceStatus]}
-      </div>
+      {/* Attendance Controls or Status */}
+      {showAttendanceControls ? (
+        <div className="flex items-center space-x-1">
+          <Button
+            size="sm"
+            variant={attendanceStatus === 'confirmed' ? 'default' : 'outline'}
+            className={cn(
+              "w-6 h-6 p-0 rounded-full",
+              attendanceStatus === 'confirmed' && "bg-green-500 hover:bg-green-600"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAttendanceChange?.(player.playerId, 'confirmed');
+            }}
+            disabled={isConfirming}
+            data-testid={`confirm-attendance-${player.playerId}`}
+          >
+            <Check className="w-3 h-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant={attendanceStatus === 'absent' ? 'default' : 'outline'}
+            className={cn(
+              "w-6 h-6 p-0 rounded-full",
+              attendanceStatus === 'absent' && "bg-red-500 hover:bg-red-600"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAttendanceChange?.(player.playerId, 'absent');
+            }}
+            disabled={isConfirming}
+            data-testid={`reject-attendance-${player.playerId}`}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant={attendanceStatus === 'pending' ? 'default' : 'outline'}
+            className={cn(
+              "w-6 h-6 p-0 rounded-full",
+              attendanceStatus === 'pending' && "bg-yellow-500 hover:bg-yellow-600"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAttendanceChange?.(player.playerId, 'pending');
+            }}
+            disabled={isConfirming}
+            data-testid={`pending-attendance-${player.playerId}`}
+          >
+            <Clock className="w-3 h-3" />
+          </Button>
+        </div>
+      ) : (
+        <div className={cn(
+          "flex items-center justify-center w-5 h-5 rounded-full border text-xs font-medium",
+          statusColors[attendanceStatus]
+        )}>
+          {statusIcons[attendanceStatus]}
+        </div>
+      )}
 
       {/* Out of Position Badge */}
       {isOutOfPosition && (

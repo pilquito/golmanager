@@ -9,9 +9,18 @@ import { cn } from '@/lib/utils';
 interface CallupListProps {
   players: any[];
   className?: string;
+  showAttendanceControls?: boolean;
+  onAttendanceChange?: (playerId: string, status: 'confirmed' | 'absent' | 'pending') => void;
+  isConfirming?: boolean;
 }
 
-export function CallupList({ players = [], className }: CallupListProps) {
+export function CallupList({ 
+  players = [], 
+  className,
+  showAttendanceControls = false,
+  onAttendanceChange,
+  isConfirming = false
+}: CallupListProps) {
   const { attendances } = useMatchStore();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -60,6 +69,9 @@ export function CallupList({ players = [], className }: CallupListProps) {
             attendanceStatus={attendances[player.id] || 'pending'}
             size="sm"
             className="w-full cursor-default"
+            showAttendanceControls={showAttendanceControls}
+            onAttendanceChange={onAttendanceChange}
+            isConfirming={isConfirming}
           />
         ))
       )}

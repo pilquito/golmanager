@@ -707,6 +707,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to change any player's attendance
+  app.post("/api/admin/attendances", isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      
+      // Verificar que es admin
+      const userPlayer = await storage.getPlayerByUserId(currentUser?.id);
+      if (!userPlayer || userPlayer.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { matchId, playerId, status } = req.body;
+      
+      if (!matchId || !playerId || !status) {
+        return res.status(400).json({ 
+          message: "matchId, playerId, and status are required" 
+        });
+      }
+
+      if (!['confirmed', 'absent', 'pending'].includes(status)) {
+        return res.status(400).json({ 
+          message: "Status must be 'confirmed', 'absent', or 'pending'" 
+        });
+      }
+
+      console.log('Admin updating attendance:', { matchId, playerId, status });
+      
+      const attendanceData = {
+        matchId,
+        status,
+        userId: playerId // playerId is actually the userId in our system
+      };
+      
+      const attendance = await storage.createOrUpdateAttendance(attendanceData);
+      res.status(201).json(attendance);
+    } catch (error) {
+      console.error("Error updating attendance (admin):", error);
+      res.status(500).json({ 
+        message: "Failed to update attendance", 
+        error: error.message 
+      });
+    }
+  });
+
   app.get("/api/other-payments/:id", isAuthenticated, async (req, res) => {
     try {
       const payment = await storage.getOtherPayment(req.params.id);

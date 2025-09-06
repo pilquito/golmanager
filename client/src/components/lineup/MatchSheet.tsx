@@ -9,6 +9,7 @@ import { Bench } from './Bench';
 import { CallupList } from './CallupList';
 import { PlayerCard } from './PlayerCard';
 import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
+import { useAttendanceConfirmation } from '@/hooks/useAttendanceConfirmation';
 import { cn } from '@/lib/utils';
 import { RefreshCw, Settings } from 'lucide-react';
 
@@ -39,6 +40,16 @@ export function MatchSheet({
   
   const { toast } = useToast();
   const [draggedPlayer, setDraggedPlayer] = useState<PlayerRef | null>(null);
+  const { confirmAttendance, isConfirming } = useAttendanceConfirmation();
+
+  // Handle attendance changes from admin controls
+  const handleAttendanceChange = (playerId: string, status: 'confirmed' | 'absent' | 'pending') => {
+    confirmAttendance({ 
+      matchId, 
+      playerId, 
+      status 
+    });
+  };
 
   // Initialize match when component mounts
   useEffect(() => {
@@ -238,7 +249,12 @@ export function MatchSheet({
       </DndContext>
 
       {/* Callup List */}
-      <CallupList players={players} />
+      <CallupList 
+        players={players} 
+        showAttendanceControls={true}
+        onAttendanceChange={handleAttendanceChange}
+        isConfirming={isConfirming}
+      />
     </div>
   );
 }
