@@ -6,6 +6,18 @@ GolManager is a comprehensive football (soccer) team management system built for
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes
+
+## September 6, 2025 - Removed Drag & Drop from MatchSheet Component
+
+Removed all drag & drop functionality from the MatchSheet component:
+- Removed @dnd-kit imports (DndContext, DragEndEvent, DragOverlay)
+- Removed handleDragStart and handleDragEnd functions
+- Removed DragOverlay component from JSX
+- Removed DndContext wrapper from the component
+- Maintained all other functionality including controls, lineup display, and attendance management
+- The component now relies on the existing click-based LineSlot interaction system
+
 # System Architecture
 
 ## Frontend Architecture
