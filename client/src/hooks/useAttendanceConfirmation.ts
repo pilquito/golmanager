@@ -105,6 +105,29 @@ export function useAttendanceConfirmation() {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/matches', variables.matchId, 'attendances'] 
       });
+      
+      // Si el jugador fue confirmado, forzar auto-asignación
+      if (!error && variables.status === 'confirmed') {
+        setTimeout(() => {
+          // Encontrar el jugador para auto-asignar
+          const allPlayers = queryClient.getQueryData(['/api/players']) as any[];
+          const player = allPlayers?.find((p: any) => p.id === variables.playerId);
+          
+          if (player) {
+            const playerRef = {
+              playerId: player.id,
+              playerName: player.name || 'Sin nombre',
+              playerNumber: (player.number || '0').toString(),
+              playerPosition: (player.position || 'DEFENSA').toUpperCase()
+            };
+            
+            const currentPosition = useMatchStore.getState().findPlayerPosition(player.id);
+            if (!currentPosition) {
+              useMatchStore.getState().autoAssignPlayer(playerRef);
+            }
+          }
+        }, 100); // Pequeño delay para asegurar que el estado se actualice
+      }
     },
   });
 
