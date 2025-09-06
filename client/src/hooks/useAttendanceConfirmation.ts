@@ -17,8 +17,9 @@ export function useAttendanceConfirmation() {
       playerId: string; 
       status: 'confirmed' | 'absent' | 'pending'; 
     }) => {
-      return apiRequest("/api/attendances", "POST", {
+      return apiRequest("/api/admin/attendances", "POST", {
         matchId,
+        playerId,
         status,
       });
     },

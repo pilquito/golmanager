@@ -712,9 +712,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUser = req.user as any;
       
-      // Verificar que es admin
-      const userPlayer = await storage.getPlayerByUserId(currentUser?.id);
-      if (!userPlayer || userPlayer.role !== 'admin') {
+      // Verificar que es admin - usar el rol del usuario directamente
+      if (!currentUser || currentUser.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
 
