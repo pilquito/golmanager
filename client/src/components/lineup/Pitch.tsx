@@ -63,6 +63,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
+                  players={[]}
                 />
               ))}
             </div>
@@ -78,6 +79,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
+                  players={[]}
                 />
               ))}
             </div>
@@ -93,6 +95,7 @@ export function Pitch({ className }: PitchProps) {
                   slotIndex={index}
                   slot={slot}
                   size="lineup11"
+                  players={[]}
                 />
               ))}
             </div>
@@ -106,6 +109,7 @@ export function Pitch({ className }: PitchProps) {
               slotIndex={0}
               slot={lineup.POR[0]}
               size="lineup11-gk"
+              players={[]}
             />
           </div>
         </div>
