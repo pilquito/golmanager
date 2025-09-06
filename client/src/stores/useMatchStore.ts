@@ -148,21 +148,10 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     set(state => {
       const newLineup = { ...state.lineup };
       
-      // Remove player from current position
-      const currentPos = state.findPlayerPosition(playerId);
-      if (currentPos) {
-        if (currentPos.position === 'BENCH') {
-          newLineup.BENCH.players = newLineup.BENCH.players.filter(p => p.playerId !== playerId);
-        } else {
-          const slots = newLineup[currentPos.position as keyof Omit<LineupState, 'BENCH'>];
-          if (slots && currentPos.slotIndex !== undefined) {
-            slots[currentPos.slotIndex].players = slots[currentPos.slotIndex].players.filter(p => p.playerId !== playerId);
-          }
-        }
-      }
-      
-      // Find player reference (assuming it exists somewhere in the lineup)
+      // FIRST: Find and capture player reference BEFORE removing it
       let playerRef: PlayerRef | null = null;
+      
+      // Search in field positions
       for (const position of ['POR', 'DEF', 'MED', 'DEL'] as const) {
         const slots = newLineup[position];
         for (const slot of slots) {
@@ -175,13 +164,27 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
         if (playerRef) break;
       }
       
+      // Search in bench if not found in field
       if (!playerRef) {
         playerRef = newLineup.BENCH.players.find(p => p.playerId === playerId) || null;
       }
       
       if (!playerRef) return state; // Player not found
       
-      // Add player to new position
+      // SECOND: Remove player from current position
+      const currentPos = state.findPlayerPosition(playerId);
+      if (currentPos) {
+        if (currentPos.position === 'BENCH') {
+          newLineup.BENCH.players = newLineup.BENCH.players.filter(p => p.playerId !== playerId);
+        } else {
+          const slots = newLineup[currentPos.position as keyof Omit<LineupState, 'BENCH'>];
+          if (slots && currentPos.slotIndex !== undefined) {
+            slots[currentPos.slotIndex].players = slots[currentPos.slotIndex].players.filter(p => p.playerId !== playerId);
+          }
+        }
+      }
+      
+      // THIRD: Add player to new position using captured reference
       if (toPosition === 'BENCH') {
         newLineup.BENCH.players.push(playerRef);
         // Sort bench by player number
