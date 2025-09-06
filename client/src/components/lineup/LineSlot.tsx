@@ -3,6 +3,7 @@ import { PlayerCard } from './PlayerCard';
 import { Slot, PlayerRef, useMatchStore } from '@/stores/useMatchStore';
 import { PlayerSelectionModal } from './PlayerSelectionModal';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface LineSlotProps {
   position: string;
@@ -16,6 +17,7 @@ interface LineSlotProps {
 export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md', players }: LineSlotProps) {
   const { overrideOutOfPosition, attendances, assignPlayerToSlot, moveToBench, getAvailableBenchPlayers } = useMatchStore();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const { toast } = useToast();
   
   const isEmpty = slot.player === null;
 
@@ -24,8 +26,16 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
 
   // Manejar clic en posición vacía - abrir modal para seleccionar jugador
   const handleEmptySlotClick = () => {
-    if (isEmpty && availablePlayers.length > 0) {
-      setShowPlayerModal(true);
+    if (isEmpty) {
+      if (availablePlayers.length > 0) {
+        setShowPlayerModal(true);
+      } else {
+        toast({
+          title: "Banquillo vacío",
+          description: "No hay jugadores disponibles en el banquillo para asignar a esta posición.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -42,11 +52,26 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
     if (isEmpty) {
       // Slot vacío: asignar jugador
       assignPlayerToSlot(selectedPlayer, position, slotIndex);
+      toast({
+        title: "Jugador asignado",
+        description: `${selectedPlayer.playerName} ha sido asignado a la posición ${position}.`,
+        variant: "default"
+      });
     } else {
       // Slot ocupado: hacer sustitución usando swap
       const success = useMatchStore.getState().swapPlayerWithBench(slot.player!.playerId, selectedPlayer.playerId);
-      if (!success) {
-        console.warn('Failed to substitute player due to position incompatibility');
+      if (success) {
+        toast({
+          title: "Sustitución realizada",
+          description: `${selectedPlayer.playerName} ha sustituido a ${slot.player!.playerName}.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Sustitución fallida",
+          description: `No se puede sustituir: ${selectedPlayer.playerName} no es compatible con la posición ${position}.`,
+          variant: "destructive"
+        });
       }
     }
   };
