@@ -73,9 +73,9 @@ export function MatchSheet({
             if (status === 'confirmed') {
               const playerRef: PlayerRef = {
                 playerId: player.id,
-                playerName: player.name,
-                playerNumber: player.number.toString(),
-                playerPosition: player.position.toUpperCase()
+                playerName: player.name || 'Sin nombre',
+                playerNumber: (player.number || '0').toString(),
+                playerPosition: (player.position || 'DEFENSA').toUpperCase()
               };
               
               const currentPosition = useMatchStore.getState().findPlayerPosition(player.id);
@@ -100,9 +100,9 @@ export function MatchSheet({
     if (player) {
       const playerRef: PlayerRef = {
         playerId: player.id,
-        playerName: player.name,
-        playerNumber: player.number.toString(),
-        playerPosition: player.position.toUpperCase()
+        playerName: player.name || 'Sin nombre',
+        playerNumber: (player.number || '0').toString(),
+        playerPosition: (player.position || 'DEFENSA').toUpperCase()
       };
       setDraggedPlayer(playerRef);
     }
