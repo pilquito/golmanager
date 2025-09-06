@@ -71,13 +71,28 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
   },
 
   swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => {
-    const { findPlayerPosition, lineup } = get();
+    const { findPlayerPosition, lineup, overrideOutOfPosition } = get();
     
     const fieldPosition = findPlayerPosition(fieldPlayerId);
-    if (!fieldPosition || fieldPosition.position === 'BENCH') return;
+    if (!fieldPosition || fieldPosition.position === 'BENCH') return false;
     
     const benchPlayer = lineup.BENCH.players.find(p => p.playerId === benchPlayerId);
-    if (!benchPlayer) return;
+    if (!benchPlayer) return false;
+    
+    // Check position compatibility unless override is enabled
+    if (!overrideOutOfPosition) {
+      const positionMap: Record<string, string> = {
+        'PORTERO': 'POR',
+        'DEFENSA': 'DEF',
+        'MEDIOCENTRO': 'MED',
+        'DELANTERO': 'DEL'
+      };
+      
+      const benchPlayerLineupPosition = positionMap[benchPlayer.playerPosition.toUpperCase()];
+      if (benchPlayerLineupPosition !== fieldPosition.position) {
+        return false; // Incompatible position
+      }
+    }
     
     set(state => {
       const newLineup = { ...state.lineup };
@@ -96,6 +111,8 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       
       return { ...state, lineup: newLineup };
     });
+    
+    return true; // Success
   },
 
   setMatch: (matchId: string) => {
