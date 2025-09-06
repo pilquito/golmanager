@@ -1,6 +1,7 @@
-import { useDroppable } from '@dnd-kit/core';
+import { useState } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { Slot, PlayerRef, useMatchStore } from '@/stores/useMatchStore';
+import { PlayerSelectionModal } from './PlayerSelectionModal';
 import { cn } from '@/lib/utils';
 
 interface LineSlotProps {
@@ -9,19 +10,37 @@ interface LineSlotProps {
   slot: Slot;
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'lineup11' | 'lineup11-gk';
+  players: any[]; // Lista completa de jugadores para seleccionar
 }
 
-export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md' }: LineSlotProps) {
-  const { overrideOutOfPosition, attendances } = useMatchStore();
+export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md', players }: LineSlotProps) {
+  const { overrideOutOfPosition, attendances, assignPlayerToSlot, removePlayerFromSlot, getAvailableBenchPlayers } = useMatchStore();
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
   
-  const dropId = slotIndex !== undefined ? `${position}-${slotIndex}` : position;
-  const { isOver, setNodeRef } = useDroppable({
-    id: dropId,
-    data: { position, slotIndex }
-  });
-
-  const canAcceptMore = slot.player === null;
   const isEmpty = slot.player === null;
+
+  // Obtener jugadores disponibles del banquillo
+  const availablePlayers = getAvailableBenchPlayers();
+
+  // Manejar clic en posición vacía - abrir modal para seleccionar jugador
+  const handleEmptySlotClick = () => {
+    if (isEmpty && availablePlayers.length > 0) {
+      setShowPlayerModal(true);
+    }
+  };
+
+  // Manejar clic en jugador existente - mover al banquillo
+  const handlePlayerClick = () => {
+    if (slot.player) {
+      // Mover jugador al banquillo
+      removePlayerFromSlot(slot.player.playerId);
+    }
+  };
+
+  // Manejar selección de jugador del modal
+  const handlePlayerSelection = (selectedPlayer: PlayerRef) => {
+    assignPlayerToSlot(selectedPlayer, position, slotIndex);
+  };
 
   // Check if players are out of position
   const getPlayerOutOfPosition = (player: PlayerRef) => {
@@ -50,23 +69,22 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "relative flex flex-col items-center justify-center transition-all",
-        sizeClasses[size],
-        // LINEUP11 style has no visible borders when empty, just transparent
-        isLineup11Style
-          ? "border-2 border-transparent rounded-lg p-2"
-          : "rounded-lg border-2 border-dashed p-2",
-        !isLineup11Style && isEmpty && "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50",
-        !isLineup11Style && !isEmpty && "border-gray-400 dark:border-gray-500 bg-white/20 dark:bg-gray-700/20",
-        isOver && canAcceptMore && "border-blue-500 bg-blue-50/70 scale-105",
-        isOver && !canAcceptMore && "border-red-500 bg-red-50/70",
-        className
-      )}
-      data-testid={`slot-${dropId}`}
-    >
+    <>
+      <div
+        className={cn(
+          "relative flex flex-col items-center justify-center transition-all cursor-pointer",
+          sizeClasses[size],
+          // LINEUP11 style has no visible borders when empty, just transparent
+          isLineup11Style
+            ? "border-2 border-transparent rounded-lg p-2"
+            : "rounded-lg border-2 border-dashed p-2",
+          !isLineup11Style && isEmpty && "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/50",
+          !isLineup11Style && !isEmpty && "border-gray-400 dark:border-gray-500 bg-white/20 dark:bg-gray-700/20 hover:bg-white/30",
+          className
+        )}
+        onClick={isEmpty ? handleEmptySlotClick : handlePlayerClick}
+        data-testid={`slot-${position}-${slotIndex}`}
+      >
       {/* Slot capacity indicator - Hide for LINEUP11 style */}
       {!isLineup11Style && (
         <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
@@ -108,12 +126,16 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
         </div>
       )}
 
-      {/* Full slot warning */}
-      {!canAcceptMore && isOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 rounded-lg">
-          <span className="text-red-700 text-xs font-medium">¡Completo!</span>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+      
+      <PlayerSelectionModal
+        isOpen={showPlayerModal}
+        onClose={() => setShowPlayerModal(false)}
+        onSelectPlayer={handlePlayerSelection}
+        availablePlayers={availablePlayers}
+        position={position}
+        title={isEmpty ? "Seleccionar jugador" : "Sustituir jugador"}
+      />
+    </>
+    );
 }
