@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Trophy, Edit, Users, MessageCircle, FormationIcon as Formation } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Edit, Users, MessageCircle, Grid3X3 } from 'lucide-react';
 import { SportEasyField } from './SportEasyField';
 import { CallupList } from './CallupList';
 
@@ -33,7 +33,7 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
     { id: 'information', label: 'INFORMACIÓN', icon: Clock },
     { id: 'players', label: 'JUGADORES', icon: Users },
     { id: 'forum', label: 'FORO', icon: MessageCircle },
-    { id: 'lineup', label: 'ALINEACIÓN', icon: Formation },
+    { id: 'lineup', label: 'ALINEACIÓN', icon: Grid3X3 },
   ];
 
   const formatDate = (date: Date) => {

@@ -168,8 +168,19 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
 
         {/* Posiciones de jugadores */}
         {fieldPositions.map((position, index) => {
-          const slot = lineup[position.type as keyof typeof lineup]?.[position.slotIndex];
-          const player = Array.isArray(slot) ? slot[0]?.player : (slot as any)?.player;
+          // Manejar diferentes tipos de slots
+          let player = null;
+          if (position.type === 'BENCH') {
+            // El banquillo tiene un formato diferente
+            const benchData = lineup.BENCH;
+            player = benchData.players[position.slotIndex] || null;
+          } else {
+            // Las posiciones de campo son arrays de slots
+            const fieldSlots = lineup[position.type as keyof Omit<typeof lineup, 'BENCH'>];
+            if (Array.isArray(fieldSlots) && fieldSlots[position.slotIndex]) {
+              player = fieldSlots[position.slotIndex].player;
+            }
+          }
           
           return (
             <div
@@ -181,10 +192,8 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                 <div className="relative">
                   <PlayerCard
                     player={player}
-                    position={position.type}
-                    slotIndex={position.slotIndex}
-                    className="w-16 h-16 cursor-pointer hover:scale-105 transition-transform"
-                    showMenuOnClick={true}
+                    size="lineup11"
+                    className="cursor-pointer hover:scale-105 transition-transform"
                   />
                 </div>
               ) : (
@@ -217,9 +226,8 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
               <PlayerCard
                 key={player.playerId}
                 player={player}
-                position="BENCH"
-                className="w-12 h-12 cursor-pointer hover:scale-105 transition-transform"
-                showMenuOnClick={true}
+                size="sm"
+                className="cursor-pointer hover:scale-105 transition-transform"
               />
             ))}
           </div>

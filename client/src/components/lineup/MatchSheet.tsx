@@ -1,15 +1,9 @@
 import { useEffect } from 'react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Pitch } from './Pitch';
-import { Bench } from './Bench';
-import { CallupList } from './CallupList';
+import { MatchTabs } from './MatchTabs';
 import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
 import { useAttendanceConfirmation } from '@/hooks/useAttendanceConfirmation';
 import { cn } from '@/lib/utils';
-import { RefreshCw, Settings } from 'lucide-react';
 
 interface MatchSheetProps {
   matchId: string;
@@ -123,54 +117,23 @@ export function MatchSheet({
     });
   };
 
+  // Buscar información del partido
+  const matchInfo = {
+    id: matchId,
+    date: new Date(), // En una implementación real, esto vendría de la base de datos
+    opponent: 'Rival FC',
+    venue: 'Campo Municipal',
+    competition: 'Liga Local',
+    status: 'scheduled',
+    notes: 'Partido importante de liga'
+  };
+
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header Controls */}
-      <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-sm">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Settings className="w-4 h-4 text-gray-600" />
-            <Label htmlFor="override-position" className="text-sm font-medium">
-              Permitir fuera de posición
-            </Label>
-            <Switch
-              id="override-position"
-              checked={overrideOutOfPosition}
-              onCheckedChange={handleOverrideToggle}
-              data-testid="toggle-override-position"
-            />
-          </div>
-        </div>
-        
-        <Button 
-          onClick={handleResetLineup}
-          variant="outline" 
-          size="sm"
-          className="flex items-center space-x-2"
-          data-testid="button-reset-lineup"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Reiniciar</span>
-        </Button>
-      </div>
-
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Pitch - Takes up 3 columns on large screens */}
-        <div className="lg:col-span-3">
-          <Pitch players={players} />
-        </div>
-
-        {/* Bench - 1 column on large screens */}
-        <div className="lg:col-span-1">
-          <Bench />
-        </div>
-      </div>
-
-      {/* Callup List */}
-      <CallupList 
-        players={players} 
-        showAttendanceControls={true}
+      <MatchTabs 
+        match={matchInfo}
+        players={players}
+        onPlayersUpdate={onPlayersUpdate}
         onAttendanceChange={handleAttendanceChange}
         isConfirming={isConfirming}
       />
