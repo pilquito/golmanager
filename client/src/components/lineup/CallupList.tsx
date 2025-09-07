@@ -5,6 +5,7 @@ import { PlayerCard } from './PlayerCard';
 import { useMatchStore } from '@/stores/useMatchStore';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 interface CallupListProps {
   players: any[];
@@ -23,10 +24,33 @@ export function CallupList({
 }: CallupListProps) {
   const { attendances } = useMatchStore();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Obtener usuarios para filtrar administradores
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+    retry: false,
+  });
+  
+  // Filtrar administradores de la lista de jugadores
+  const nonAdminPlayers = useMemo(() => {
+    const usersArray = users as any[];
+    const adminUserIds = usersArray
+      .filter((user: any) => user.role === 'admin')
+      .map((user: any) => user.id);
+    
+    // Filtrar jugadores que NO sean administradores
+    const filtered = players.filter(player => !adminUserIds.includes(player.id));
+    console.log('🔍 Jugadores filtrados (sin admins):', { 
+      total: players.length, 
+      sinAdmins: filtered.length,
+      admins: adminUserIds.length 
+    });
+    return filtered;
+  }, [players, users]);
 
-  // Filter and categorize players
+  // Filter and categorize players (usando nonAdminPlayers en lugar de players)
   const categorizedPlayers = useMemo(() => {
-    const filtered = players.filter(player =>
+    const filtered = nonAdminPlayers.filter(player =>
       player.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (player.jerseyNumber && player.jerseyNumber.toString().includes(searchTerm))
     );
@@ -37,14 +61,14 @@ export function CallupList({
       absent: filtered.filter(p => attendances[p.id] === 'absent'),
       all: filtered
     };
-  }, [players, attendances, searchTerm]);
+  }, [nonAdminPlayers, attendances, searchTerm]);
 
   const getStatusCounts = () => {
     return {
       confirmed: categorizedPlayers.confirmed.length,
       pending: categorizedPlayers.pending.length,
       absent: categorizedPlayers.absent.length,
-      total: players.length
+      total: nonAdminPlayers.length
     };
   };
 
