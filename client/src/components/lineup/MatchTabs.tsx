@@ -71,7 +71,7 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
         
         <div className="flex items-center justify-center space-x-4">
           <div className="text-center">
-            <p className="text-lg font-medium">{(teamConfig as any)?.teamName || 'AF. Sobradillo'}</p>
+            <p className="text-lg font-medium">AF. Sobradillo</p>
           </div>
           <div className="text-gray-300 font-bold text-lg">VS</div>
           <div className="text-center">
@@ -140,22 +140,6 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
             </Card>
 
             {/* Live Stats */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-medium mb-4">Live Stats</h3>
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-gray-200 rounded-full flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-lg font-medium mb-2">
-                    ¡Apunta todas las estadísticas del partido con la suscripción Premium!
-                  </p>
-                  <Button className="bg-green-500 hover:bg-green-600 text-white">
-                    Más información
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
