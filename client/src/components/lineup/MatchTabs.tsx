@@ -69,17 +69,16 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
           </Button>
         </div>
         
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">{match.opponent}</h2>
-          <p className="text-gray-300">vs</p>
-          <p className="text-lg">Por determinar</p>
+        <div className="flex items-center justify-center space-x-4">
+          <div className="text-center">
+            <p className="text-lg font-medium">{(teamConfig as any)?.teamName || 'AF. Sobradillo'}</p>
+          </div>
+          <div className="text-gray-300 font-bold text-lg">VS</div>
+          <div className="text-center">
+            <h2 className="text-lg font-medium">{match.opponent}</h2>
+          </div>
         </div>
 
-        {/* Botón de gestión */}
-        <Button className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-medium">
-          <Settings className="w-4 h-4 mr-2" />
-          {isAdmin ? "Gestionar Equipo" : "Ver Convocatoria"}
-        </Button>
       </div>
 
       {/* Pestañas - Estilo SportEasy */}

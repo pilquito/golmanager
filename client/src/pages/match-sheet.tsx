@@ -60,34 +60,34 @@ export default function MatchSheetPage() {
       {/* LINEUP11 Style Header */}
       <div className="bg-gray-200 border-b border-gray-300">
         <div className="container mx-auto px-4 py-6">
-          {/* Top Section - VS and SUB buttons like LINEUP11 */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
+          {/* Header con equipos */}
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-4 mb-2">
               <Button 
-                variant="outline" 
+                variant="ghost"
                 size="sm" 
                 onClick={() => navigate('/matches')}
-                className="bg-gray-400 text-white border-gray-400 rounded-full px-3 py-1 text-xs font-medium hover:bg-gray-500"
+                className="text-gray-600 hover:text-gray-800"
               >
-                VS
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Volver
               </Button>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-gray-600 text-white border-gray-600 rounded-full px-3 py-1 text-xs font-medium"
-              >
-                SUB 6
-              </Button>
+            
+            {/* Nombres de equipos */}
+            <div className="flex items-center justify-center space-x-6">
+              <div className="text-right">
+                <h1 className="text-xl font-bold text-gray-800">
+                  {(teamConfig as any)?.teamName || 'AF. Sobradillo'}
+                </h1>
+              </div>
+              <div className="text-gray-500 font-medium">vs</div>
+              <div className="text-left">
+                <h1 className="text-xl font-bold text-gray-800">
+                  {(match as any)?.opponent || 'Rival'}
+                </h1>
+              </div>
             </div>
-          </div>
-          
-          {/* Team Name - Centered like LINEUP11 */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">
-              {(teamConfig as any)?.teamName || 'AF. Sobradillo'}
-            </h1>
           </div>
         </div>
       </div>
