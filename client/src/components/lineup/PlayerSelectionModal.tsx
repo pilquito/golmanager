@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { PlayerRef } from '@/stores/useMatchStore';
 import { PlayerCard } from './PlayerCard';
@@ -37,6 +37,9 @@ export function PlayerSelectionModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Selecciona un jugador de la lista disponible.
+          </DialogDescription>
         </DialogHeader>
         
         {/* Mostrar jugador actual si es para sustitución */}
