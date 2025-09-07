@@ -136,7 +136,7 @@ export default function CollectionBalancePage() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">€{totalIncome.toFixed(2)}</div>
             <Badge variant="secondary" className="bg-green-100 text-green-800">
               <TrendingUp className="h-3 w-3 mr-1" />
               Total
@@ -150,7 +150,7 @@ export default function CollectionBalancePage() {
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">${totalExpenses.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-red-600">€{totalExpenses.toFixed(2)}</div>
             <Badge variant="secondary" className="bg-red-100 text-red-800">
               <TrendingDown className="h-3 w-3 mr-1" />
               Total
@@ -165,7 +165,7 @@ export default function CollectionBalancePage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-              ${balance.toFixed(2)}
+              €{balance.toFixed(2)}
             </div>
             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
               Balance
@@ -210,14 +210,14 @@ export default function CollectionBalancePage() {
                     <span className="font-medium">{method.method}</span>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">${method.amount.toFixed(2)}</div>
+                    <div className="font-bold">€{method.amount.toFixed(2)}</div>
                   </div>
                 </div>
               ))}
               <Separator />
               <div className="flex items-center justify-between font-bold">
                 <span>Total</span>
-                <span>${totalIncome.toFixed(2)}</span>
+                <span>€{totalIncome.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -240,7 +240,7 @@ export default function CollectionBalancePage() {
                       <div className="text-sm text-muted-foreground">{payment.month}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">${Number(payment.amount).toFixed(2)}</div>
+                      <div className="font-bold">€{Number(payment.amount).toFixed(2)}</div>
                       <Badge variant={payment.status === 'paid' ? 'default' : 'secondary'}>
                         {payment.status === 'paid' ? 'Pagado' : 'Pendiente'}
                       </Badge>
@@ -270,7 +270,7 @@ export default function CollectionBalancePage() {
                       <div className="text-sm text-muted-foreground">{payment.paymentDate}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">${Number(payment.amount).toFixed(2)}</div>
+                      <div className="font-bold">€{Number(payment.amount).toFixed(2)}</div>
                       <Badge variant={payment.status === 'paid' ? 'default' : 'secondary'}>
                         {payment.status === 'paid' ? 'Pagado' : 'Pendiente'}
                       </Badge>

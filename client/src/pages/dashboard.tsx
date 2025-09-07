@@ -115,7 +115,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-muted-foreground text-sm">Balance</p>
                   <p className="text-3xl font-bold text-green-600" data-testid="stat-current-balance">
-                    ${stats?.currentBalance?.toFixed(2) || "0.00"}
+                    €{stats?.currentBalance?.toFixed(2) || "0.00"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">saldo actual</p>
                 </div>
@@ -178,7 +178,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-foreground" data-testid={`payment-amount-${payment.id}`}>
-                          ${parseFloat(payment.amount).toFixed(2)}
+                          €{parseFloat(payment.amount).toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground" data-testid={`payment-status-${payment.id}`}>
                           {payment.status}
@@ -212,19 +212,19 @@ export default function Dashboard() {
               <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
                 <p className="text-sm text-green-700 mb-2">Ingresos Totales</p>
                 <p className="text-3xl font-bold text-green-600" data-testid="financial-total-income">
-                  ${stats?.totalIncome?.toFixed(2) || "0.00"}
+                  €{stats?.totalIncome?.toFixed(2) || "0.00"}
                 </p>
               </div>
               <div className="text-center p-6 bg-red-50 rounded-lg border border-red-200">
                 <p className="text-sm text-red-700 mb-2">Gastos Totales</p>
                 <p className="text-3xl font-bold text-red-600" data-testid="financial-total-expenses">
-                  ${stats?.totalExpenses?.toFixed(2) || "0.00"}
+                  €{stats?.totalExpenses?.toFixed(2) || "0.00"}
                 </p>
               </div>
               <div className="text-center p-6 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-700 mb-2">Saldo Actual</p>
                 <p className="text-3xl font-bold text-blue-600" data-testid="financial-current-balance">
-                  ${stats?.currentBalance?.toFixed(2) || "0.00"}
+                  €{stats?.currentBalance?.toFixed(2) || "0.00"}
                 </p>
               </div>
             </div>

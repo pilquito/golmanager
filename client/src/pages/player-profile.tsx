@@ -289,7 +289,7 @@ export default function PlayerProfile() {
                   <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                     <p className="text-sm text-green-700 mb-1">Total Pagado</p>
                     <p className="text-2xl font-bold text-green-600" data-testid="total-paid">
-                      ${totalPaid.toFixed(2)}
+                      €{totalPaid.toFixed(2)}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
@@ -323,7 +323,7 @@ export default function PlayerProfile() {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">
-                          ${parseFloat(payment.amount).toFixed(2)}
+                          €{parseFloat(payment.amount).toFixed(2)}
                         </p>
                         {getStatusBadge(payment.status)}
                       </div>

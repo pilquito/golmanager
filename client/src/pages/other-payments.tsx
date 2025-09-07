@@ -317,7 +317,7 @@ export default function OtherPaymentsPage() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">€{totalIncome.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -327,7 +327,7 @@ export default function OtherPaymentsPage() {
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">${totalExpenses.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-red-600">€{totalExpenses.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -338,7 +338,7 @@ export default function OtherPaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-              ${balance.toFixed(2)}
+              €{balance.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -430,7 +430,7 @@ export default function OtherPaymentsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className={`text-lg font-bold ${payment.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                      ${Number(payment.amount).toFixed(2)}
+                      €{Number(payment.amount).toFixed(2)}
                     </div>
                     <div className="flex gap-1">
                       <Button

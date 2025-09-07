@@ -235,7 +235,7 @@ export default function ChampionshipPayments() {
       header: "Monto",
       cell: ({ row }: any) => (
         <div className="font-medium" data-testid={`payment-amount-${row.original.id}`}>
-          ${parseFloat(row.getValue("amount")).toFixed(2)}
+          €{parseFloat(row.getValue("amount")).toFixed(2)}
         </div>
       ),
     },
