@@ -45,9 +45,11 @@ export function PlayerCard({
   onAttendanceChange,
   isConfirming = false
 }: PlayerCardProps) {
+  // Deshabilitar drag & drop para evitar interferencia con clicks en LineSlot
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: player.playerId,
-    data: player
+    data: player,
+    disabled: true // DESHABILITAR drag & drop para que funcionen los clicks
   });
 
   const style = transform ? {

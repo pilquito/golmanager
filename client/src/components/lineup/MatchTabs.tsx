@@ -186,12 +186,7 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
 
         {activeTab === 'lineup' && (
           <div className="-m-6">
-            <SportEasyField 
-              players={players.filter(player => {
-                const { attendances } = useMatchStore.getState();
-                return attendances[player.id] === 'confirmed';
-              })} 
-            />
+            <SportEasyField players={players} />
           </div>
         )}
       </div>
