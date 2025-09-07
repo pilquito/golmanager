@@ -193,6 +193,7 @@ export function PlayerCard({
             )}
             onClick={(e) => {
               e.stopPropagation();
+              console.log('✅ Confirmando asistencia para:', player.playerName);
               onAttendanceChange?.(player.playerId, 'confirmed');
             }}
             disabled={isConfirming}
@@ -209,6 +210,7 @@ export function PlayerCard({
             )}
             onClick={(e) => {
               e.stopPropagation();
+              console.log('❌ Marcando ausente:', player.playerName);
               onAttendanceChange?.(player.playerId, 'absent');
             }}
             disabled={isConfirming}
@@ -225,6 +227,7 @@ export function PlayerCard({
             )}
             onClick={(e) => {
               e.stopPropagation();
+              console.log('⏳ Marcando pendiente:', player.playerName);
               onAttendanceChange?.(player.playerId, 'pending');
             }}
             disabled={isConfirming}

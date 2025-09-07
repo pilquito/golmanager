@@ -45,12 +45,14 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
   // Aplicar formación cuando cambie la selección
   React.useEffect(() => {
     if (selectedFormation) {
+      console.log('🔄 Cambiando formación a:', selectedFormation.name, selectedFormation.positions);
       setFormation(selectedFormation.positions);
     }
   }, [selectedFormation, setFormation]);
 
   // Funciones para gestionar alineaciones guardadas
   const saveCurrentLineup = () => {
+    console.log('💾 Iniciando guardado de alineación...');
     const lineupName = prompt('Nombre de la alineación:');
     if (lineupName) {
       const newSavedLineup = {
@@ -60,10 +62,12 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         formation_obj: selectedFormation
       };
       setSavedLineups(prev => [...prev, newSavedLineup]);
+      console.log('✅ Alineación guardada:', lineupName);
     }
   };
 
   const loadLineup = (savedLineup: any) => {
+    console.log('📂 Cargando alineación:', savedLineup.name);
     setSelectedFormation(savedLineup.formation_obj);
     // La alineación se cargará automáticamente con el efecto
   };
@@ -226,6 +230,7 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                     onClick={() => {
                       // Abrir menú de jugador o mover al banquillo
                       if (player) {
+                        console.log('👤 Moviendo jugador al banquillo:', player.playerName);
                         moveToBench(player.playerId);
                       }
                     }}
@@ -267,6 +272,7 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                 key={player.playerId}
                 className="cursor-pointer hover:scale-105 transition-transform"
                 onClick={() => {
+                  console.log('🚀 Asignando jugador desde banquillo:', player.playerName, player.playerPosition);
                   // Buscar primera posición disponible para asignar
                   const playerPos = player.playerPosition.toUpperCase();
                   const positionMap: Record<string, string> = {
@@ -282,10 +288,12 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                   if (Array.isArray(slots)) {
                     for (let i = 0; i < slots.length; i++) {
                       if (!slots[i].player) {
+                        console.log('✅ Asignando a posición:', targetPosition, 'slot:', i);
                         assignPlayerToSlot(player, targetPosition, i);
                         return;
                       }
                     }
+                    console.log('❌ No hay slots disponibles en posición:', targetPosition);
                   }
                 }}
               >

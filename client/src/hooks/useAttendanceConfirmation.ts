@@ -92,7 +92,18 @@ export function useAttendanceConfirmation() {
         updateAttendance(variables.playerId, context.previousStoreState);
       }
       
-      console.error("Error updating attendance:", error);
+      console.error("❌ Error updating attendance:", error);
+      
+      // Error específico para perfil de jugador no encontrado
+      if (error instanceof Error && error.message.includes('Player profile not found')) {
+        toast({
+          title: "Perfil no encontrado",
+          description: "No tienes un perfil de jugador asociado. Solo los jugadores pueden cambiar su asistencia.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Error",
         description: "No se pudo actualizar la asistencia. Inténtalo de nuevo.",
