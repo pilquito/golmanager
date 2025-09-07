@@ -5,6 +5,7 @@ import { Menu, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
 import { PlayerCard } from './PlayerCard';
 import { PlayerSelectionModal } from './PlayerSelectionModal';
+import fieldBackgroundImage from '@assets/generated_images/SportEasy_football_field_background_d706f965.png';
 
 interface Formation {
   id: string;
@@ -188,20 +189,94 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
 
       {/* Campo de fútbol 3D - Con imagen de fondo generada */}
       <div className="relative mx-4 mb-4 rounded-lg overflow-hidden" style={{ height: '650px' }}>
-        {/* Imagen de fondo exacta como SportEasy */}
+        {/* Campo con gradientes como SportEasy + perspectiva */}
         <div 
           className="absolute inset-0 rounded-lg"
           style={{
-            backgroundImage: `url('/attached_assets/generated_images/SportEasy_football_field_background_d706f965.png')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+            background: `
+              linear-gradient(135deg, 
+                #4ade80 0%, 
+                #22c55e 15%, 
+                #16a34a 35%, 
+                #15803d 60%, 
+                #166534 85%, 
+                #14532d 100%
+              ),
+              radial-gradient(ellipse 120% 80% at 50% 20%, 
+                rgba(74, 222, 128, 0.3) 0%, 
+                rgba(34, 197, 94, 0.4) 30%, 
+                rgba(22, 163, 74, 0.6) 60%, 
+                rgba(21, 128, 61, 0.8) 100%
+              )
+            `,
             transform: 'perspective(1000px) rotateX(15deg)',
             transformOrigin: 'center top',
             height: '110%',
             top: '-5%'
           }}
         >
+          {/* Textura de césped realista */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                repeating-linear-gradient(
+                  90deg,
+                  transparent 0px,
+                  transparent 12px,
+                  rgba(255,255,255,0.08) 12px,
+                  rgba(255,255,255,0.08) 14px
+                ),
+                repeating-linear-gradient(
+                  0deg,
+                  transparent 0px,
+                  transparent 8px,
+                  rgba(255,255,255,0.05) 8px,
+                  rgba(255,255,255,0.05) 9px
+                )
+              `,
+              opacity: 0.7
+            }}
+          />
+          
+          {/* Líneas del campo SportEasy style */}
+          <svg 
+            className="absolute inset-0 w-full h-full" 
+            viewBox="0 0 400 700"
+            style={{ opacity: 0.95 }}
+          >
+            {/* Bordes del campo */}
+            <rect x="50" y="50" width="300" height="600" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Línea central */}
+            <line x1="50" y1="350" x2="350" y2="350" stroke="white" strokeWidth="3" />
+            
+            {/* Círculo central */}
+            <circle cx="200" cy="350" r="50" fill="none" stroke="white" strokeWidth="3" />
+            <circle cx="200" cy="350" r="3" fill="white" />
+            
+            {/* Área grande arriba */}
+            <rect x="130" y="50" width="140" height="90" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Área pequeña arriba */}
+            <rect x="160" y="50" width="80" height="50" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Semicírculo área arriba */}
+            <path d="M 160 140 A 40 40 0 0 1 240 140" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Área grande abajo */}
+            <rect x="130" y="560" width="140" height="90" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Área pequeña abajo */}
+            <rect x="160" y="600" width="80" height="50" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Semicírculo área abajo */}
+            <path d="M 160 560 A 40 40 0 0 0 240 560" fill="none" stroke="white" strokeWidth="3" />
+            
+            {/* Puntos de penalti */}
+            <circle cx="200" cy="580" r="3" fill="white" />
+            <circle cx="200" cy="120" r="3" fill="white" />
+          </svg>
         </div>
 
         {/* Posiciones de jugadores */}
