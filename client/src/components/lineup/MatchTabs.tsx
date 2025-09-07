@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, Trophy, Edit, Users, MessageCircle, Grid3X3, S
 import { SportEasyField } from './SportEasyField';
 import { CallupList } from './CallupList';
 import { useAuth } from '@/hooks/useAuth';
+import { useMatchStore } from '@/stores/useMatchStore';
 
 interface Match {
   id: string;
@@ -185,7 +186,12 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
 
         {activeTab === 'lineup' && (
           <div className="-m-6">
-            <SportEasyField players={players} />
+            <SportEasyField 
+              players={players.filter(player => {
+                const { attendances } = useMatchStore.getState();
+                return attendances[player.id] === 'confirmed';
+              })} 
+            />
           </div>
         )}
       </div>
