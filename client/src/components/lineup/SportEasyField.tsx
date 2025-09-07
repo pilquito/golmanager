@@ -189,73 +189,16 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
 
       {/* Campo de fútbol 3D - Con imagen de fondo generada */}
       <div className="relative mx-4 mb-4 rounded-lg overflow-hidden" style={{ height: '650px' }}>
-        {/* CAMPO 3D EXACTO COMO SPORTEASY - CSS PURO */}
+        {/* IMAGEN EXACTA DEL USUARIO - SIN MODIFICAR */}
         <div 
           className="absolute inset-0 rounded-lg"
           style={{
-            background: `
-              linear-gradient(45deg, 
-                #22c55e 0%, #16a34a 12.5%, 
-                #22c55e 25%, #16a34a 37.5%,
-                #22c55e 50%, #16a34a 62.5%,
-                #22c55e 75%, #16a34a 87.5%,
-                #22c55e 100%
-              ),
-              radial-gradient(ellipse 200% 100% at 50% 0%, 
-                #4ade80 0%, #22c55e 30%, #16a34a 60%, #15803d 100%
-              )
-            `,
-            transform: 'perspective(800px) rotateX(35deg)',
-            transformOrigin: 'center top',
-            height: '130%',
-            top: '-15%',
-            backgroundSize: '40px 40px, 100% 100%'
+            backgroundImage: `url('/attached_assets/temp_image_8bd50853-6309-4c5e-9587-8b1dbe0727de.png_1757281142614.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
           }}
-        >
-          {/* LÍNEAS DEL CAMPO - PERSPECTIVA 3D */}
-          <svg 
-            className="absolute inset-0 w-full h-full" 
-            viewBox="0 0 400 800"
-            style={{ 
-              opacity: 0.9,
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
-            }}
-          >
-            {/* Bordes del campo con perspectiva */}
-            <rect x="30" y="100" width="340" height="600" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Línea central horizontal */}
-            <line x1="30" y1="400" x2="370" y2="400" stroke="white" strokeWidth="4" />
-            
-            {/* Círculo central */}
-            <ellipse cx="200" cy="400" rx="60" ry="40" fill="none" stroke="white" strokeWidth="4" />
-            <circle cx="200" cy="400" r="3" fill="white" />
-            
-            {/* Área grande superior (portería rival) */}
-            <rect x="120" y="100" width="160" height="80" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Área pequeña superior */}
-            <rect x="150" y="100" width="100" height="40" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Semicírculo área superior */}
-            <path d="M 150 180 A 50 30 0 0 1 250 180" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Área grande inferior (nuestra portería) */}
-            <rect x="120" y="620" width="160" height="80" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Área pequeña inferior */}
-            <rect x="150" y="660" width="100" height="40" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Semicírculo área inferior */}
-            <path d="M 150 620 A 50 30 0 0 0 250 620" fill="none" stroke="white" strokeWidth="4" />
-            
-            {/* Punto de penalti superior */}
-            <circle cx="200" cy="150" r="3" fill="white" />
-            
-            {/* Punto de penalti inferior */}
-            <circle cx="200" cy="650" r="3" fill="white" />
-          </svg>
-        </div>
+        ></div>
 
         {/* Posiciones de jugadores */}
         {fieldPositions.map((position, index) => {
