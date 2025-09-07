@@ -68,7 +68,7 @@ const createInitialLineup = (): LineupState => createLineupForFormation();
 export const useMatchStore = create<MatchStore>((set, get) => ({
   matchId: null,
   lineup: createInitialLineup(),
-  overrideOutOfPosition: false,
+  overrideOutOfPosition: true,
   attendances: {},
   currentFormation: { DEF: 4, MED: 4, DEL: 2 },
 
@@ -131,7 +131,7 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       matchId,
       lineup: createInitialLineup(),
       attendances: {},
-      overrideOutOfPosition: false,
+      overrideOutOfPosition: true,
       currentFormation: { DEF: 4, MED: 4, DEL: 2 }
     });
   },
@@ -206,11 +206,16 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
   },
 
   assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex = 0) => {
-    const { canPlaceInSlot } = get();
+    // REMOVER TODAS LAS RESTRICCIONES - permitir cualquier jugador en cualquier posición
+    const { lineup } = get();
     
-    // Check if we can place the player
-    if (!canPlaceInSlot(position, slotIndex, playerRef.playerPosition)) {
-      return;
+    // Solo verificar que el slot existe y no verificar compatibilidad de posición
+    if (position !== 'BENCH') {
+      const slots = lineup[position as keyof Omit<LineupState, 'BENCH'>];
+      if (!slots || !slots[slotIndex]) {
+        console.log('❌ Slot no existe:', position, slotIndex);
+        return;
+      }
     }
     
     set(state => {
