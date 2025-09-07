@@ -74,8 +74,11 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
 
   // New methods for click system
   getAvailableBenchPlayers: () => {
-    const { lineup } = get();
-    return lineup.BENCH.players;
+    const { lineup, attendances } = get();
+    // Solo devolver jugadores confirmados del banquillo
+    return lineup.BENCH.players.filter(player => 
+      attendances[player.playerId] === 'confirmed'
+    );
   },
 
   swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => {

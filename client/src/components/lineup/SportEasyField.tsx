@@ -40,7 +40,7 @@ interface SportEasyFieldProps {
 export function SportEasyField({ players = [] }: SportEasyFieldProps) {
   const [selectedFormation, setSelectedFormation] = useState(formations[12]); // 4-4-2 por defecto
   const [savedLineups, setSavedLineups] = useState<any[]>([]);
-  const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation } = useMatchStore();
+  const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation, attendances } = useMatchStore();
 
   // Aplicar formación cuando cambie la selección
   React.useEffect(() => {
@@ -217,6 +217,11 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
             }
           }
           
+          // Solo mostrar jugadores confirmados en campo
+          if (player && attendances[player.playerId] !== 'confirmed') {
+            player = null;
+          }
+          
           return (
             <div
               key={`${position.type}-${position.slotIndex}`}
@@ -267,7 +272,9 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         <div className="bg-gray-100 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-600 mb-3">SUPLENTE</h3>
           <div className="flex flex-wrap gap-2">
-            {lineup.BENCH.players.map((player) => (
+            {lineup.BENCH.players
+              .filter(player => attendances[player.playerId] === 'confirmed')
+              .map((player) => (
               <div
                 key={player.playerId}
                 className="cursor-pointer hover:scale-105 transition-transform"
