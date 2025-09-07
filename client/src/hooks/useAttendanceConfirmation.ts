@@ -2,10 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMatchStore } from "@/stores/useMatchStore";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useAttendanceConfirmation() {
   const { toast } = useToast();
   const { updateAttendance } = useMatchStore();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const confirmAttendanceMutation = useMutation({
     mutationFn: async ({ 
@@ -17,10 +20,22 @@ export function useAttendanceConfirmation() {
       playerId: string; 
       status: 'confirmed' | 'absent' | 'pending'; 
     }) => {
-      return apiRequest("/api/attendances", "POST", {
-        matchId,
-        status,
-      });
+      console.log(`🔧 ${isAdmin ? 'Admin' : 'Jugador'} cambiando asistencia:`, { matchId, playerId, status });
+      
+      if (isAdmin) {
+        // Admin puede cambiar la asistencia de cualquier jugador
+        return apiRequest("/api/admin/attendances", "POST", {
+          matchId,
+          playerId,
+          status,
+        });
+      } else {
+        // Jugador solo puede cambiar su propia asistencia
+        return apiRequest("/api/attendances", "POST", {
+          matchId,
+          status,
+        });
+      }
     },
     onMutate: async ({ matchId, playerId, status }) => {
       // Cancelar queries en progreso con query key segmentado
@@ -74,9 +89,10 @@ export function useAttendanceConfirmation() {
         pending: "Marcado como pendiente"
       };
 
+      const adminPrefix = isAdmin ? "(Admin) " : "";
       toast({
         title: "✓ Estado actualizado",
-        description: statusMessages[variables.status],
+        description: `${adminPrefix}${statusMessages[variables.status]}`,
       });
     },
     onError: (error, variables, context) => {
@@ -94,8 +110,8 @@ export function useAttendanceConfirmation() {
       
       console.error("❌ Error updating attendance:", error);
       
-      // Error específico para perfil de jugador no encontrado
-      if (error instanceof Error && error.message.includes('Player profile not found')) {
+      // Error específico para perfil de jugador no encontrado (solo para no-admins)
+      if (!isAdmin && error instanceof Error && error.message.includes('Player profile not found')) {
         toast({
           title: "Perfil no encontrado",
           description: "No tienes un perfil de jugador asociado. Solo los jugadores pueden cambiar su asistencia.",

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Trophy, Edit, Users, MessageCircle, Grid3X3 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Edit, Users, MessageCircle, Grid3X3, Settings } from 'lucide-react';
 import { SportEasyField } from './SportEasyField';
 import { CallupList } from './CallupList';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Match {
   id: string;
@@ -28,6 +29,8 @@ interface MatchTabsProps {
 
 export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceChange, isConfirming }: MatchTabsProps) {
   const [activeTab, setActiveTab] = useState('information');
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const tabs = [
     { id: 'information', label: 'INFORMACIÓN', icon: Clock },
@@ -71,9 +74,10 @@ export function MatchTabs({ match, players = [], onPlayersUpdate, onAttendanceCh
           <p className="text-lg">Por determinar</p>
         </div>
 
-        {/* Botón de convocar */}
+        {/* Botón de gestión */}
         <Button className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-medium">
-          Convocar miembros
+          <Settings className="w-4 h-4 mr-2" />
+          {isAdmin ? "Gestionar Equipo" : "Ver Convocatoria"}
         </Button>
       </div>
 
