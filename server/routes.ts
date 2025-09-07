@@ -14,6 +14,7 @@ import {
   registerSchema
 } from "@shared/schema";
 import { z } from "zod";
+import bcrypt from "bcrypt";
 import "./types";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -104,6 +105,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating users for existing players:", error);
       res.status(500).json({ message: "Failed to create users for existing players" });
+    }
+  });
+
+  // Emergency endpoint to create/reset admin user (NO AUTH REQUIRED - USE ONLY IN PRODUCTION EMERGENCY)
+  app.post('/api/emergency/reset-admin', async (req, res) => {
+    try {
+      console.log('🚨 EMERGENCY: Creating/resetting admin user...');
+      
+      // Check if admin exists
+      const existingAdmin = await storage.getUserByEmail('admin@sobrado.com');
+      
+      if (existingAdmin) {
+        // Update existing admin password
+        await storage.updateUser(existingAdmin.id, {
+          password: await bcrypt.hash('password', 10),
+          username: 'admin',
+          role: 'admin',
+          isActive: true
+        });
+        console.log('✅ Admin password reset to: password');
+        res.json({ 
+          success: true, 
+          message: 'Admin password reset successfully',
+          username: 'admin',
+          email: 'admin@sobrado.com',
+          password: 'password'
+        });
+      } else {
+        // Create new admin user
+        const adminUser = await storage.createUser({
+          username: 'admin',
+          email: 'admin@sobrado.com',
+          password: await bcrypt.hash('password', 10),
+          firstName: 'Admin',
+          lastName: 'System',
+          role: 'admin',
+          isActive: true
+        });
+        console.log('✅ Admin user created with password: password');
+        res.json({ 
+          success: true, 
+          message: 'Admin user created successfully',
+          username: 'admin',
+          email: 'admin@sobrado.com', 
+          password: 'password'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error in emergency admin reset:', error);
+      res.status(500).json({ message: "Failed to reset admin user" });
     }
   });
 
