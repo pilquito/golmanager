@@ -250,10 +250,15 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                 <div 
                   className="w-16 h-16 border-2 border-dashed border-white border-opacity-60 rounded-lg bg-black bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all"
                   onClick={() => {
+                    console.log('🎯 Click en botón + para posición:', position.type, 'slot:', position.slotIndex);
                     // Buscar jugador disponible en el banquillo
                     const benchPlayers = getAvailableBenchPlayers();
+                    console.log('👥 Jugadores disponibles en banquillo:', benchPlayers.length);
                     if (benchPlayers.length > 0) {
+                      console.log('✅ Asignando primer jugador disponible:', benchPlayers[0].playerName);
                       assignPlayerToSlot(benchPlayers[0], position.type, position.slotIndex);
+                    } else {
+                      console.log('❌ No hay jugadores confirmados en el banquillo');
                     }
                   }}
                 >
@@ -290,12 +295,14 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                   };
                   const targetPosition = positionMap[playerPos] || 'DEF';
                   
-                  // Buscar slot disponible
+                  // Buscar slot disponible (vacío O con jugador no confirmado)
                   const slots = lineup[targetPosition as keyof Omit<typeof lineup, 'BENCH'>];
                   if (Array.isArray(slots)) {
                     for (let i = 0; i < slots.length; i++) {
-                      if (!slots[i].player) {
-                        console.log('✅ Asignando a posición:', targetPosition, 'slot:', i);
+                      const slotPlayer = slots[i].player;
+                      const isSlotAvailable = !slotPlayer || attendances[slotPlayer.playerId] !== 'confirmed';
+                      if (isSlotAvailable) {
+                        console.log('✅ Asignando a posición:', targetPosition, 'slot:', i, 'reemplazando:', slotPlayer?.playerName || 'vacío');
                         assignPlayerToSlot(player, targetPosition, i);
                         return;
                       }
