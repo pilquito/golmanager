@@ -26,26 +26,10 @@ export function PlayerSelectionModal({
   onMoveToBench,
   overrideOutOfPosition = false
 }: PlayerSelectionModalProps) {
-  // Filter players by position if not overriding
+  // MOSTRAR TODOS LOS JUGADORES - sin restricciones de posición
   const compatiblePlayers = availablePlayers.filter(player => {
-    if (position === 'BENCH') return true;
-    
-    // Si no hay jugador actual (slot vacío), mostrar TODOS los jugadores
-    if (!currentPlayer) return true;
-    
-    // Si hay jugador actual (sustitución) y override está habilitado, mostrar todos
-    if (overrideOutOfPosition) return true;
-    
-    // Si hay jugador actual (sustitución) y override NO está habilitado, filtrar por posición
-    const positionMap: Record<string, string> = {
-      'PORTERO': 'POR',
-      'DEFENSA': 'DEF',
-      'MEDIOCENTRO': 'MED',
-      'DELANTERO': 'DEL'
-    };
-    
-    const playerLineupPosition = positionMap[player.playerPosition.toUpperCase()];
-    return playerLineupPosition === position;
+    // SIEMPRE mostrar TODOS los jugadores disponibles
+    return true;
   });
 
   return (
