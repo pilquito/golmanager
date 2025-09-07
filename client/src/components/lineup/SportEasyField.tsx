@@ -21,9 +21,9 @@ const formations: Formation[] = [
   { id: '2-2-2-2-2', name: '2-2-2-2-2', display: '2-2-2-2-2', positions: { DEF: 2, MED: 2, DEL: 2 } },
   { id: '3-2-3-2', name: '3-2-3-2', display: '3-2-3-2', positions: { DEF: 3, MED: 2, DEL: 3 } },
   { id: '3-3-2-2', name: '3-3-2-2', display: '3-3-2-2', positions: { DEF: 3, MED: 3, DEL: 2 } },
-  { id: '3-3-3-1', name: '3-3-3-1', display: '3-3-3-1', positions: { DEF: 3, MED: 3, DEL: 3 } },
+  { id: '3-3-3-1', name: '3-3-3-1', display: '3-3-3-1', positions: { DEF: 3, MED: 3, DEL: 1 } },
   { id: '3-4-1-2', name: '3-4-1-2', display: '3-4-1-2', positions: { DEF: 3, MED: 4, DEL: 1 } },
-  { id: '3-4-2-1', name: '3-4-2-1', display: '3-4-2-1', positions: { DEF: 3, MED: 4, DEL: 2 } },
+  { id: '3-4-2-1', name: '3-4-2-1', display: '3-4-2-1', positions: { DEF: 3, MED: 4, DEL: 1 } },
   { id: '3-4-3', name: '3-4-3', display: '3-4-3', positions: { DEF: 3, MED: 4, DEL: 3 } },
   { id: '3-4-3-diamond', name: '3-4-3 sistema (de diamante)', display: '3-4-3 sistema (de diamante)', positions: { DEF: 3, MED: 4, DEL: 3 } },
   { id: '3-5-2', name: '3-5-2', display: '3-5-2', positions: { DEF: 3, MED: 5, DEL: 2 } },
@@ -90,15 +90,15 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
       style: { bottom: '8%', left: '50%' }
     });
 
-    // Defensas - Ajustados para perspectiva
+    // Defensas - Más espaciados y mejor distribución
     const defCount = formation.positions.DEF;
     for (let i = 0; i < defCount; i++) {
       let leftOffset;
       if (defCount === 1) leftOffset = 50;
-      else if (defCount === 2) leftOffset = 35 + (i * 30);
-      else if (defCount === 3) leftOffset = 30 + (i * 20);
-      else if (defCount === 4) leftOffset = 22 + (i * 18.5);
-      else leftOffset = 20 + (i * (60 / (defCount - 1)));
+      else if (defCount === 2) leftOffset = 25 + (i * 50);
+      else if (defCount === 3) leftOffset = 20 + (i * 30);
+      else if (defCount === 4) leftOffset = 15 + (i * 23.5);
+      else leftOffset = 10 + (i * (80 / (defCount - 1)));
       
       positions.push({
         type: 'DEF',
@@ -107,16 +107,16 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
       });
     }
 
-    // Mediocampistas - Centrados para perspectiva
+    // Mediocampistas - Más espaciados
     const medCount = formation.positions.MED;
     for (let i = 0; i < medCount; i++) {
       let leftOffset;
       if (medCount === 1) leftOffset = 50;
-      else if (medCount === 2) leftOffset = 37 + (i * 26);
-      else if (medCount === 3) leftOffset = 32 + (i * 18);
-      else if (medCount === 4) leftOffset = 25 + (i * 16.7);
-      else if (medCount === 5) leftOffset = 22 + (i * 13.5);
-      else leftOffset = 20 + (i * (60 / (medCount - 1)));
+      else if (medCount === 2) leftOffset = 30 + (i * 40);
+      else if (medCount === 3) leftOffset = 25 + (i * 25);
+      else if (medCount === 4) leftOffset = 18 + (i * 21);
+      else if (medCount === 5) leftOffset = 15 + (i * 17.5);
+      else leftOffset = 10 + (i * (80 / (medCount - 1)));
       
       positions.push({
         type: 'MED',
@@ -125,14 +125,15 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
       });
     }
 
-    // Delanteros - Más arriba por la perspectiva
+    // Delanteros - Más espaciados  
     const delCount = formation.positions.DEL;
     for (let i = 0; i < delCount; i++) {
       let leftOffset;
       if (delCount === 1) leftOffset = 50;
-      else if (delCount === 2) leftOffset = 40 + (i * 20);
-      else if (delCount === 3) leftOffset = 35 + (i * 15);
-      else leftOffset = 30 + (i * (40 / (delCount - 1)));
+      else if (delCount === 2) leftOffset = 35 + (i * 30);
+      else if (delCount === 3) leftOffset = 25 + (i * 25);
+      else if (delCount === 4) leftOffset = 20 + (i * 20);
+      else leftOffset = 15 + (i * (70 / (delCount - 1)));
       
       positions.push({
         type: 'DEL',
@@ -185,87 +186,22 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         </Select>
       </div>
 
-      {/* Campo de fútbol 3D - Exacto como SportEasy */}
+      {/* Campo de fútbol 3D - Con imagen de fondo generada */}
       <div className="relative mx-4 mb-4 rounded-lg overflow-hidden" style={{ height: '650px' }}>
-        {/* Campo con perspectiva 3D */}
+        {/* Imagen de fondo exacta como SportEasy */}
         <div 
           className="absolute inset-0 rounded-lg"
           style={{
-            background: `
-              radial-gradient(ellipse 80% 100% at center 50%, #4ade80 0%, #22c55e 25%, #16a34a 50%, #15803d 75%, #166534 100%),
-              linear-gradient(to bottom, #4ade80 0%, #22c55e 20%, #16a34a 40%, #15803d 70%, #166534 100%)
-            `,
-            transform: 'perspective(1000px) rotateX(25deg)',
+            backgroundImage: `url('/attached_assets/generated_images/SportEasy_football_field_background_d706f965.png')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            transform: 'perspective(1000px) rotateX(15deg)',
             transformOrigin: 'center top',
-            height: '120%',
-            top: '-10%'
+            height: '110%',
+            top: '-5%'
           }}
         >
-          {/* Textura de hierba realista */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  0deg,
-                  transparent 0px,
-                  transparent 8px,
-                  rgba(255,255,255,0.03) 8px,
-                  rgba(255,255,255,0.03) 9px
-                ),
-                repeating-linear-gradient(
-                  90deg,
-                  transparent 0px,
-                  transparent 15px,
-                  rgba(255,255,255,0.02) 15px,
-                  rgba(255,255,255,0.02) 16px
-                )
-              `,
-              opacity: 0.6
-            }}
-          />
-          
-          {/* Líneas del campo en perspectiva */}
-          <svg 
-            className="absolute inset-0 w-full h-full" 
-            viewBox="0 0 400 700"
-            style={{ 
-              opacity: 0.9,
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-            }}
-          >
-            {/* Bordes del campo */}
-            <rect x="50" y="50" width="300" height="600" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Línea central */}
-            <line x1="50" y1="350" x2="350" y2="350" stroke="white" strokeWidth="3" />
-            
-            {/* Círculo central */}
-            <circle cx="200" cy="350" r="60" fill="none" stroke="white" strokeWidth="3" />
-            <circle cx="200" cy="350" r="2" fill="white" />
-            
-            {/* Área grande superior */}
-            <rect x="120" y="50" width="160" height="100" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Área pequeña superior */}
-            <rect x="150" y="50" width="100" height="60" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Semicírculo área superior */}
-            <path d="M 150 150 A 50 50 0 0 1 250 150" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Área grande inferior */}
-            <rect x="120" y="550" width="160" height="100" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Área pequeña inferior */}
-            <rect x="150" y="590" width="100" height="60" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Semicírculo área inferior */}
-            <path d="M 150 550 A 50 50 0 0 0 250 550" fill="none" stroke="white" strokeWidth="3" />
-            
-            {/* Puntos de penalti */}
-            <circle cx="200" cy="540" r="2" fill="white" />
-            <circle cx="200" cy="160" r="2" fill="white" />
-          </svg>
         </div>
 
         {/* Posiciones de jugadores */}
