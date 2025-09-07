@@ -304,18 +304,61 @@ export class DatabaseStorage implements IStorage {
   async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player> {
     console.log(`Storage: Updating player ${id} with:`, player);
     
+    // Get current player data to check for associated user
+    const currentPlayer = await this.getPlayer(id);
+    if (!currentPlayer) {
+      throw new Error(`Player with ID ${id} not found`);
+    }
+
     const [updatedPlayer] = await db
       .update(players)
       .set({ ...player, updatedAt: new Date() })
       .where(eq(players.id, id))
       .returning();
     
+    // If isActive status is being changed, sync it with associated user
+    if (player.isActive !== undefined && currentPlayer.email) {
+      console.log(`🔄 Syncing user status for player ${currentPlayer.name} (${currentPlayer.email})`);
+      
+      try {
+        const associatedUser = await this.getUserByEmail(currentPlayer.email);
+        if (associatedUser) {
+          await this.updateUser(associatedUser.id, { 
+            isActive: player.isActive 
+          });
+          console.log(`✅ User ${associatedUser.username} status synced: isActive = ${player.isActive}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not sync user status for player ${currentPlayer.name}:`, error);
+      }
+    }
+    
     console.log(`Storage: Player updated successfully:`, updatedPlayer);
     return updatedPlayer;
   }
 
   async deletePlayer(id: string): Promise<void> {
+    // Get player data to check for associated user before deletion
+    const player = await this.getPlayer(id);
+    
+    if (player && player.email) {
+      console.log(`🔄 Checking for associated user before deleting player ${player.name} (${player.email})`);
+      
+      try {
+        const associatedUser = await this.getUserByEmail(player.email);
+        if (associatedUser) {
+          // Delete associated user first
+          await db.delete(users).where(eq(users.id, associatedUser.id));
+          console.log(`✅ Associated user ${associatedUser.username} deleted`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not delete associated user for player ${player.name}:`, error);
+      }
+    }
+
+    // Delete the player
     await db.delete(players).where(eq(players.id, id));
+    console.log(`✅ Player ${player?.name || id} deleted successfully`);
   }
 
   async createPlayerForExistingUser(playerData: InsertPlayer, userId: string): Promise<Player> {
