@@ -113,6 +113,8 @@ export const teamConfig = pgTable("team_config", {
   paymentDueDay: integer("payment_due_day").default(1),
   contactEmail: varchar("contact_email"),
   contactPhone: varchar("contact_phone"),
+  // Tipo de fútbol: 11 jugadores vs 7 jugadores
+  footballType: varchar("football_type").default("11"), // "11" or "7"
   // Configuraciones del modo jugador
   playerStatsEnabled: boolean("player_stats_enabled").default(true), // Mostrar "Estadísticas de jugador"
   myCompetitionEnabled: boolean("my_competition_enabled").default(true), // Mostrar "Mi competición"
