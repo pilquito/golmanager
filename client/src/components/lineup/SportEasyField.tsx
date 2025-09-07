@@ -6,6 +6,7 @@ import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
 import { PlayerCard } from './PlayerCard';
 import { PlayerSelectionModal } from './PlayerSelectionModal';
 import fieldBackgroundImage from '@assets/generated_images/SportEasy_football_field_background_d706f965.png';
+import userFieldImage from '@assets/temp_image_8bd50853-6309-4c5e-9587-8b1dbe0727de.png_1757281142614.jpg';
 
 interface Formation {
   id: string;
@@ -193,7 +194,7 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         <div 
           className="absolute inset-0 rounded-lg"
           style={{
-            backgroundImage: `url('/attached_assets/temp_image_8bd50853-6309-4c5e-9587-8b1dbe0727de.png_1757281142614.jpg')`,
+            backgroundImage: `url(${userFieldImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
