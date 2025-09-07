@@ -7,45 +7,45 @@ import { PlayerCard } from './PlayerCard';
 import { PlayerSelectionModal } from './PlayerSelectionModal';
 import fieldBackgroundImage from '@assets/generated_images/SportEasy_football_field_background_d706f965.png';
 import userFieldImage from '@assets/temp_image_8bd50853-6309-4c5e-9587-8b1dbe0727de.png_1757281142614.jpg';
+import { getFormationsByType, Formation } from '../../config/formations';
+import { useQuery } from '@tanstack/react-query';
 
-interface Formation {
-  id: string;
-  name: string;
-  display: string;
-  positions: {
-    DEF: number;
-    MED: number;
-    DEL: number;
-  };
-}
-
-const formations: Formation[] = [
-  { id: '2-2-2-2-2', name: '2-2-2-2-2', display: '2-2-2-2-2', positions: { DEF: 2, MED: 2, DEL: 2 } },
-  { id: '3-2-3-2', name: '3-2-3-2', display: '3-2-3-2', positions: { DEF: 3, MED: 2, DEL: 3 } },
-  { id: '3-3-2-2', name: '3-3-2-2', display: '3-3-2-2', positions: { DEF: 3, MED: 3, DEL: 2 } },
-  { id: '3-3-3-1', name: '3-3-3-1', display: '3-3-3-1', positions: { DEF: 3, MED: 3, DEL: 1 } },
-  { id: '3-4-1-2', name: '3-4-1-2', display: '3-4-1-2', positions: { DEF: 3, MED: 4, DEL: 1 } },
-  { id: '3-4-2-1', name: '3-4-2-1', display: '3-4-2-1', positions: { DEF: 3, MED: 4, DEL: 1 } },
-  { id: '3-4-3', name: '3-4-3', display: '3-4-3', positions: { DEF: 3, MED: 4, DEL: 3 } },
-  { id: '3-4-3-diamond', name: '3-4-3 sistema (de diamante)', display: '3-4-3 sistema (de diamante)', positions: { DEF: 3, MED: 4, DEL: 3 } },
-  { id: '3-5-2', name: '3-5-2', display: '3-5-2', positions: { DEF: 3, MED: 5, DEL: 2 } },
-  { id: '4-1-3-2', name: '4-1-3-2', display: '4-1-3-2', positions: { DEF: 4, MED: 1, DEL: 3 } },
-  { id: '4-1-4-1', name: '4-1-4-1', display: '4-1-4-1', positions: { DEF: 4, MED: 1, DEL: 4 } },
-  { id: '4-2-2-2', name: '4-2-2-2', display: '4-2-2-2', positions: { DEF: 4, MED: 2, DEL: 2 } },
-  { id: '4-4-2', name: '4-4-2', display: '4-4-2', positions: { DEF: 4, MED: 4, DEL: 2 } },
-  { id: '4-3-3', name: '4-3-3', display: '4-3-3', positions: { DEF: 4, MED: 3, DEL: 3 } },
-];
+// Las formaciones ahora se obtienen dinámicamente según el tipo de fútbol
 
 interface SportEasyFieldProps {
   players?: any[];
 }
 
 export function SportEasyField({ players = [] }: SportEasyFieldProps) {
-  const [selectedFormation, setSelectedFormation] = useState(formations[12]); // 4-4-2 por defecto
+  // Obtener configuración del equipo para saber el tipo de fútbol
+  const { data: teamConfig } = useQuery<any>({
+    queryKey: ['/api/team-config'],
+  });
+
+  const footballType = (teamConfig?.footballType as '11' | '7') || '11';
+  const availableFormations = getFormationsByType(footballType as '11' | '7');
+  
+  // Seleccionar formación por defecto según el tipo de fútbol
+  const defaultFormation = footballType === '7' 
+    ? availableFormations.find(f => f.id === '2-3-1') || availableFormations[0] // 2-3-1 por defecto para F7
+    : availableFormations.find(f => f.id === '4-4-2') || availableFormations[12]; // 4-4-2 por defecto para F11
+
+  const [selectedFormation, setSelectedFormation] = useState<Formation>(defaultFormation);
   const [savedLineups, setSavedLineups] = useState<any[]>([]);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<{ type: string; slotIndex: number } | null>(null);
   const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation, attendances } = useMatchStore();
+
+  // Actualizar formación cuando cambie el tipo de fútbol
+  React.useEffect(() => {
+    if (teamConfig?.footballType && availableFormations.length > 0) {
+      const currentFormationValid = availableFormations.find(f => f.id === selectedFormation.id);
+      if (!currentFormationValid) {
+        // La formación actual no es válida para el nuevo tipo de fútbol
+        setSelectedFormation(defaultFormation);
+      }
+    }
+  }, [teamConfig?.footballType, availableFormations]);
 
   // Aplicar formación cuando cambie la selección
   React.useEffect(() => {
@@ -155,6 +155,9 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
       <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <h2 className="text-lg font-medium">Alineación</h2>
+          <span className="px-2 py-1 bg-green-600 rounded text-xs font-medium">
+            Fútbol {footballType}
+          </span>
         </div>
         <Button variant="ghost" size="sm" className="text-white">
           GUARDAR
@@ -172,14 +175,14 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         </Button>
         
         <Select value={selectedFormation.id} onValueChange={(value) => {
-          const formation = formations.find(f => f.id === value);
+          const formation = availableFormations.find(f => f.id === value);
           if (formation) setSelectedFormation(formation);
         }}>
           <SelectTrigger className="w-32 bg-white border-green-300">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            {formations.map((formation) => (
+            {availableFormations.map((formation) => (
               <SelectItem key={formation.id} value={formation.id}>
                 {formation.display}
               </SelectItem>
