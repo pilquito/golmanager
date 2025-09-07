@@ -189,14 +189,18 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
 
       {/* Campo de fútbol 3D - Con imagen de fondo generada */}
       <div className="relative mx-4 mb-4 rounded-lg overflow-hidden" style={{ height: '650px' }}>
-        {/* IMAGEN REALISTA EXACTA COMO SPORTEASY */}
+        {/* CAMPO 3D CON PERSPECTIVA Y ORIENTACIÓN EXACTA */}
         <div 
           className="absolute inset-0 rounded-lg"
           style={{
-            backgroundImage: `url('/attached_assets/generated_images/Exact_SportEasy_football_field_replica_e6405f02.png')`,
+            backgroundImage: `url('/attached_assets/generated_images/3D_perspective_football_field_exact_orientation_8f954577.png')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
+            backgroundRepeat: 'no-repeat',
+            transform: 'perspective(1200px) rotateX(25deg)',
+            transformOrigin: 'center center',
+            height: '120%',
+            top: '-10%'
           }}
         ></div>
 
