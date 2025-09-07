@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Menu, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
 import { PlayerCard } from './PlayerCard';
+import { PlayerSelectionModal } from './PlayerSelectionModal';
 
 interface Formation {
   id: string;
@@ -40,6 +41,8 @@ interface SportEasyFieldProps {
 export function SportEasyField({ players = [] }: SportEasyFieldProps) {
   const [selectedFormation, setSelectedFormation] = useState(formations[12]); // 4-4-2 por defecto
   const [savedLineups, setSavedLineups] = useState<any[]>([]);
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<{ type: string; slotIndex: number } | null>(null);
   const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation, attendances } = useMatchStore();
 
   // Aplicar formación cuando cambie la selección
@@ -250,16 +253,10 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                 <div 
                   className="w-16 h-16 border-2 border-dashed border-white border-opacity-60 rounded-lg bg-black bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all"
                   onClick={() => {
-                    console.log('🎯 Click en botón + para posición:', position.type, 'slot:', position.slotIndex);
-                    // Buscar jugador disponible en el banquillo
-                    const benchPlayers = getAvailableBenchPlayers();
-                    console.log('👥 Jugadores disponibles en banquillo:', benchPlayers.length);
-                    if (benchPlayers.length > 0) {
-                      console.log('✅ Asignando primer jugador disponible:', benchPlayers[0].playerName);
-                      assignPlayerToSlot(benchPlayers[0], position.type, position.slotIndex);
-                    } else {
-                      console.log('❌ No hay jugadores confirmados en el banquillo');
-                    }
+                    console.log('🎯 Abriendo modal para seleccionar jugador en posición:', position.type, 'slot:', position.slotIndex);
+                    // Abrir modal para seleccionar jugador manualmente
+                    setSelectedPosition({ type: position.type, slotIndex: position.slotIndex });
+                    setShowPlayerModal(true);
                   }}
                 >
                   <div className="w-8 h-8 rounded-full bg-white bg-opacity-60 flex items-center justify-center">
@@ -295,19 +292,25 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                   };
                   const targetPosition = positionMap[playerPos] || 'DEF';
                   
-                  // Buscar slot disponible (vacío O con jugador no confirmado)
-                  const slots = lineup[targetPosition as keyof Omit<typeof lineup, 'BENCH'>];
-                  if (Array.isArray(slots)) {
-                    for (let i = 0; i < slots.length; i++) {
-                      const slotPlayer = slots[i].player;
-                      const isSlotAvailable = !slotPlayer || attendances[slotPlayer.playerId] !== 'confirmed';
-                      if (isSlotAvailable) {
-                        console.log('✅ Asignando a posición:', targetPosition, 'slot:', i, 'reemplazando:', slotPlayer?.playerName || 'vacío');
-                        assignPlayerToSlot(player, targetPosition, i);
-                        return;
+                  // CUALQUIER JUGADOR EN CUALQUIER POSICIÓN - buscar CUALQUIER slot disponible
+                  let assigned = false;
+                  for (const pos of ['DEL', 'MED', 'DEF', 'POR']) {
+                    const slots = lineup[pos as keyof Omit<typeof lineup, 'BENCH'>];
+                    if (Array.isArray(slots)) {
+                      for (let i = 0; i < slots.length; i++) {
+                        const slotPlayer = slots[i].player;
+                        const isSlotAvailable = !slotPlayer || attendances[slotPlayer.playerId] !== 'confirmed';
+                        if (isSlotAvailable) {
+                          console.log('✅ Asignando jugador a CUALQUIER posición:', pos, 'slot:', i, 'reemplazando:', slotPlayer?.playerName || 'vacío');
+                          assignPlayerToSlot(player, pos, i);
+                          assigned = true;
+                          return;
+                        }
                       }
                     }
-                    console.log('❌ No hay slots disponibles en posición:', targetPosition);
+                  }
+                  if (!assigned) {
+                    console.log('❌ No hay slots disponibles en TODO el campo');
                   }
                 }}
               >
@@ -320,6 +323,27 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
           </div>
         </div>
       </div>
+
+      {/* Modal para seleccionar jugador */}
+      {selectedPosition && (
+        <PlayerSelectionModal
+          isOpen={showPlayerModal}
+          onClose={() => {
+            setShowPlayerModal(false);
+            setSelectedPosition(null);
+          }}
+          onSelectPlayer={(player: PlayerRef) => {
+            console.log('🎯 Jugador seleccionado manualmente:', player.playerName, 'para posición:', selectedPosition.type);
+            assignPlayerToSlot(player, selectedPosition.type, selectedPosition.slotIndex);
+            setShowPlayerModal(false);
+            setSelectedPosition(null);
+          }}
+          availablePlayers={lineup.BENCH.players.filter(player => attendances[player.playerId] === 'confirmed')}
+          position={selectedPosition.type}
+          title={`Seleccionar jugador para ${selectedPosition.type}`}
+          overrideOutOfPosition={true}
+        />
+      )}
 
       {/* Sección Mis Alineaciones - Estilo SportEasy */}
       <div className="border-t border-gray-200 p-4 bg-gray-50">
