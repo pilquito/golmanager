@@ -30,9 +30,13 @@ export function PlayerSelectionModal({
   const compatiblePlayers = availablePlayers.filter(player => {
     if (position === 'BENCH') return true;
     
-    // If override is enabled, show all players
+    // Si no hay jugador actual (slot vacío), mostrar TODOS los jugadores
+    if (!currentPlayer) return true;
+    
+    // Si hay jugador actual (sustitución) y override está habilitado, mostrar todos
     if (overrideOutOfPosition) return true;
     
+    // Si hay jugador actual (sustitución) y override NO está habilitado, filtrar por posición
     const positionMap: Record<string, string> = {
       'PORTERO': 'POR',
       'DEFENSA': 'DEF',
