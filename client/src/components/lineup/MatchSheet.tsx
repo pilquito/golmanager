@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import React from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { MatchTabs } from './MatchTabs';
 import { useMatchStore, PlayerRef } from '@/stores/useMatchStore';
@@ -117,16 +118,59 @@ export function MatchSheet({
     });
   };
 
-  // Buscar información del partido
-  const matchInfo = {
-    id: matchId,
-    date: new Date(), // En una implementación real, esto vendría de la base de datos
-    opponent: 'Rival FC',
-    venue: 'Campo Municipal',
-    competition: 'Liga Local',
-    status: 'scheduled',
-    notes: 'Partido importante de liga'
-  };
+  // Obtener información real del partido desde props o estado
+  const [matchInfo, setMatchInfo] = React.useState<any>(null);
+  
+  React.useEffect(() => {
+    const fetchMatch = async () => {
+      try {
+        const response = await fetch(`/api/matches/${matchId}`);
+        if (response.ok) {
+          const matchData = await response.json();
+          const newMatchInfo = {
+            id: matchData.id,
+            date: new Date(matchData.date),
+            opponent: matchData.opponent,
+            venue: matchData.venue,
+            competition: matchData.competition,
+            status: matchData.status,
+            notes: matchData.notes || 'Partido'
+          };
+          setMatchInfo(newMatchInfo);
+        }
+      } catch (error) {
+        console.error('Error fetching match data:', error);
+        // Fallback con datos básicos
+        const fallbackMatchInfo = {
+          id: matchId,
+          date: new Date(),
+          opponent: 'Rival FC',
+          venue: 'Campo Municipal',
+          competition: 'Liga Local',
+          status: 'scheduled',
+          notes: 'Partido'
+        };
+        setMatchInfo(fallbackMatchInfo);
+      }
+    };
+    
+    if (matchId) {
+      fetchMatch();
+    }
+  }, [matchId]);
+
+  if (!matchInfo) {
+    return (
+      <div className={cn("space-y-6", className)}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando información del partido...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-6", className)}>

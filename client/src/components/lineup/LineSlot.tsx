@@ -59,17 +59,26 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
       });
     } else {
       // Slot ocupado: hacer sustitución usando swap
-      const success = useMatchStore.getState().swapPlayerWithBench(slot.player!.playerId, selectedPlayer.playerId);
-      if (success) {
+      try {
+        const { swapPlayerWithBench } = useMatchStore.getState();
+        const success = swapPlayerWithBench(slot.player!.playerId, selectedPlayer.playerId);
+        if (success) {
         toast({
           title: "Sustitución realizada",
           description: `${selectedPlayer.playerName} ha sustituido a ${slot.player!.playerName}.`,
           variant: "default"
         });
       } else {
+          toast({
+            title: "Sustitución fallida",
+            description: `No se puede sustituir: ${selectedPlayer.playerName} no es compatible con la posición ${position}.`,
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
         toast({
-          title: "Sustitución fallida",
-          description: `No se puede sustituir: ${selectedPlayer.playerName} no es compatible con la posición ${position}.`,
+          title: "Error",
+          description: "No se pudo realizar la sustitución",
           variant: "destructive"
         });
       }

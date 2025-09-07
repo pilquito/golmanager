@@ -39,7 +39,14 @@ interface SportEasyFieldProps {
 
 export function SportEasyField({ players = [] }: SportEasyFieldProps) {
   const [selectedFormation, setSelectedFormation] = useState(formations[12]); // 4-4-2 por defecto
-  const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers } = useMatchStore();
+  const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation } = useMatchStore();
+
+  // Aplicar formación cuando cambie la selección
+  React.useEffect(() => {
+    if (selectedFormation) {
+      setFormation(selectedFormation.positions);
+    }
+  }, [selectedFormation, setFormation]);
 
   // Generar posiciones del campo basadas en la formación
   const generateFieldPositions = (formation: Formation) => {

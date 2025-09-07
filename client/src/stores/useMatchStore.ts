@@ -14,10 +14,10 @@ export interface Slot {
 }
 
 export interface LineupState {
-  POR: [Slot];
-  DEF: [Slot, Slot, Slot, Slot];
-  MED: [Slot, Slot, Slot, Slot];
-  DEL: [Slot, Slot];
+  POR: Slot[];
+  DEF: Slot[];
+  MED: Slot[];
+  DEL: Slot[];
   BENCH: { players: PlayerRef[] }; // El banquillo sí puede tener múltiples jugadores
 }
 
@@ -26,6 +26,7 @@ export interface MatchState {
   lineup: LineupState;
   overrideOutOfPosition: boolean;
   attendances: Record<string, 'pending' | 'confirmed' | 'absent'>;
+  currentFormation: { DEF: number; MED: number; DEL: number };
 }
 
 interface MatchStore extends MatchState {
@@ -40,30 +41,36 @@ interface MatchStore extends MatchState {
   
   // New methods for click system
   getAvailableBenchPlayers: () => PlayerRef[];
-  swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => void;
+  swapPlayerWithBench: (fieldPlayerId: string, benchPlayerId: string) => boolean;
   moveToBench: (playerId: string) => void;
   
   // Helpers
   findPlayerPosition: (playerId: string) => { position: string; slotIndex?: number } | null;
   canPlaceInSlot: (position: string, slotIndex?: number, playerPosition?: string) => boolean;
   getSlotOccupancy: (position: string) => number;
+  
+  // Formation management
+  setFormation: (formation: { DEF: number; MED: number; DEL: number }) => void;
 }
 
 const createEmptySlot = (): Slot => ({ player: null });
 
-const createInitialLineup = (): LineupState => ({
+const createLineupForFormation = (formation = { DEF: 4, MED: 4, DEL: 2 }): LineupState => ({
   POR: [createEmptySlot()],
-  DEF: [createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot()],
-  MED: [createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot()],
-  DEL: [createEmptySlot(), createEmptySlot()],
+  DEF: Array.from({ length: formation.DEF }, () => createEmptySlot()),
+  MED: Array.from({ length: formation.MED }, () => createEmptySlot()),  
+  DEL: Array.from({ length: formation.DEL }, () => createEmptySlot()),
   BENCH: { players: [] }
 });
+
+const createInitialLineup = (): LineupState => createLineupForFormation();
 
 export const useMatchStore = create<MatchStore>((set, get) => ({
   matchId: null,
   lineup: createInitialLineup(),
   overrideOutOfPosition: false,
   attendances: {},
+  currentFormation: { DEF: 4, MED: 4, DEL: 2 },
 
   // New methods for click system
   getAvailableBenchPlayers: () => {
@@ -121,7 +128,8 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       matchId,
       lineup: createInitialLineup(),
       attendances: {},
-      overrideOutOfPosition: false
+      overrideOutOfPosition: false,
+      currentFormation: { DEF: 4, MED: 4, DEL: 2 }
     });
   },
 
@@ -312,7 +320,7 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
   resetLineup: () => {
     set(state => ({
       ...state,
-      lineup: createInitialLineup(),
+      lineup: createLineupForFormation(state.currentFormation),
       attendances: {}
     }));
   },
@@ -343,6 +351,69 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
       }
       
       return { ...state, lineup: newLineup };
+    });
+  },
+
+  setFormation: (formation: { DEF: number; MED: number; DEL: number }) => {
+    set(state => {
+      // Preserve existing players
+      const currentPlayers: PlayerRef[] = [];
+      
+      // Collect all current field players
+      ['POR', 'DEF', 'MED', 'DEL'].forEach(pos => {
+        const slots = state.lineup[pos as keyof Omit<LineupState, 'BENCH'>];
+        if (Array.isArray(slots)) {
+          slots.forEach(slot => {
+            if (slot.player) {
+              currentPlayers.push(slot.player);
+            }
+          });
+        }
+      });
+      
+      // Create new lineup with new formation
+      const newLineup = createLineupForFormation(formation);
+      
+      // Add bench players back
+      newLineup.BENCH.players = [...state.lineup.BENCH.players];
+      
+      // Try to redistribute field players based on their positions
+      currentPlayers.forEach(player => {
+        const playerPos = player.playerPosition.toUpperCase();
+        const positionMap: Record<string, keyof Omit<LineupState, 'BENCH'>> = {
+          'PORTERO': 'POR',
+          'DEFENSA': 'DEF',
+          'MEDIOCENTRO': 'MED',
+          'DELANTERO': 'DEL'
+        };
+        
+        const targetPosition = positionMap[playerPos];
+        if (targetPosition && targetPosition !== 'POR') {
+          // Find first available slot in target position
+          const slots = newLineup[targetPosition];
+          for (let i = 0; i < slots.length; i++) {
+            if (!slots[i].player) {
+              slots[i].player = player;
+              return;
+            }
+          }
+        } else if (targetPosition === 'POR' && !newLineup.POR[0].player) {
+          newLineup.POR[0].player = player;
+          return;
+        }
+        
+        // If no space in preferred position, add to bench
+        newLineup.BENCH.players.push(player);
+      });
+      
+      // Sort bench
+      newLineup.BENCH.players.sort((a, b) => parseInt(a.playerNumber) - parseInt(b.playerNumber));
+      
+      return { 
+        ...state, 
+        lineup: newLineup, 
+        currentFormation: formation 
+      };
     });
   }
 }));
