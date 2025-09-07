@@ -8,6 +8,18 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## September 7, 2025 - Implemented SportEasy-Style Match Management Interface
+
+Completely redesigned the match management interface to match SportEasy app design:
+- Created new SportEasyField component with green football pitch and realistic field markings
+- Implemented formation selector with 14 real football formations (4-4-2, 3-5-2, etc.)
+- Added MatchTabs component with 4 tabs: Information, Players, Forum, and Lineup
+- Integrated saved lineups system with "Mis alineaciones" section
+- Updated MatchSheet to use new tabbed interface instead of side-by-side layout
+- Maintained all existing functionality while improving visual design and user experience
+- Field positions now dynamically adjust based on selected formation
+- Added proper SportEasy-style header with opponent information and match details
+
 ## September 6, 2025 - Removed Drag & Drop from MatchSheet Component
 
 Removed all drag & drop functionality from the MatchSheet component:
