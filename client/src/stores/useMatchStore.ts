@@ -33,7 +33,7 @@ interface MatchStore extends MatchState {
   // Actions
   setMatch: (matchId: string) => void;
   setOverrideOutOfPosition: (enabled: boolean) => void;
-  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex?: number) => void;
+  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex?: number, footballType?: '11' | '7') => void;
   removePlayerFromSlot: (playerId: string) => void;
   updateAttendance: (playerId: string, status: 'pending' | 'confirmed' | 'absent') => void;
   autoAssignPlayer: (playerRef: PlayerRef) => void;
@@ -48,6 +48,8 @@ interface MatchStore extends MatchState {
   findPlayerPosition: (playerId: string) => { position: string; slotIndex?: number } | null;
   canPlaceInSlot: (position: string, slotIndex?: number, playerPosition?: string) => boolean;
   getSlotOccupancy: (position: string) => number;
+  getTotalFieldPlayers: () => number;
+  canAssignToField: (footballType: '11' | '7') => boolean;
   
   // Formation management
   setFormation: (formation: { DEF: number; MED: number; DEL: number }) => void;
@@ -205,15 +207,44 @@ export const useMatchStore = create<MatchStore>((set, get) => ({
     return slots.reduce((total, slot) => total + (slot.player ? 1 : 0), 0);
   },
 
-  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex = 0) => {
-    // REMOVER TODAS LAS RESTRICCIONES - permitir cualquier jugador en cualquier posición
+  getTotalFieldPlayers: () => {
     const { lineup } = get();
+    let total = 0;
+    
+    ['POR', 'DEF', 'MED', 'DEL'].forEach(position => {
+      const slots = lineup[position as keyof Omit<LineupState, 'BENCH'>];
+      if (Array.isArray(slots)) {
+        total += slots.reduce((count, slot) => count + (slot.player ? 1 : 0), 0);
+      }
+    });
+    
+    return total;
+  },
+
+  canAssignToField: (footballType: '11' | '7') => {
+    const { getTotalFieldPlayers } = get();
+    const maxPlayers = footballType === '7' ? 7 : 11;
+    return getTotalFieldPlayers() < maxPlayers;
+  },
+
+  assignPlayerToSlot: (playerRef: PlayerRef, position: string, slotIndex = 0, footballType: '11' | '7' = '11') => {
+    const { lineup, findPlayerPosition, canAssignToField } = get();
     
     // Solo verificar que el slot existe y no verificar compatibilidad de posición
     if (position !== 'BENCH') {
       const slots = lineup[position as keyof Omit<LineupState, 'BENCH'>];
       if (!slots || !slots[slotIndex]) {
         console.log('❌ Slot no existe:', position, slotIndex);
+        return;
+      }
+      
+      // Validar límites según tipo de fútbol (solo si el jugador viene del banquillo)
+      const currentPos = findPlayerPosition(playerRef.playerId);
+      const isComingFromBench = currentPos?.position === 'BENCH' || !currentPos;
+      
+      if (isComingFromBench && !canAssignToField(footballType)) {
+        const maxPlayers = footballType === '7' ? 7 : 11;
+        console.log(`❌ No se puede asignar - Límite de ${maxPlayers} jugadores alcanzado para Fútbol ${footballType}`);
         return;
       }
     }

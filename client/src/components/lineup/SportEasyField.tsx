@@ -305,7 +305,7 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
                         const isSlotAvailable = !slotPlayer || attendances[slotPlayer.playerId] !== 'confirmed';
                         if (isSlotAvailable) {
                           console.log('✅ Asignando jugador a CUALQUIER posición:', pos, 'slot:', i, 'reemplazando:', slotPlayer?.playerName || 'vacío');
-                          assignPlayerToSlot(player, pos, i);
+                          assignPlayerToSlot(player, pos, i, footballType);
                           assigned = true;
                           return;
                         }
@@ -337,7 +337,7 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
           }}
           onSelectPlayer={(player: PlayerRef) => {
             console.log('🎯 Jugador seleccionado manualmente:', player.playerName, 'para posición:', selectedPosition.type);
-            assignPlayerToSlot(player, selectedPosition.type, selectedPosition.slotIndex);
+            assignPlayerToSlot(player, selectedPosition.type, selectedPosition.slotIndex, footballType);
             setShowPlayerModal(false);
             setSelectedPosition(null);
           }}
