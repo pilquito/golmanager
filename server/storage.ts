@@ -38,6 +38,8 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
+  createUserForPlayer(player: Player): Promise<User | null>;
+  createUsersForAllExistingPlayers(): Promise<void>;
 
   // Player operations
   getPlayers(): Promise<Player[]>;
@@ -123,7 +125,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
-  async updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: string, updateData: Partial<UpsertUser>): Promise<User> {
     const [user] = await db
       .update(users)
       .set({
@@ -185,19 +187,19 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Player operations
-  async getPlayers(): Promise<(Player & { profileImageUrl?: string })[]> {
+  // Player operations  
+  async getPlayers(): Promise<Player[]> {
     const result = await db
       .select({
         id: players.id,
         name: players.name,
         jerseyNumber: players.jerseyNumber,
         position: players.position,
-        phone: players.phoneNumber,
+        phoneNumber: players.phoneNumber,
         email: players.email,
         birthDate: players.birthDate,
         tagline: players.tagline,
-        profile_image_url: users.profileImageUrl,
+        profileImageUrl: users.profileImageUrl,
         isActive: players.isActive,
         createdAt: players.createdAt,
         updatedAt: players.updatedAt,
@@ -231,30 +233,72 @@ export class DatabaseStorage implements IStorage {
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const [newPlayer] = await db.insert(players).values(player).returning();
     
-    // Auto-create user account for player with read-only access
+    // Auto-create user account for player
+    await this.createUserForPlayer(newPlayer);
+    
+    return newPlayer;
+  }
+
+  async createUserForPlayer(player: Player): Promise<User | null> {
     try {
-      const username = player.name.toLowerCase().replace(/\s+/g, '.');
+      // Check if user already exists for this player (by email)
+      if (player.email) {
+        const existingUser = await this.getUserByEmail(player.email);
+        if (existingUser) {
+          console.log(`User already exists for player ${player.name}: ${existingUser.username}`);
+          return existingUser;
+        }
+      }
+
+      // Generate username, handle duplicates
+      let username = player.name.toLowerCase().replace(/\s+/g, '.').replace(/[^\w.]/g, '');
+      let counter = 1;
+      let finalUsername = username;
+      
+      while (await this.getUserByUsername(finalUsername)) {
+        finalUsername = `${username}${counter}`;
+        counter++;
+      }
+
       const defaultPassword = 'jugador123'; // Default password for players
       
-      console.log(`Creating user account for player: ${player.name} with username: ${username}`);
+      console.log(`🔧 Creating user account for player: ${player.name} with username: ${finalUsername}`);
       
       const newUser = await this.createUser({
-        username,
+        username: finalUsername,
         password: defaultPassword,
         firstName: player.name.split(' ')[0],
         lastName: player.name.split(' ').slice(1).join(' ') || '',
-        email: player.email || `${username}@golmanager.com`,
+        email: player.email || `${finalUsername}@golmanager.local`,
         role: 'user',
         isActive: true,
       });
       
-      console.log(`✓ User account created successfully for ${player.name}: ${username}`);
+      console.log(`✅ User account created successfully for ${player.name}: ${finalUsername}`);
+      return newUser;
     } catch (error) {
-      // Log error but don't fail player creation if user creation fails
-      console.error('Failed to create user account for player:', player.name, error);
+      console.error('❌ Failed to create user account for player:', player.name, error);
+      return null;
     }
+  }
+
+  async createUsersForAllExistingPlayers(): Promise<void> {
+    console.log('🔄 Creating user accounts for all existing players...');
     
-    return newPlayer;
+    const allPlayers = await db.select().from(players);
+    let created = 0;
+    let skipped = 0;
+
+    for (const player of allPlayers) {
+      const result = await this.createUserForPlayer(player);
+      if (result) {
+        created++;
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(`✅ Finished creating users: ${created} created, ${skipped} skipped`);
   }
 
   async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player> {
@@ -509,9 +553,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Team configuration methods
-  async getTeamConfig(): Promise<TeamConfig | null> {
+  async getTeamConfig(): Promise<TeamConfig | undefined> {
     const [config] = await db.select().from(teamConfig).where(eq(teamConfig.id, 'team_config'));
-    return config || null;
+    return config || undefined;
   }
 
   async updateTeamConfig(configData: Partial<InsertTeamConfig>): Promise<TeamConfig> {

@@ -16,7 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { Upload } from "lucide-react";
+import { Upload, Users } from "lucide-react";
 
 export default function Configuration() {
   const { toast } = useToast();
@@ -89,6 +89,37 @@ export default function Configuration() {
       toast({
         title: "Error",
         description: "Error al guardar configuración",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createUsersMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/admin/create-users-for-players", "POST", {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Éxito",
+        description: data.message || "Usuarios creados correctamente para todos los jugadores",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Error al crear usuarios para jugadores",
         variant: "destructive",
       });
     },
@@ -547,6 +578,38 @@ export default function Configuration() {
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
+
+              {/* Admin Tools - Solo para administradores */}
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Herramientas de Administrador
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 border">
+                    <h3 className="font-medium mb-2">Crear usuarios para jugadores</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Si hay jugadores que no tienen usuarios asociados, esta herramienta creará 
+                      automáticamente cuentas de usuario para todos los jugadores existentes.
+                      <br />
+                      <span className="font-medium">Contraseña por defecto:</span> jugador123
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => createUsersMutation.mutate()}
+                      disabled={createUsersMutation.isPending}
+                      variant="default"
+                      className="bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-create-users"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {createUsersMutation.isPending ? "Creando usuarios..." : "Crear usuarios para jugadores"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

@@ -85,6 +85,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only endpoint to create users for existing players
+  app.post('/api/admin/create-users-for-players', isAuthenticated, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Access denied - Admin required" });
+      }
+
+      console.log(`🔧 Admin ${currentUser.username || currentUser.id} initiating user creation for existing players...`);
+      
+      await storage.createUsersForAllExistingPlayers();
+      
+      res.json({ 
+        success: true, 
+        message: "Users created successfully for all existing players"
+      });
+    } catch (error) {
+      console.error("Error creating users for existing players:", error);
+      res.status(500).json({ message: "Failed to create users for existing players" });
+    }
+  });
+
   // Change password endpoint
   app.post('/api/auth/change-password', isAuthenticated, async (req, res) => {
     try {
