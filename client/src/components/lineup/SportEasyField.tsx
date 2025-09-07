@@ -39,6 +39,7 @@ interface SportEasyFieldProps {
 
 export function SportEasyField({ players = [] }: SportEasyFieldProps) {
   const [selectedFormation, setSelectedFormation] = useState(formations[12]); // 4-4-2 por defecto
+  const [savedLineups, setSavedLineups] = useState<any[]>([]);
   const { lineup, assignPlayerToSlot, moveToBench, swapPlayerWithBench, getAvailableBenchPlayers, setFormation } = useMatchStore();
 
   // Aplicar formación cuando cambie la selección
@@ -47,6 +48,29 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
       setFormation(selectedFormation.positions);
     }
   }, [selectedFormation, setFormation]);
+
+  // Funciones para gestionar alineaciones guardadas
+  const saveCurrentLineup = () => {
+    const lineupName = prompt('Nombre de la alineación:');
+    if (lineupName) {
+      const newSavedLineup = {
+        name: lineupName,
+        formation: selectedFormation.name,
+        lineup: JSON.parse(JSON.stringify(lineup)),
+        formation_obj: selectedFormation
+      };
+      setSavedLineups(prev => [...prev, newSavedLineup]);
+    }
+  };
+
+  const loadLineup = (savedLineup: any) => {
+    setSelectedFormation(savedLineup.formation_obj);
+    // La alineación se cargará automáticamente con el efecto
+  };
+
+  const deleteSavedLineup = (index: number) => {
+    setSavedLineups(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Generar posiciones del campo basadas en la formación
   const generateFieldPositions = (formation: Formation) => {
@@ -282,17 +306,42 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
         <Button 
           variant="outline" 
           className="w-full mb-4 border-green-400 text-green-600 hover:bg-green-50"
+          onClick={saveCurrentLineup}
         >
-          Crear una nueva alineación
+          Guardar alineación actual
         </Button>
         
         <div className="space-y-2">
-          <div className="bg-white rounded-lg p-3 flex items-center justify-between border border-gray-200">
-            <span className="text-gray-700">Alineación 1</span>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </div>
+          {savedLineups.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500 text-sm">
+                ¡Guarda tu primera alineación!
+              </p>
+            </div>
+          ) : (
+            savedLineups.map((savedLineup, index) => (
+              <div 
+                key={index}
+                className="bg-white rounded-lg p-3 flex items-center justify-between border border-gray-200 cursor-pointer hover:bg-gray-50"
+                onClick={() => loadLineup(savedLineup)}
+              >
+                <div>
+                  <span className="text-gray-700 font-medium">{savedLineup.name}</span>
+                  <div className="text-xs text-gray-500">{savedLineup.formation}</div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSavedLineup(index);
+                  }}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
