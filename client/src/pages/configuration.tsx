@@ -37,6 +37,7 @@ export default function Configuration() {
       paymentDueDay: 1,
       contactEmail: "",
       contactPhone: "",
+      footballType: "11",
       playerStatsEnabled: true,
       myCompetitionEnabled: true,
     },
@@ -54,6 +55,7 @@ export default function Configuration() {
         paymentDueDay: config.paymentDueDay || 1,
         contactEmail: config.contactEmail || "",
         contactPhone: config.contactPhone || "",
+        footballType: config.footballType || "11",
         playerStatsEnabled: config.playerStatsEnabled ?? true,
         myCompetitionEnabled: config.myCompetitionEnabled ?? true,
       });
@@ -185,6 +187,7 @@ export default function Configuration() {
         paymentDueDay: config.paymentDueDay || 1,
         contactEmail: config.contactEmail || "",
         contactPhone: config.contactPhone || "",
+        footballType: config.footballType || "11",
       });
     }
   };
@@ -250,6 +253,34 @@ export default function Configuration() {
                             data-testid="input-team-colors"
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="footballType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Fútbol</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-football-type">
+                              <SelectValue placeholder="Selecciona el tipo de fútbol" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="11">Fútbol 11 (tradicional)</SelectItem>
+                            <SelectItem value="7">Fútbol 7</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          Cambiar este tipo afectará las formaciones disponibles en la alineación de partidos.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
