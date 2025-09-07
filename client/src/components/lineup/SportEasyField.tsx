@@ -190,11 +190,20 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
             >
               {player ? (
                 <div className="relative">
-                  <PlayerCard
-                    player={player}
-                    size="lineup11"
+                  <div 
                     className="cursor-pointer hover:scale-105 transition-transform"
-                  />
+                    onClick={() => {
+                      // Abrir menú de jugador o mover al banquillo
+                      if (player) {
+                        moveToBench(player.playerId);
+                      }
+                    }}
+                  >
+                    <PlayerCard
+                      player={player}
+                      size="lineup11"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div 
@@ -223,12 +232,37 @@ export function SportEasyField({ players = [] }: SportEasyFieldProps) {
           <h3 className="text-sm font-medium text-gray-600 mb-3">SUPLENTE</h3>
           <div className="flex flex-wrap gap-2">
             {lineup.BENCH.players.map((player) => (
-              <PlayerCard
+              <div
                 key={player.playerId}
-                player={player}
-                size="sm"
                 className="cursor-pointer hover:scale-105 transition-transform"
-              />
+                onClick={() => {
+                  // Buscar primera posición disponible para asignar
+                  const playerPos = player.playerPosition.toUpperCase();
+                  const positionMap: Record<string, string> = {
+                    'PORTERO': 'POR',
+                    'DEFENSA': 'DEF',
+                    'MEDIOCENTRO': 'MED', 
+                    'DELANTERO': 'DEL'
+                  };
+                  const targetPosition = positionMap[playerPos] || 'DEF';
+                  
+                  // Buscar slot disponible
+                  const slots = lineup[targetPosition as keyof Omit<typeof lineup, 'BENCH'>];
+                  if (Array.isArray(slots)) {
+                    for (let i = 0; i < slots.length; i++) {
+                      if (!slots[i].player) {
+                        assignPlayerToSlot(player, targetPosition, i);
+                        return;
+                      }
+                    }
+                  }
+                }}
+              >
+                <PlayerCard
+                  player={player}
+                  size="sm"
+                />
+              </div>
             ))}
           </div>
         </div>
