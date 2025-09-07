@@ -25,7 +25,10 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
   const availablePlayers = getAvailableBenchPlayers();
 
   // Manejar clic en posición vacía - abrir modal para seleccionar jugador
-  const handleEmptySlotClick = () => {
+  const handleEmptySlotClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar propagación que pueda causar eventos no deseados
+    console.log('➕ Click en slot vacío:', position, 'slot:', slotIndex);
+    
     if (isEmpty) {
       if (availablePlayers.length > 0) {
         setShowPlayerModal(true);
@@ -40,7 +43,10 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
   };
 
   // Manejar clic en jugador existente - abrir modal para sustituir o mover al banquillo
-  const handlePlayerClick = () => {
+  const handlePlayerClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar propagación que pueda causar eventos no deseados
+    console.log('👆 Click en jugador ocupado:', slot.player?.playerName, 'posición:', position);
+    
     if (slot.player) {
       // Abrir modal para sustituir el jugador o moverlo al banquillo
       setShowPlayerModal(true);
