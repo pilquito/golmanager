@@ -193,7 +193,7 @@ export function LineSlot({ position, slotIndex = 0, slot, className, size = 'md'
         title={isEmpty ? "Seleccionar jugador" : "Sustituir jugador"}
         currentPlayer={slot.player}
         onMoveToBench={handleMoveToBench}
-        overrideOutOfPosition={overrideOutOfPosition}
+        overrideOutOfPosition={true}
       />
     </>
     );
