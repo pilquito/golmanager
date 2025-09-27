@@ -19,7 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Filter, RefreshCcw, Info } from "lucide-react";
+import { Plus, Edit, Trash2, Filter, RefreshCcw, Info, CalendarPlus } from "lucide-react";
 import { insertMonthlyPaymentSchema } from "@shared/schema";
 import type { MonthlyPayment, Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -129,7 +129,7 @@ export default function MonthlyPayments() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/monthly-payments/${id}`);
+      await apiRequest(`/api/monthly-payments/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/monthly-payments"] });
@@ -153,6 +153,38 @@ export default function MonthlyPayments() {
       toast({
         title: "Error",
         description: "Error al eliminar pago",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createCurrentMonthPaymentsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/monthly-payments/create-current-month", "POST");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/monthly-payments"] });
+      toast({
+        title: "Éxito",
+        description: `Se crearon ${data.count} pagos para el mes actual`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Error al crear los pagos automáticos",
         variant: "destructive",
       });
     },
@@ -505,6 +537,15 @@ export default function MonthlyPayments() {
                 </p>
               </div>
               <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => createCurrentMonthPaymentsMutation.mutate()}
+                  disabled={createCurrentMonthPaymentsMutation.isPending}
+                  data-testid="button-create-current-month"
+                >
+                  <CalendarPlus className="h-4 w-4 mr-2" />
+                  {createCurrentMonthPaymentsMutation.isPending ? "Creando..." : "Crear Pagos Mes Actual"}
+                </Button>
                 <Button variant="default" data-testid="button-filter">
                   <Filter className="h-4 w-4 mr-2" />
                   Filtrar

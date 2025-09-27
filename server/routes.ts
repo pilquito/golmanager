@@ -563,6 +563,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/monthly-payments/create-current-month", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Get current date and month using local components to avoid timezone issues
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+      const currentMonth = `${year}-${String(month).padStart(2, '0')}`; // YYYY-MM format
+      
+      // Get all active players
+      const players = await storage.getPlayers();
+      const activePlayers = players.filter(player => player.isActive);
+      
+      // Get team configuration
+      const teamConfig = await storage.getTeamConfig();
+      const monthlyFee = teamConfig?.monthlyFee || 15.00;
+      const paymentDueDay = teamConfig?.paymentDueDay || 15;
+      
+      // Calculate due date for current month, safely handling month boundaries
+      const daysInMonth = new Date(year, month, 0).getDate(); // Get last day of current month
+      const safeDay = Math.min(paymentDueDay, daysInMonth); // Clamp to valid day
+      const dueDate = `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+      
+      // Get existing payments for current month
+      const existingPayments = await storage.getMonthlyPayments();
+      const existingPlayerIds = new Set(
+        existingPayments
+          .filter(payment => payment.month === currentMonth)
+          .map(payment => payment.playerId)
+      );
+      
+      // Create payments for players who don't have one for this month
+      const paymentsToCreate = activePlayers.filter(player => !existingPlayerIds.has(player.id));
+      
+      let createdCount = 0;
+      for (const player of paymentsToCreate) {
+        await storage.createMonthlyPayment({
+          playerId: player.id,
+          month: currentMonth,
+          amount: monthlyFee.toString(),
+          dueDate: dueDate,
+          status: "pending",
+          paymentMethod: "",
+          notes: `Pago automático generado para ${currentMonth}`,
+        });
+        createdCount++;
+      }
+      
+      res.json({ 
+        count: createdCount, 
+        month: currentMonth,
+        totalPlayers: activePlayers.length,
+        existingPayments: existingPlayerIds.size
+      });
+    } catch (error) {
+      console.error("Error creating current month payments:", error);
+      res.status(500).json({ message: "Failed to create current month payments" });
+    }
+  });
+
   // Championship payments routes
   app.get("/api/championship-payments", isAuthenticated, async (req, res) => {
     try {

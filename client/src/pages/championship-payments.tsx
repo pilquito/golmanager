@@ -127,7 +127,7 @@ export default function ChampionshipPayments() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/championship-payments/${id}`);
+      await apiRequest(`/api/championship-payments/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/championship-payments"] });
