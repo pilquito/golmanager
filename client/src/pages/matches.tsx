@@ -174,7 +174,7 @@ export default function Matches() {
 
   const importMatchesMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/liga-hesperides/import-matches", {});
+      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", {});
       return response.json();
     },
     onSuccess: (data: any) => {

@@ -50,7 +50,7 @@ export default function Standings() {
 
   const importStandingsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/liga-hesperides/import-standings", {});
+      const response = await apiRequest("/api/liga-hesperides/import-standings", "POST", {});
       return response.json();
     },
     onSuccess: (data: any) => {

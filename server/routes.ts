@@ -983,7 +983,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Scrape matches from Liga Hesperides
-      const response = await fetch(teamConfig.ligaHesperidesMatchesUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(teamConfig.ligaHesperidesMatchesUrl, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         throw new Error(`Failed to fetch matches: ${response.status} ${response.statusText}`);
       }
@@ -1046,7 +1052,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Scrape standings from Liga Hesperides
-      const response = await fetch(teamConfig.ligaHesperidesStandingsUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(teamConfig.ligaHesperidesStandingsUrl, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         throw new Error(`Failed to fetch standings: ${response.status} ${response.statusText}`);
       }
@@ -1103,11 +1115,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectStorageService = new ObjectStorageService();
       let savedLogos = 0;
       
-      for (const [teamName, logoUrl] of teamLogos) {
+      for (const [teamName, logoUrl] of Array.from(teamLogos.entries())) {
         try {
           console.log(`Downloading logo for ${teamName} from ${logoUrl}`);
           
-          const logoResponse = await fetch(logoUrl);
+          const logoController = new AbortController();
+          const logoTimeoutId = setTimeout(() => logoController.abort(), 5000); // 5 second timeout for logos
+          
+          const logoResponse = await fetch(logoUrl, {
+            signal: logoController.signal
+          });
+          clearTimeout(logoTimeoutId);
           if (!logoResponse.ok) {
             console.warn(`Failed to download logo for ${teamName}: ${logoResponse.status}`);
             continue;
@@ -1125,13 +1143,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const uploadResult = await objectStorageService.getObjectEntityUploadURL(fileName, `image/${ext}`, 'public');
           
           // Upload the image data
+          const uploadController = new AbortController();
+          const uploadTimeoutId = setTimeout(() => uploadController.abort(), 5000); // 5 second timeout for upload
+          
           const uploadResponse = await fetch(uploadResult.uploadURL, {
             method: 'PUT',
             body: logoData,
             headers: {
               'Content-Type': `image/${ext}`,
             },
+            signal: uploadController.signal
           });
+          clearTimeout(uploadTimeoutId);
           
           if (uploadResponse.ok) {
             // Save team info to opponents table
