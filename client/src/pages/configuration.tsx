@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +16,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { Upload, Users } from "lucide-react";
+import { Upload, Users, Download, ExternalLink } from "lucide-react";
 
 export default function Configuration() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: config, isLoading } = useQuery<TeamConfig>({
     queryKey: ["/api/team-config"],
@@ -124,6 +125,52 @@ export default function Configuration() {
       toast({
         title: "Error",
         description: "Error al crear usuarios para jugadores",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Liga Hesperides import mutation - simplified approach
+  const importLigaHesperidesMutation = useMutation({
+    mutationFn: async () => {
+      // Use the existing server-side import endpoint
+      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", {});
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Import failed: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onMutate: () => {
+      setIsImporting(true);
+    },
+    onSuccess: (data) => {
+      setIsImporting(false);
+      toast({
+        title: "Importación exitosa",
+        description: data.message || `Se importaron partidos de Liga Hespérides`,
+      });
+      // Invalidate matches query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+    },
+    onError: (error) => {
+      setIsImporting(false);
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error de importación",
+        description: error instanceof Error ? error.message : "Error desconocido al importar partidos",
         variant: "destructive",
       });
     },
@@ -633,6 +680,49 @@ export default function Configuration() {
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
+
+              {/* Liga Hesperides Manual Import */}
+              <Card className="border-green-200 bg-green-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="h-5 w-5" />
+                    Importación Manual - Liga Hespérides
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 border">
+                    <h3 className="font-medium mb-2">Importar partidos desde Liga Hespérides</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Esta herramienta importa automáticamente los partidos de AF. SOBRADILLO desde Liga Hespérides.
+                      Los datos se obtienen directamente desde el navegador para evitar problemas de contenido dinámico.
+                      <br />
+                      <span className="font-medium">Nota:</span> Solo se importarán partidos que no existan ya en el sistema.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => importLigaHesperidesMutation.mutate()}
+                        disabled={isImporting || importLigaHesperidesMutation.isPending}
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                        data-testid="button-import-liga-hesperides"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isImporting ? "Importando partidos..." : "Importar partidos de Liga Hespérides"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => window.open("https://ligahesperides.mygol.es/tournaments/21/matches", "_blank")}
+                        data-testid="button-view-liga-hesperides"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Ver Liga Hespérides
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 

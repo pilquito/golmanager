@@ -975,6 +975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Liga Hesperides integration routes
   app.post("/api/liga-hesperides/import-matches", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -1003,32 +1004,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced HTML parsing to extract actual match data
       console.log("🔍 Starting match extraction from Liga Hesperides...");
       
+      // Liga Hesperides specific extraction function
+      const extractMatchesFromLigaHesperides = (html: string) => {
+        const matches: any[] = [];
+        
+        console.log('📋 Parsing Liga Hesperides structure...');
+        console.log(`📄 HTML content length: ${html.length} chars`);
+        console.log(`📄 HTML preview (first 500 chars): ${html.substring(0, 500)}`);
+        
+        // Liga Hesperides specific structure: Jornadas with markdown table format
+        // Pattern: ### Jornada X followed by table rows with match data
+        
+        // First check if we have jornadas
+        const jornadaMatches = html.match(/###\s*Jornada\s*(\d+)/gi);
+        console.log(`📅 Found ${jornadaMatches ? jornadaMatches.length : 0} jornadas: ${jornadaMatches ? jornadaMatches.join(', ') : 'none'}`);
+        
+        // Check if AF. SOBRADILLO appears anywhere in the content
+        const sobradilloMatches = html.match(/AF\.\s*SOBRADILLO|SOBRADILLO/gi);
+        console.log(`⚽ Found ${sobradilloMatches ? sobradilloMatches.length : 0} mentions of SOBRADILLO: ${sobradilloMatches ? sobradilloMatches.join(', ') : 'none'}`);
+        
+        // Split content by jornadas
+        const jornadaRegex = /###\s*Jornada\s*(\d+)/g;
+        const sections = html.split(jornadaRegex);
+        console.log(`📊 Split into ${sections.length} sections`);
+        
+        for (let i = 1; i < sections.length; i += 2) {
+          const jornadaNumber = sections[i];
+          const jornadaContent = sections[i + 1] || '';
+          
+          console.log(`📅 Processing Jornada ${jornadaNumber} (content length: ${jornadaContent.length})`);
+          console.log(`📅 Jornada ${jornadaNumber} preview: ${jornadaContent.substring(0, 200)}`);
+          
+          // Each match row in markdown table format:
+          // | Date/Time | Home Team | Home Logo | Status | Away Logo | Away Team | Location | Score |
+          const tableRowRegex = /\|\s*([^|]+)\s*\|\s*\[([^\]]+)\][^|]*\|\s*[^|]*\|\s*([^|]+)\s*\|\s*[^|]*\|\s*\[([^\]]+)\][^|]*\|\s*([^|]*)\s*\|\s*([^|]*)\s*\|/g;
+          let rowMatch;
+          let rowCount = 0;
+          
+          while ((rowMatch = tableRowRegex.exec(jornadaContent)) !== null) {
+            rowCount++;
+            const [, dateTimeStr, homeTeam, statusStr, awayTeam, locationStr, scoreStr] = rowMatch;
+            
+            console.log(`🔍 Row ${rowCount}: Found potential match: "${homeTeam?.trim()}" vs "${awayTeam?.trim()}"`);
+            
+            // Check if AF. SOBRADILLO is in this match
+            if (!/AF\.\s*SOBRADILLO|SOBRADILLO/i.test(`${homeTeam} ${awayTeam}`)) {
+              console.log(`⏭️  Skipping row ${rowCount}: No SOBRADILLO found`);
+              continue;
+            }
+            
+            console.log(`⚽ AF. SOBRADILLO match found: ${homeTeam?.trim()} vs ${awayTeam?.trim()}`);
+            
+            // Clean and extract data
+            const dateTime = dateTimeStr?.trim();
+            const cleanHomeTeam = homeTeam?.trim();
+            const cleanAwayTeam = awayTeam?.trim();
+            const status = statusStr?.trim() || 'scheduled';
+            const location = locationStr?.replace('@', '').trim() || '';
+            
+            // Determine opponent and if we're home/away
+            let opponent;
+            let isHome;
+            
+            if (/AF\.\s*SOBRADILLO|SOBRADILLO/i.test(cleanHomeTeam)) {
+              opponent = cleanAwayTeam;
+              isHome = true;
+            } else {
+              opponent = cleanHomeTeam;
+              isHome = false;
+            }
+            
+            // Parse date (format: DD/MM/YYYY HH:MM)
+            let matchDate = null;
+            const dateMatch = dateTime?.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+            const timeMatch = dateTime?.match(/(\d{1,2}:\d{2})/);
+            
+            if (dateMatch) {
+              const [day, month, year] = dateMatch[1].split('/');
+              const time = timeMatch ? timeMatch[1] : '00:00';
+              try {
+                matchDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}:00`);
+              } catch (error) {
+                console.log(`❌ Error parsing date: ${dateTime}`);
+                continue;
+              }
+            }
+            
+            // Parse score if available
+            let ourScore = null;
+            let opponentScore = null;
+            const scoreMatch = scoreStr?.match(/(\d+)\s*[-:]\s*(\d+)/);
+            if (scoreMatch) {
+              const homeScore = parseInt(scoreMatch[1]);
+              const awayScore = parseInt(scoreMatch[2]);
+              
+              if (isHome) {
+                ourScore = homeScore;
+                opponentScore = awayScore;
+              } else {
+                ourScore = awayScore;
+                opponentScore = homeScore;
+              }
+            }
+            
+            // Only include matches with valid data
+            if (opponent && opponent.length > 1 && matchDate) {
+              const matchInfo = {
+                date: matchDate.toISOString().split('T')[0],
+                opponent: opponent,
+                isHome: isHome,
+                ourScore,
+                opponentScore,
+                competition: '1ª División',
+                venue: location || "Campo Municipal"
+              };
+              
+              matches.push(matchInfo);
+              console.log(`✅ Added match: ${isHome ? 'AF. SOBRADILLO' : opponent} vs ${isHome ? opponent : 'AF. SOBRADILLO'} (${dateTime})`);
+            }
+          }
+          
+          console.log(`📊 Jornada ${jornadaNumber}: Processed ${rowCount} table rows`);
+        }
+        
+        console.log(`📊 Total matches found: ${matches.length}`);
+        return matches;
+      };
+      
       let importedCount = 0;
       let skippedCount = 0;
       let updatedCount = 0;
 
-      // Multiple strategies to find match data
-      const strategies = [
-        // Strategy 1: Table-based extraction (most common)
-        () => extractMatchesFromTables(html),
-        // Strategy 2: Div-based extraction 
-        () => extractMatchesFromDivs(html),
-        // Strategy 3: List-based extraction
-        () => extractMatchesFromLists(html)
-      ];
-
+      // Use Liga Hesperides specific extraction
       let extractedMatches = [];
       
-      for (const strategy of strategies) {
-        try {
-          extractedMatches = strategy();
-          if (extractedMatches.length > 0) {
-            console.log(`✅ Found ${extractedMatches.length} matches using extraction strategy`);
-            break;
-          }
-        } catch (error) {
-          console.log("Strategy failed, trying next...");
+      try {
+        extractedMatches = extractMatchesFromLigaHesperides(html);
+        if (extractedMatches.length > 0) {
+          console.log(`✅ Found ${extractedMatches.length} matches using Liga Hesperides extraction`);
+        } else {
+          console.log("❌ No AF. SOBRADILLO matches found in Liga Hesperides data");
         }
+      } catch (error) {
+        console.log("❌ Error in Liga Hesperides extraction:", error);
       }
 
       // Process and save extracted matches
@@ -1082,147 +1200,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Helper functions for different extraction strategies
-      const extractMatchesFromTables = (html: string) => {
-        const matches: any[] = [];
-        const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/gi;
-        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-        const cellRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
-        
-        let tableMatch;
-        while ((tableMatch = tableRegex.exec(html)) !== null) {
-          const tableContent = tableMatch[0];
-          
-          // Check if this table contains AF. Sobradillo
-          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(tableContent)) continue;
-          
-          let rowMatch;
-          while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
-            const rowContent = rowMatch[1];
-            
-            // Skip header rows
-            if (/<th/i.test(rowContent)) continue;
-            
-            // Check if row contains AF. Sobradillo
-            if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(rowContent)) continue;
-            
-            const cells: string[] = [];
-            let cellMatch;
-            while ((cellMatch = cellRegex.exec(rowContent)) !== null) {
-              cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
-            }
-            
-            if (cells.length >= 3) {
-              const matchInfo = parseMatchFromCells(cells);
-              if (matchInfo) matches.push(matchInfo);
-            }
-          }
-        }
-        
-        return matches;
-      }
-
-      const extractMatchesFromDivs = (html: string) => {
-        const matches: any[] = [];
-        const divRegex = /<div[^>]*class[^>]*match[^>]*>[\s\S]*?<\/div>/gi;
-        
-        let divMatch;
-        while ((divMatch = divRegex.exec(html)) !== null) {
-          const divContent = divMatch[0];
-          
-          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(divContent)) continue;
-          
-          const matchInfo = parseMatchFromDiv(divContent);
-          if (matchInfo) matches.push(matchInfo);
-        }
-        
-        return matches;
-      }
-
-      const extractMatchesFromLists = (html: string) => {
-        const matches: any[] = [];
-        const listRegex = /<[uo]l[^>]*>[\s\S]*?<\/[uo]l>/gi;
-        const itemRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-        
-        let listMatch;
-        while ((listMatch = listRegex.exec(html)) !== null) {
-          const listContent = listMatch[0];
-          
-          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(listContent)) continue;
-          
-          let itemMatch;
-          while ((itemMatch = itemRegex.exec(listContent)) !== null) {
-            const itemContent = itemMatch[1];
-            
-            if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(itemContent)) continue;
-            
-            const matchInfo = parseMatchFromText(itemContent);
-            if (matchInfo) matches.push(matchInfo);
-          }
-        }
-        
-        return matches;
-      }
-
-      const parseMatchFromCells = (cells: string[]) => {
-        // Common table formats: [Date, Home, Away, Score] or [Date, Teams, Venue, Score]
-        const dateCell = cells.find(cell => /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(cell));
-        if (!dateCell) return null;
-        
-        const date = parseDate(dateCell);
-        if (!date) return null;
-        
-        // Find team names
-        const teamCells = cells.filter(cell => 
-          /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(cell) ||
-          /vs|contra|-|x/.test(cell)
-        );
-        
-        if (teamCells.length === 0) return null;
-        
-        const { opponent, isHome } = extractOpponent(teamCells.join(' '));
-        if (!opponent) return null;
-        
-        const { homeScore, awayScore } = extractScore(cells.join(' '));
-        
-        return {
-          date,
-          opponent,
-          isHome,
-          homeScore,
-          awayScore,
-          venue: "Campo Municipal",
-          competition: "Liga Hesperides"
-        };
-      }
-
-      const parseMatchFromDiv = (divContent: string) => {
-        const text = divContent.replace(/<[^>]*>/g, ' ').trim();
-        return parseMatchFromText(text);
-      }
-
-      const parseMatchFromText = (text: string) => {
-        const dateMatch = text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
-        if (!dateMatch) return null;
-        
-        const date = parseDate(dateMatch[0]);
-        if (!date) return null;
-        
-        const { opponent, isHome } = extractOpponent(text);
-        if (!opponent) return null;
-        
-        const { homeScore, awayScore } = extractScore(text);
-        
-        return {
-          date,
-          opponent,
-          isHome,
-          homeScore,
-          awayScore,
-          venue: "Campo Municipal", 
-          competition: "Liga Hesperides"
-        };
-      }
 
       const parseDate = (dateStr: string): string | null => {
         try {
