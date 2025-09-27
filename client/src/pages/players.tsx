@@ -42,13 +42,18 @@ export default function Players() {
     queryKey: ["/api/players"],
   });
 
-  // Filter players based on number and position
+  // Filter and sort players based on number and position
   const filteredPlayers = players?.filter((player) => {
     const matchesNumber = !filterNumber || 
       (player.jerseyNumber && player.jerseyNumber.toString().includes(filterNumber));
     const matchesPosition = !filterPosition || filterPosition === "all" ||
       (player.position && player.position.toLowerCase().includes(filterPosition.toLowerCase()));
     return matchesNumber && matchesPosition;
+  }).sort((a, b) => {
+    // Sort by jersey number ascending (1, 2, 3, ...), putting players without number at the end
+    const aNumber = a.jerseyNumber || 999;
+    const bNumber = b.jerseyNumber || 999;
+    return aNumber - bNumber;
   }) || [];
 
   const form = useForm({
