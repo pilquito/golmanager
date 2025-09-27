@@ -976,81 +976,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Liga Hesperides integration routes - accepts pre-scraped data from client
+  // Liga Hesperides integration routes - server-side scraping
   app.post("/api/liga-hesperides/import-matches", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      // Accept scraped HTML data from client
-      const { html } = req.body;
-      if (!html || typeof html !== 'string' || html.length < 100) {
+      // Get team configuration to retrieve Liga Hesperides URLs
+      const teamConfig = await storage.getTeamConfig();
+      if (!teamConfig?.ligaHesperidesMatchesUrl) {
         return res.status(400).json({ 
-          message: "No se recibieron datos HTML válidos para procesar." 
+          message: "Liga Hesperides URL de partidos no configurada. Configúrala en la página de configuración." 
         });
       }
 
-      console.log("🔍 Processing Liga Hesperides data from client...");
+      // Security: Validate URL to prevent SSRF attacks
+      const allowedDomains = ['ligahesperides.mygol.es', 'ligahesperides.com'];
+      const url = new URL(teamConfig.ligaHesperidesMatchesUrl);
+      if (!allowedDomains.includes(url.hostname)) {
+        return res.status(400).json({
+          message: "URL no permitida. Solo se permiten URLs de Liga Hesperides oficial."
+        });
+      }
+
+      // Fetch matches data directly from Liga Hesperides server
+      console.log(`🔍 Fetching matches from: ${teamConfig.ligaHesperidesMatchesUrl}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const response = await fetch(teamConfig.ligaHesperidesMatchesUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch matches: ${response.status} ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      console.log(`📄 Fetched ${html.length} characters of Liga Hesperides data`);
       
       // Enhanced HTML parsing to extract actual match data
       console.log("🔍 Starting match extraction from Liga Hesperides...");
       
-      // Liga Hesperides specific extraction function
+      // Liga Hesperides specific extraction function  
       const extractMatchesFromLigaHesperides = (html: string) => {
         const matches: any[] = [];
         
-        console.log('📋 Parsing Liga Hesperides structure...');
+        console.log('⚽ Extracting matches from Liga Hesperides...');
         console.log(`📄 HTML content length: ${html.length} chars`);
-        console.log(`📄 HTML preview (first 500 chars): ${html.substring(0, 500)}`);
         
-        // Liga Hesperides specific structure: Jornadas with markdown table format
-        // Pattern: ### Jornada X followed by table rows with match data
+        // Find all "Jornada X" sections
+        const jornadaSectionRegex = /###\s*Jornada\s*(\d+)([\s\S]*?)(?=###|$)/gi;
+        let jornadaMatch;
         
-        // First check if we have jornadas
-        const jornadaMatches = html.match(/###\s*Jornada\s*(\d+)/gi);
-        console.log(`📅 Found ${jornadaMatches ? jornadaMatches.length : 0} jornadas: ${jornadaMatches ? jornadaMatches.join(', ') : 'none'}`);
-        
-        // Check if AF. SOBRADILLO appears anywhere in the content
-        const sobradilloMatches = html.match(/AF\.\s*SOBRADILLO|SOBRADILLO/gi);
-        console.log(`⚽ Found ${sobradilloMatches ? sobradilloMatches.length : 0} mentions of SOBRADILLO: ${sobradilloMatches ? sobradilloMatches.join(', ') : 'none'}`);
-        
-        // Split content by jornadas
-        const jornadaRegex = /###\s*Jornada\s*(\d+)/g;
-        const sections = html.split(jornadaRegex);
-        console.log(`📊 Split into ${sections.length} sections`);
-        
-        for (let i = 1; i < sections.length; i += 2) {
-          const jornadaNumber = sections[i];
-          const jornadaContent = sections[i + 1] || '';
+        while ((jornadaMatch = jornadaSectionRegex.exec(html)) !== null) {
+          const [, jornadaNumber, jornadaContent] = jornadaMatch;
           
-          console.log(`📅 Processing Jornada ${jornadaNumber} (content length: ${jornadaContent.length})`);
-          console.log(`📅 Jornada ${jornadaNumber} preview: ${jornadaContent.substring(0, 200)}`);
+          console.log(`📅 Processing Jornada ${jornadaNumber}`);
           
-          // Each match row in markdown table format:
-          // | Date/Time | Home Team | Home Logo | Status | Away Logo | Away Team | Location | Score |
-          const tableRowRegex = /\|\s*([^|]+)\s*\|\s*\[([^\]]+)\][^|]*\|\s*[^|]*\|\s*([^|]+)\s*\|\s*[^|]*\|\s*\[([^\]]+)\][^|]*\|\s*([^|]*)\s*\|\s*([^|]*)\s*\|/g;
-          let rowMatch;
-          let rowCount = 0;
+          // Extract match rows from this jornada using the exact Liga Hesperides format:
+          // | [27/09/2025 16:30](link) | [EUROPA SANTA CRUZ](link) | ![](logo) | Status | ![](logo) | [AF. SOBRADILLO](link) | @ Location | |
+          const matchRowRegex = /\|\s*\[([^\]]+)\][^|]*\|\s*\[([^\]]+)\][^|]*\|\s*[^|]*\|\s*([^|]+)\s*\|\s*[^|]*\|\s*\[([^\]]+)\][^|]*\|\s*([^|]*)\s*\|\s*[^|]*\|/g;
           
-          while ((rowMatch = tableRowRegex.exec(jornadaContent)) !== null) {
-            rowCount++;
-            const [, dateTimeStr, homeTeam, statusStr, awayTeam, locationStr, scoreStr] = rowMatch;
+          let matchRowMatch;
+          while ((matchRowMatch = matchRowRegex.exec(jornadaContent)) !== null) {
+            const [, dateTimeStr, homeTeam, statusStr, awayTeam, locationStr] = matchRowMatch;
             
-            console.log(`🔍 Row ${rowCount}: Found potential match: "${homeTeam?.trim()}" vs "${awayTeam?.trim()}"`);
-            
-            // Check if AF. SOBRADILLO is in this match
+            // Only process matches involving AF. SOBRADILLO
             if (!/AF\.\s*SOBRADILLO|SOBRADILLO/i.test(`${homeTeam} ${awayTeam}`)) {
-              console.log(`⏭️  Skipping row ${rowCount}: No SOBRADILLO found`);
               continue;
             }
             
-            console.log(`⚽ AF. SOBRADILLO match found: ${homeTeam?.trim()} vs ${awayTeam?.trim()}`);
+            console.log(`⚽ Found AF. SOBRADILLO match: ${homeTeam?.trim()} vs ${awayTeam?.trim()}`);
             
-            // Clean and extract data
-            const dateTime = dateTimeStr?.trim();
+            // Extract match details
             const cleanHomeTeam = homeTeam?.trim();
-            const cleanAwayTeam = awayTeam?.trim();
-            const status = statusStr?.trim() || 'scheduled';
-            const location = locationStr?.replace('@', '').trim() || '';
+            const cleanAwayTeam = awayTeam?.trim();  
+            const status = statusStr?.trim();
+            const location = locationStr?.replace(/^@\s*/, '').trim();
             
-            // Determine opponent and if we're home/away
+            // Determine opponent and home/away status
             let opponent;
             let isHome;
             
@@ -1062,43 +1069,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isHome = false;
             }
             
-            // Parse date (format: DD/MM/YYYY HH:MM)
+            // Parse date from format: "27/09/2025 16:30"
             let matchDate = null;
-            const dateMatch = dateTime?.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-            const timeMatch = dateTime?.match(/(\d{1,2}:\d{2})/);
+            let matchTime = null;
             
-            if (dateMatch) {
-              const [day, month, year] = dateMatch[1].split('/');
-              const time = timeMatch ? timeMatch[1] : '00:00';
+            const dateTimeMatch = dateTimeStr?.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*(\d{1,2}:\d{2})?/);
+            if (dateTimeMatch) {
+              const [, dateStr, timeStr] = dateTimeMatch;
+              const [day, month, year] = dateStr.split('/');
+              matchTime = timeStr || '00:00';
+              
               try {
-                matchDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}:00`);
+                matchDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${matchTime}:00`);
               } catch (error) {
-                console.log(`❌ Error parsing date: ${dateTime}`);
+                console.warn(`⚠️  Error parsing date: ${dateTimeStr}`);
                 continue;
               }
             }
             
-            // Parse score if available
+            // Parse status-based scores if match is completed
             let ourScore = null;
             let opponentScore = null;
-            const scoreMatch = scoreStr?.match(/(\d+)\s*[-:]\s*(\d+)/);
-            if (scoreMatch) {
-              const homeScore = parseInt(scoreMatch[1]);
-              const awayScore = parseInt(scoreMatch[2]);
+            
+            // Check if status contains score (e.g., "En juego11" might indicate score)
+            const statusScoreMatch = status?.match(/(\d+)\s*[-:]\s*(\d+)/);
+            if (statusScoreMatch) {
+              const homeScore = parseInt(statusScoreMatch[1]);
+              const awayScore = parseInt(statusScoreMatch[2]);
               
-              if (isHome) {
-                ourScore = homeScore;
-                opponentScore = awayScore;
-              } else {
-                ourScore = awayScore;
-                opponentScore = homeScore;
-              }
+              ourScore = isHome ? homeScore : awayScore;
+              opponentScore = isHome ? awayScore : homeScore;
             }
             
-            // Only include matches with valid data
-            if (opponent && opponent.length > 1 && matchDate) {
-              const matchInfo = {
+            // Create match record
+            if (opponent && matchDate) {
+              const matchRecord = {
                 date: matchDate.toISOString().split('T')[0],
+                time: matchTime,
                 opponent: opponent,
                 isHome: isHome,
                 ourScore,
@@ -1107,12 +1114,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 venue: location || "Campo Municipal"
               };
               
-              matches.push(matchInfo);
-              console.log(`✅ Added match: ${isHome ? 'AF. SOBRADILLO' : opponent} vs ${isHome ? opponent : 'AF. SOBRADILLO'} (${dateTime})`);
+              matches.push(matchRecord);
+              console.log(`✅ Added match: ${isHome ? 'AF. SOBRADILLO' : opponent} vs ${isHome ? opponent : 'AF. SOBRADILLO'} (${dateTimeStr})`);
             }
           }
-          
-          console.log(`📊 Jornada ${jornadaNumber}: Processed ${rowCount} table rows`);
         }
         
         console.log(`📊 Total matches found: ${matches.length}`);
@@ -1289,6 +1294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Security: Validate URL to prevent SSRF attacks
+      const allowedDomains = ['ligahesperides.mygol.es', 'ligahesperides.com'];
+      const url = new URL(teamConfig.ligaHesperidesStandingsUrl);
+      if (!allowedDomains.includes(url.hostname)) {
+        return res.status(400).json({
+          message: "URL no permitida. Solo se permiten URLs de Liga Hesperides oficial."
+        });
+      }
+
       // Scrape standings from Liga Hesperides
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -1310,29 +1324,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let updatedTeams = 0;
       let savedLogos = 0;
 
-      // Multiple strategies to extract standings table
-      const strategies = [
-        // Strategy 1: Table-based extraction (most common)
-        () => extractStandingsFromTables(html),
-        // Strategy 2: Div-based extraction  
-        () => extractStandingsFromDivs(html),
-        // Strategy 3: List-based extraction
-        () => extractStandingsFromLists(html)
-      ];
-
-      let extractedStandings: any[] = [];
+      // Liga Hesperides specific markdown table extraction
+      console.log("📊 Parsing Liga Hesperides markdown format...");
       
-      for (const strategy of strategies) {
-        try {
-          extractedStandings = strategy();
-          if (extractedStandings.length > 0) {
-            console.log(`✅ Found ${extractedStandings.length} teams in standings using extraction strategy`);
-            break;
-          }
-        } catch (error) {
-          console.log("Strategy failed, trying next...");
+      const extractStandingsFromLigaHesperides = (html: string) => {
+        const standings: any[] = [];
+        
+        // Liga Hesperides uses markdown table format
+        // | Ranking |  | Equipo | Puntos | Partidos jugados | ... |
+        console.log(`📄 HTML content length: ${html.length} chars`);
+        
+        // Look for the classification table
+        const classificationMatch = html.match(/###\s*Clasificaci[óo]n([\s\S]*?)(?=###|\n\n|$)/i);
+        if (!classificationMatch) {
+          console.log("❌ No classification section found");
+          return standings;
         }
-      }
+        
+        const classificationContent = classificationMatch[1];
+        console.log(`📊 Found classification section (${classificationContent.length} chars)`);
+        
+        // Extract table rows (markdown format)
+        // Pattern: | position | logo | [team name](link) | points | played | wins | draws | losses | goals_for | goals_against | goal_diff |
+        const tableRowRegex = /\|\s*(\d+)\s*\|\s*[^|]*\|\s*\[([^\]]+)\][^|]*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(-?\d+)\s*\|/g;
+        
+        let match;
+        let rowCount = 0;
+        
+        while ((match = tableRowRegex.exec(classificationContent)) !== null) {
+          rowCount++;
+          const [, position, teamName, points, played, wins, draws, losses, goalsFor, goalsAgainst, goalDiff] = match;
+          
+          console.log(`📋 Row ${rowCount}: ${teamName} - Pos: ${position}, Pts: ${points}`);
+          
+          const teamData = {
+            position: parseInt(position),
+            team: teamName.trim(),
+            points: parseInt(points),
+            matchesPlayed: parseInt(played),
+            wins: parseInt(wins),
+            draws: parseInt(draws),
+            losses: parseInt(losses),
+            goalsFor: parseInt(goalsFor),
+            goalsAgainst: parseInt(goalsAgainst),
+            goalDifference: parseInt(goalDiff),
+            logoUrl: null // Will try to extract logo later
+          };
+          
+          standings.push(teamData);
+        }
+        
+        // Also try to extract team logos from the table
+        const logoRegex = /\|\s*\d+\s*\|\s*!\[]\(([^)]+)\)/g;
+        let logoMatch;
+        let logoIndex = 0;
+        
+        while ((logoMatch = logoRegex.exec(classificationContent)) !== null && logoIndex < standings.length) {
+          const logoUrl = logoMatch[1];
+          if (logoUrl && standings[logoIndex]) {
+            standings[logoIndex].logoUrl = logoUrl.startsWith('http') ? logoUrl : `https://ligahesperides.mygol.es${logoUrl}`;
+            console.log(`🖼️  Found logo for ${standings[logoIndex].team}: ${standings[logoIndex].logoUrl}`);
+          }
+          logoIndex++;
+        }
+        
+        console.log(`✅ Extracted ${standings.length} teams from Liga Hesperides classification`);
+        return standings;
+      };
+
+      const extractedStandings = extractStandingsFromLigaHesperides(html);
 
       // Helper function for downloading and saving team logos
       const downloadAndSaveTeamLogo = async (teamName: string, logoUrl: string) => {

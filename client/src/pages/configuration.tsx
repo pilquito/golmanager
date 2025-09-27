@@ -130,30 +130,11 @@ export default function Configuration() {
     },
   });
 
-  // Liga Hesperides import mutation - manual copy-paste approach
+  // Liga Hesperides import mutation - automatic server-side scraping
   const importLigaHesperidesMutation = useMutation({
     mutationFn: async () => {
-      // Ask user to manually copy HTML content
-      const htmlContent = prompt(`
-INSTRUCCIONES SIMPLES:
-
-1. Abre Liga Hesperides en una nueva pestaña: https://ligahesperides.mygol.es/tournaments/21/matches
-
-2. Cuando cargue la página, presiona F12 para abrir las herramientas de desarrollador
-
-3. Copia todo este código y pégalo en la consola:
-document.documentElement.outerHTML
-
-4. Copia el resultado completo (todo el texto que aparece) y pégalo abajo:
-
-PEGA EL CÓDIGO HTML AQUÍ:`);
-      
-      if (!htmlContent || htmlContent.trim().length < 100) {
-        throw new Error("No se proporcionó contenido HTML válido. Inténtalo de nuevo siguiendo las instrucciones.");
-      }
-      
-      // Send HTML to server for processing
-      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", { html: htmlContent });
+      // Server automatically fetches and processes Liga Hesperides data
+      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", {});
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -190,6 +171,51 @@ PEGA EL CÓDIGO HTML AQUÍ:`);
       toast({
         title: "Error de importación",
         description: error instanceof Error ? error.message : "Error desconocido al importar partidos",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Liga Hesperides standings import mutation
+  const importLigaHesperidesStandingsMutation = useMutation({
+    mutationFn: async () => {
+      // Server automatically fetches and processes Liga Hesperides standings data
+      const response = await apiRequest("/api/liga-hesperides/import-standings", "POST", {});
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Import failed: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onMutate: () => {
+      setIsImporting(true);
+    },
+    onSuccess: (data) => {
+      setIsImporting(false);
+      toast({
+        title: "Clasificación importada",
+        description: data.message || "Clasificación importada correctamente desde Liga Hespérides",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/standings"] });
+    },
+    onError: (error) => {
+      setIsImporting(false);
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error al importar clasificación", 
+        description: error instanceof Error ? error.message : "Error desconocido al importar clasificación",
         variant: "destructive",
       });
     },
@@ -702,39 +728,50 @@ PEGA EL CÓDIGO HTML AQUÍ:`);
                 </CardContent>
               </Card>
 
-              {/* Liga Hesperides Manual Import */}
+              {/* Liga Hesperides Automatic Import */}
               <Card className="border-green-200 bg-green-50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Download className="h-5 w-5" />
-                    Importación Manual - Liga Hespérides
+                    Importación Automática - Liga Hespérides
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-white rounded-lg p-4 border">
                     <h3 className="font-medium mb-2">Importar partidos desde Liga Hespérides</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Esta herramienta te guiará paso a paso para importar los partidos de AF. SOBRADILLO desde Liga Hespérides.
-                      Es un proceso simple de copiar y pegar que funciona perfectamente.
+                      Importa automáticamente todos los partidos de AF. SOBRADILLO desde Liga Hespérides.
+                      El proceso es completamente automático y funciona perfectamente desde cualquier dispositivo.
                       <br />
                       <span className="font-medium">Nota:</span> Solo se importarán partidos que no existan ya en el sistema.
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         type="button"
                         onClick={() => importLigaHesperidesMutation.mutate()}
                         disabled={isImporting || importLigaHesperidesMutation.isPending}
                         variant="default"
                         className="bg-green-600 hover:bg-green-700"
-                        data-testid="button-import-liga-hesperides"
+                        data-testid="button-import-liga-hesperides-matches"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        {isImporting ? "Importando partidos..." : "Importar partidos de Liga Hespérides"}
+                        {isImporting ? "Importando partidos..." : "Importar Partidos"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => importLigaHesperidesStandingsMutation.mutate()}
+                        disabled={isImporting || importLigaHesperidesStandingsMutation.isPending}
+                        variant="default"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        data-testid="button-import-liga-hesperides-standings"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isImporting ? "Importando clasificación..." : "Importar Clasificación"}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => window.open("https://ligahesperides.mygol.es/tournaments/21/matches", "_blank")}
+                        onClick={() => window.open("https://ligahesperides.mygol.es/tournaments/21", "_blank")}
                         data-testid="button-view-liga-hesperides"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
