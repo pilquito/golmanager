@@ -1000,38 +1000,308 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const html = await response.text();
       
-      // Simple HTML parsing to find AF. Sobradillo matches
-      // This is a basic implementation - in production you'd use a proper HTML parser
-      const matchRegex = /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi;
-      const lines = html.split('\n');
-      const matches = [];
+      // Enhanced HTML parsing to extract actual match data
+      console.log("🔍 Starting match extraction from Liga Hesperides...");
       
       let importedCount = 0;
       let skippedCount = 0;
+      let updatedCount = 0;
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (matchRegex.test(line)) {
-          // Found a line with AF. Sobradillo, try to extract match info
-          // This is a simplified parser - would need more sophisticated parsing for real data
-          console.log("Found match line:", line.trim());
-          
-          // Here you would implement proper parsing logic to extract:
-          // - Date and time
-          // - Opponent name
-          // - Venue
-          // - Competition
-          // - Score (if already played)
-          
-          // For now, we'll just log the finding
-          importedCount++;
+      // Multiple strategies to find match data
+      const strategies = [
+        // Strategy 1: Table-based extraction (most common)
+        () => extractMatchesFromTables(html),
+        // Strategy 2: Div-based extraction 
+        () => extractMatchesFromDivs(html),
+        // Strategy 3: List-based extraction
+        () => extractMatchesFromLists(html)
+      ];
+
+      let extractedMatches = [];
+      
+      for (const strategy of strategies) {
+        try {
+          extractedMatches = strategy();
+          if (extractedMatches.length > 0) {
+            console.log(`✅ Found ${extractedMatches.length} matches using extraction strategy`);
+            break;
+          }
+        } catch (error) {
+          console.log("Strategy failed, trying next...");
         }
+      }
+
+      // Process and save extracted matches
+      for (const matchData of extractedMatches) {
+        try {
+          // Check if match already exists (avoid duplicates)
+          const existingMatches = await storage.getMatches();
+          const duplicate = existingMatches.find(m => 
+            m.opponent === matchData.opponent && 
+            m.date === matchData.date
+          );
+
+          if (duplicate) {
+            // Update existing match if needed
+            if (matchData.homeScore !== null && matchData.awayScore !== null) {
+              const ourScore = matchData.isHome ? matchData.homeScore : matchData.awayScore;
+              const opponentScore = matchData.isHome ? matchData.awayScore : matchData.homeScore;
+              await storage.updateMatch(duplicate.id, {
+                ourScore,
+                opponentScore
+              });
+              updatedCount++;
+              console.log(`🔄 Updated match vs ${matchData.opponent} with score`);
+            } else {
+              skippedCount++;
+              console.log(`⏭️  Skipped duplicate match vs ${matchData.opponent}`);
+            }
+          } else {
+            // Create new match
+            const ourScore = matchData.homeScore !== null && matchData.awayScore !== null 
+              ? (matchData.isHome ? matchData.homeScore : matchData.awayScore) 
+              : null;
+            const opponentScore = matchData.homeScore !== null && matchData.awayScore !== null 
+              ? (matchData.isHome ? matchData.awayScore : matchData.homeScore) 
+              : null;
+            
+            await storage.createMatch({
+              date: matchData.date,
+              opponent: matchData.opponent,
+              venue: matchData.venue || "Campo Municipal",
+              competition: matchData.competition || "Liga Hesperides",
+              ourScore,
+              opponentScore
+            });
+            importedCount++;
+            console.log(`✅ Imported new match vs ${matchData.opponent} on ${matchData.date}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error processing match vs ${matchData.opponent}:`, error);
+          skippedCount++;
+        }
+      }
+
+      // Helper functions for different extraction strategies
+      const extractMatchesFromTables = (html: string) => {
+        const matches: any[] = [];
+        const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/gi;
+        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+        const cellRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+        
+        let tableMatch;
+        while ((tableMatch = tableRegex.exec(html)) !== null) {
+          const tableContent = tableMatch[0];
+          
+          // Check if this table contains AF. Sobradillo
+          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(tableContent)) continue;
+          
+          let rowMatch;
+          while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+            const rowContent = rowMatch[1];
+            
+            // Skip header rows
+            if (/<th/i.test(rowContent)) continue;
+            
+            // Check if row contains AF. Sobradillo
+            if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(rowContent)) continue;
+            
+            const cells: string[] = [];
+            let cellMatch;
+            while ((cellMatch = cellRegex.exec(rowContent)) !== null) {
+              cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+            }
+            
+            if (cells.length >= 3) {
+              const matchInfo = parseMatchFromCells(cells);
+              if (matchInfo) matches.push(matchInfo);
+            }
+          }
+        }
+        
+        return matches;
+      }
+
+      const extractMatchesFromDivs = (html: string) => {
+        const matches: any[] = [];
+        const divRegex = /<div[^>]*class[^>]*match[^>]*>[\s\S]*?<\/div>/gi;
+        
+        let divMatch;
+        while ((divMatch = divRegex.exec(html)) !== null) {
+          const divContent = divMatch[0];
+          
+          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(divContent)) continue;
+          
+          const matchInfo = parseMatchFromDiv(divContent);
+          if (matchInfo) matches.push(matchInfo);
+        }
+        
+        return matches;
+      }
+
+      const extractMatchesFromLists = (html: string) => {
+        const matches: any[] = [];
+        const listRegex = /<[uo]l[^>]*>[\s\S]*?<\/[uo]l>/gi;
+        const itemRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+        
+        let listMatch;
+        while ((listMatch = listRegex.exec(html)) !== null) {
+          const listContent = listMatch[0];
+          
+          if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(listContent)) continue;
+          
+          let itemMatch;
+          while ((itemMatch = itemRegex.exec(listContent)) !== null) {
+            const itemContent = itemMatch[1];
+            
+            if (!/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(itemContent)) continue;
+            
+            const matchInfo = parseMatchFromText(itemContent);
+            if (matchInfo) matches.push(matchInfo);
+          }
+        }
+        
+        return matches;
+      }
+
+      const parseMatchFromCells = (cells: string[]) => {
+        // Common table formats: [Date, Home, Away, Score] or [Date, Teams, Venue, Score]
+        const dateCell = cells.find(cell => /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(cell));
+        if (!dateCell) return null;
+        
+        const date = parseDate(dateCell);
+        if (!date) return null;
+        
+        // Find team names
+        const teamCells = cells.filter(cell => 
+          /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi.test(cell) ||
+          /vs|contra|-|x/.test(cell)
+        );
+        
+        if (teamCells.length === 0) return null;
+        
+        const { opponent, isHome } = extractOpponent(teamCells.join(' '));
+        if (!opponent) return null;
+        
+        const { homeScore, awayScore } = extractScore(cells.join(' '));
+        
+        return {
+          date,
+          opponent,
+          isHome,
+          homeScore,
+          awayScore,
+          venue: "Campo Municipal",
+          competition: "Liga Hesperides"
+        };
+      }
+
+      const parseMatchFromDiv = (divContent: string) => {
+        const text = divContent.replace(/<[^>]*>/g, ' ').trim();
+        return parseMatchFromText(text);
+      }
+
+      const parseMatchFromText = (text: string) => {
+        const dateMatch = text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+        if (!dateMatch) return null;
+        
+        const date = parseDate(dateMatch[0]);
+        if (!date) return null;
+        
+        const { opponent, isHome } = extractOpponent(text);
+        if (!opponent) return null;
+        
+        const { homeScore, awayScore } = extractScore(text);
+        
+        return {
+          date,
+          opponent,
+          isHome,
+          homeScore,
+          awayScore,
+          venue: "Campo Municipal", 
+          competition: "Liga Hesperides"
+        };
+      }
+
+      const parseDate = (dateStr: string): string | null => {
+        try {
+          // Handle DD/MM/YYYY, DD-MM-YYYY, MM/DD/YYYY formats
+          const parts = dateStr.split(/[\/\-]/);
+          if (parts.length !== 3) return null;
+          
+          let day, month, year;
+          
+          // Assume DD/MM/YYYY for European dates
+          day = parseInt(parts[0]);
+          month = parseInt(parts[1]);
+          year = parseInt(parts[2]);
+          
+          // Handle 2-digit years
+          if (year < 100) {
+            year += 2000;
+          }
+          
+          const date = new Date(year, month - 1, day);
+          return date.toISOString().split('T')[0];
+        } catch {
+          return null;
+        }
+      }
+
+      const extractOpponent = (text: string): { opponent: string | null, isHome: boolean } => {
+        // Remove AF. Sobradillo variations to find opponent
+        const cleanText = text.replace(/AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi, '').trim();
+        
+        // Look for common opponent patterns
+        const opponentPatterns = [
+          /vs\s+([A-Z][a-zA-Z\s\.]+)/i,
+          /contra\s+([A-Z][a-zA-Z\s\.]+)/i,
+          /-\s*([A-Z][a-zA-Z\s\.]+)/,
+          /x\s+([A-Z][a-zA-Z\s\.]+)/i,
+          /([A-Z][a-zA-Z\s\.]{3,})/
+        ];
+        
+        for (const pattern of opponentPatterns) {
+          const match = cleanText.match(pattern);
+          if (match && match[1]) {
+            const opponent = match[1].trim();
+            if (opponent.length > 2 && !/^\d+$/.test(opponent)) {
+              // Determine if home/away based on text position
+              const isHome = text.toLowerCase().indexOf('sobradillo') < text.toLowerCase().indexOf(opponent.toLowerCase());
+              return { opponent, isHome };
+            }
+          }
+        }
+        
+        return { opponent: null, isHome: true };
+      }
+
+      const extractScore = (text: string): { homeScore: number | null, awayScore: number | null } => {
+        const scorePatterns = [
+          /(\d+)\s*-\s*(\d+)/,
+          /(\d+)\s*:\s*(\d+)/,
+          /(\d+)\s+(\d+)/
+        ];
+        
+        for (const pattern of scorePatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            return {
+              homeScore: parseInt(match[1]),
+              awayScore: parseInt(match[2])
+            };
+          }
+        }
+        
+        return { homeScore: null, awayScore: null };
       }
 
       res.json({
         success: true,
-        message: `Búsqueda completada. Encontradas ${importedCount} referencias a AF. Sobradillo`,
+        message: `Importación completada. ${importedCount} partidos importados, ${updatedCount} actualizados, ${skippedCount} omitidos`,
         importedCount,
+        updatedCount,
         skippedCount,
         url: teamConfig.ligaHesperidesMatchesUrl
       });
@@ -1069,119 +1339,301 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const html = await response.text();
       
-      // Enhanced HTML parsing to find teams and their logos
-      const teamRegex = /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi;
-      const logoRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-      const teamNameRegex = /<[^>]*class[^>]*team[^>]*>([^<]+)<\/[^>]*>/gi;
+      // Enhanced HTML parsing to extract actual standings data
+      console.log("🔍 Starting standings extraction from Liga Hesperides...");
       
-      const lines = html.split('\n');
-      const foundTeams = new Set();
-      const teamLogos = new Map();
+      let importedTeams = 0;
+      let updatedTeams = 0;
+      let savedLogos = 0;
+
+      // Multiple strategies to extract standings table
+      const strategies = [
+        // Strategy 1: Table-based extraction (most common)
+        () => extractStandingsFromTables(html),
+        // Strategy 2: Div-based extraction  
+        () => extractStandingsFromDivs(html),
+        // Strategy 3: List-based extraction
+        () => extractStandingsFromLists(html)
+      ];
+
+      let extractedStandings: any[] = [];
       
-      // Look for team names and associated logos
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Check for team mentions
-        if (teamRegex.test(line)) {
-          console.log("Found standings line:", line.trim());
-          foundTeams.add("AF. Sobradillo");
-        }
-        
-        // Extract team logos - look for img tags in the context
-        let logoMatch;
-        while ((logoMatch = logoRegex.exec(line)) !== null) {
-          const logoUrl = logoMatch[1];
-          if (logoUrl && !logoUrl.startsWith('data:') && (logoUrl.includes('.png') || logoUrl.includes('.jpg') || logoUrl.includes('.jpeg') || logoUrl.includes('.svg'))) {
-            console.log("Found potential team logo:", logoUrl);
-            
-            // Try to associate logo with team name in the same or nearby lines
-            const contextLines = lines.slice(Math.max(0, i-2), Math.min(lines.length, i+3)).join(' ');
-            
-            // Simple heuristic: if the context contains team name keywords, associate logo
-            if (/club|fc|cf|real|athletic|sociedad|osasuna|eibar/gi.test(contextLines)) {
-              // Extract team name from context (simplified)
-              const teamMatch = contextLines.match(/([A-Z][a-z]+ [A-Z][a-z]+|[A-Z][a-z]+)/g);
-              if (teamMatch && teamMatch.length > 0) {
-                const teamName = teamMatch[0];
-                if (!teamLogos.has(teamName)) {
-                  teamLogos.set(teamName, logoUrl.startsWith('http') ? logoUrl : `https://ligahesperides.com${logoUrl}`);
-                  console.log(`Associated logo ${logoUrl} with team ${teamName}`);
-                }
-              }
-            }
+      for (const strategy of strategies) {
+        try {
+          extractedStandings = strategy();
+          if (extractedStandings.length > 0) {
+            console.log(`✅ Found ${extractedStandings.length} teams in standings using extraction strategy`);
+            break;
           }
+        } catch (error) {
+          console.log("Strategy failed, trying next...");
         }
       }
 
-      // Try to download and store team logos
-      const { ObjectStorageService } = await import("./objectStorage");
-      const objectStorageService = new ObjectStorageService();
-      let savedLogos = 0;
-      
-      for (const [teamName, logoUrl] of Array.from(teamLogos.entries())) {
+      // Helper function for downloading and saving team logos
+      const downloadAndSaveTeamLogo = async (teamName: string, logoUrl: string) => {
+        const { ObjectStorageService } = await import("./objectStorage");
+        const objectStorageService = new ObjectStorageService();
+        
+        const logoController = new AbortController();
+        const logoTimeoutId = setTimeout(() => logoController.abort(), 5000);
+        
+        const logoResponse = await fetch(logoUrl.startsWith('http') ? logoUrl : `https://ligahesperides.com${logoUrl}`, {
+          signal: logoController.signal
+        });
+        clearTimeout(logoTimeoutId);
+        
+        if (!logoResponse.ok) throw new Error(`HTTP ${logoResponse.status}`);
+        
+        const logoBuffer = await logoResponse.arrayBuffer();
+        const logoData = Buffer.from(logoBuffer);
+        
+        const urlPath = new URL(logoUrl).pathname;
+        const ext = urlPath.split('.').pop() || 'png';
+        const fileName = `team-logos/${teamName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${ext}`;
+        
+        const uploadResult = await objectStorageService.getObjectEntityUploadURL(fileName, `image/${ext}`, 'public');
+        
+        const uploadController = new AbortController();
+        const uploadTimeoutId = setTimeout(() => uploadController.abort(), 5000);
+        
+        const uploadResponse = await fetch(uploadResult.uploadURL, {
+          method: 'PUT',
+          body: logoData,
+          headers: { 'Content-Type': `image/${ext}` },
+          signal: uploadController.signal
+        });
+        clearTimeout(uploadTimeoutId);
+        
+        if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.status}`);
+        
+        // Update team with logo
+        await storage.createOrUpdateOpponent({
+          name: teamName,
+          logoUrl: uploadResult.objectPath,
+          source: 'liga_hesperides'
+        });
+      };
+
+      // Process and save extracted standings
+      for (const teamData of extractedStandings) {
         try {
-          console.log(`Downloading logo for ${teamName} from ${logoUrl}`);
-          
-          const logoController = new AbortController();
-          const logoTimeoutId = setTimeout(() => logoController.abort(), 5000); // 5 second timeout for logos
-          
-          const logoResponse = await fetch(logoUrl, {
-            signal: logoController.signal
-          });
-          clearTimeout(logoTimeoutId);
-          if (!logoResponse.ok) {
-            console.warn(`Failed to download logo for ${teamName}: ${logoResponse.status}`);
-            continue;
+          // Save/update team in standings
+          const existingStandings = await storage.getStandings();
+          const existingTeam = existingStandings.find(s => s.team === teamData.team);
+
+          if (existingTeam) {
+            // Update existing team
+            await storage.updateStanding(existingTeam.id, {
+              position: teamData.position,
+              matchesPlayed: teamData.matchesPlayed,
+              wins: teamData.wins,
+              draws: teamData.draws,
+              losses: teamData.losses,
+              goalsFor: teamData.goalsFor,
+              goalsAgainst: teamData.goalsAgainst,
+              goalDifference: teamData.goalDifference,
+              points: teamData.points
+            });
+            updatedTeams++;
+            console.log(`🔄 Updated ${teamData.team} standings`);
+          } else {
+            // Create new team standing
+            await storage.createStanding({
+              position: teamData.position,
+              team: teamData.team,
+              matchesPlayed: teamData.matchesPlayed,
+              wins: teamData.wins,
+              draws: teamData.draws,
+              losses: teamData.losses,
+              goalsFor: teamData.goalsFor,
+              goalsAgainst: teamData.goalsAgainst,
+              goalDifference: teamData.goalDifference,
+              points: teamData.points
+            });
+            importedTeams++;
+            console.log(`✅ Imported ${teamData.team} to standings`);
           }
-          
-          const logoBuffer = await logoResponse.arrayBuffer();
-          const logoData = Buffer.from(logoBuffer);
-          
-          // Determine file extension
-          const urlPath = new URL(logoUrl).pathname;
-          const ext = urlPath.split('.').pop() || 'png';
-          const fileName = `team-logos/${teamName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${ext}`;
-          
-          // Upload to object storage
-          const uploadResult = await objectStorageService.getObjectEntityUploadURL(fileName, `image/${ext}`, 'public');
-          
-          // Upload the image data
-          const uploadController = new AbortController();
-          const uploadTimeoutId = setTimeout(() => uploadController.abort(), 5000); // 5 second timeout for upload
-          
-          const uploadResponse = await fetch(uploadResult.uploadURL, {
-            method: 'PUT',
-            body: logoData,
-            headers: {
-              'Content-Type': `image/${ext}`,
-            },
-            signal: uploadController.signal
-          });
-          clearTimeout(uploadTimeoutId);
-          
-          if (uploadResponse.ok) {
-            // Save team info to opponents table
+
+          // Also save to opponents table if it's not AF. Sobradillo
+          if (teamData.team !== "AF. Sobradillo") {
             await storage.createOrUpdateOpponent({
-              name: teamName,
-              logoUrl: uploadResult.objectPath,
+              name: teamData.team,
+              logoUrl: teamData.logoUrl || null,
               source: 'liga_hesperides'
             });
-            savedLogos++;
-            console.log(`Successfully saved logo for ${teamName}`);
-          } else {
-            console.warn(`Failed to upload logo for ${teamName}`);
           }
-          
-        } catch (logoError) {
-          console.warn(`Error processing logo for ${teamName}:`, logoError);
+
+          // Handle logo if available
+          if (teamData.logoUrl) {
+            try {
+              await downloadAndSaveTeamLogo(teamData.team, teamData.logoUrl);
+              savedLogos++;
+            } catch (logoError) {
+              console.warn(`Error saving logo for ${teamData.team}:`, logoError);
+            }
+          }
+
+        } catch (error) {
+          console.error(`❌ Error processing team ${teamData.team}:`, error);
         }
       }
+
+      // Helper functions for different extraction strategies
+      const extractStandingsFromTables = (html: string) => {
+        const standings: any[] = [];
+        const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/gi;
+        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+        const cellRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+        
+        let tableMatch;
+        while ((tableMatch = tableRegex.exec(html)) !== null) {
+          const tableContent = tableMatch[0];
+          
+          // Check if this table looks like a standings table
+          if (!/posici[oó]n|posici\u00f3n|equipo|team|puntos|points|pj|mp|played/gi.test(tableContent)) continue;
+          
+          let rowMatch;
+          const tableRows: string[][] = [];
+          
+          while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+            const rowContent = rowMatch[1];
+            
+            // Skip header rows that only contain th tags
+            if (/<th/i.test(rowContent) && !/<td/i.test(rowContent)) continue;
+            
+            const cells: string[] = [];
+            let cellMatch;
+            while ((cellMatch = cellRegex.exec(rowContent)) !== null) {
+              cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+            }
+            
+            if (cells.length >= 5) { // Minimum columns for standings
+              tableRows.push(cells);
+            }
+          }
+          
+          // Parse table rows as standings
+          for (const row of tableRows) {
+            const standing = parseStandingFromRow(row);
+            if (standing) standings.push(standing);
+          }
+        }
+        
+        return standings;
+      };
+
+      const extractStandingsFromDivs = (html: string) => {
+        const standings: any[] = [];
+        const divRegex = /<div[^>]*class[^>]*(?:standing|position|team)[^>]*>[\s\S]*?<\/div>/gi;
+        
+        let divMatch;
+        while ((divMatch = divRegex.exec(html)) !== null) {
+          const divContent = divMatch[0];
+          const standing = parseStandingFromDiv(divContent);
+          if (standing) standings.push(standing);
+        }
+        
+        return standings;
+      };
+
+      const extractStandingsFromLists = (html: string) => {
+        const standings: any[] = [];
+        const listRegex = /<[uo]l[^>]*>[\s\S]*?<\/[uo]l>/gi;
+        const itemRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+        
+        let listMatch;
+        while ((listMatch = listRegex.exec(html)) !== null) {
+          const listContent = listMatch[0];
+          
+          if (!/posici[oó]n|equipo|team|puntos|points/gi.test(listContent)) continue;
+          
+          let itemMatch;
+          while ((itemMatch = itemRegex.exec(listContent)) !== null) {
+            const itemContent = itemMatch[1];
+            const standing = parseStandingFromText(itemContent);
+            if (standing) standings.push(standing);
+          }
+        }
+        
+        return standings;
+      };
+
+      const parseStandingFromRow = (cells: string[]) => {
+        // Common formats: [Pos, Team, PJ, G, E, P, GF, GC, Pts] or similar
+        if (cells.length < 5) return null;
+        
+        const position = parseNumber(cells.find(cell => /^\d+$/.test(cell.trim())));
+        if (!position) return null;
+        
+        const teamName = cells.find(cell => 
+          /[a-zA-Z]{3,}/.test(cell) && 
+          !/^\d+$/.test(cell) &&
+          cell.length > 2
+        );
+        if (!teamName) return null;
+        
+        // Extract numeric data (matches played, wins, draws, losses, goals, points)
+        const numbers = cells.filter(cell => /^\d+$/.test(cell.trim())).map(Number);
+        
+        if (numbers.length < 6) return null; // Need at least pos, pj, g, e, p, pts
+        
+        return {
+          position,
+          team: teamName.trim(),
+          matchesPlayed: numbers[1] || 0,
+          wins: numbers[2] || 0,
+          draws: numbers[3] || 0,
+          losses: numbers[4] || 0,
+          goalsFor: numbers[5] || 0,
+          goalsAgainst: numbers[6] || 0,
+          goalDifference: (numbers[5] || 0) - (numbers[6] || 0),
+          points: numbers[numbers.length - 1] || 0,
+          logoUrl: null
+        };
+      };
+
+      const parseStandingFromDiv = (divContent: string) => {
+        const text = divContent.replace(/<[^>]*>/g, ' ').trim();
+        return parseStandingFromText(text);
+      };
+
+      const parseStandingFromText = (text: string) => {
+        const positionMatch = text.match(/(\d+)/);
+        if (!positionMatch) return null;
+        
+        const teamMatch = text.match(/([A-Z][a-zA-Z\s\.]{2,})/);
+        if (!teamMatch) return null;
+        
+        const numbers = text.match(/\d+/g);
+        if (!numbers || numbers.length < 6) return null;
+        
+        return {
+          position: parseInt(numbers[0]),
+          team: teamMatch[1].trim(),
+          matchesPlayed: parseInt(numbers[1]) || 0,
+          wins: parseInt(numbers[2]) || 0,
+          draws: parseInt(numbers[3]) || 0,
+          losses: parseInt(numbers[4]) || 0,
+          goalsFor: parseInt(numbers[5]) || 0,
+          goalsAgainst: parseInt(numbers[6]) || 0,
+          goalDifference: (parseInt(numbers[5]) || 0) - (parseInt(numbers[6]) || 0),
+          points: parseInt(numbers[numbers.length - 1]) || 0,
+          logoUrl: null
+        };
+      };
+
+      const parseNumber = (str: string | undefined): number | null => {
+        if (!str) return null;
+        const num = parseInt(str.trim());
+        return isNaN(num) ? null : num;
+      };
 
       res.json({
         success: true,
-        message: `Clasificación consultada. Encontradas ${foundTeams.size} referencias de equipos y ${savedLogos} escudos descargados`,
-        foundTeams: foundTeams.size,
+        message: `Clasificación importada. ${importedTeams} equipos nuevos, ${updatedTeams} actualizados, ${savedLogos} escudos descargados`,
+        importedTeams,
+        updatedTeams,
         savedLogos,
         url: teamConfig.ligaHesperidesStandingsUrl
       });

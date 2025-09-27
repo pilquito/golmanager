@@ -115,6 +115,7 @@ export const opponents = pgTable("opponents", {
   colors: varchar("colors"), // Colores del equipo
   // Datos específicos de Liga Hesperides
   ligaHesperidesId: varchar("liga_hesperides_id"), // ID único en Liga Hesperides
+  source: varchar("source").default("manual"), // Fuente de importación: manual, liga_hesperides, etc.
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -164,6 +165,23 @@ export const otherPayments = pgTable("other_payments", {
   paymentDate: date("payment_date"),
   paymentMethod: varchar("payment_method"),
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Standings table - clasificación de la liga
+export const standings = pgTable("standings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  position: integer("position").notNull(),
+  team: varchar("team").notNull(),
+  matchesPlayed: integer("matches_played").notNull().default(0),
+  wins: integer("wins").notNull().default(0),
+  draws: integer("draws").notNull().default(0),
+  losses: integer("losses").notNull().default(0),
+  goalsFor: integer("goals_for").notNull().default(0),
+  goalsAgainst: integer("goals_against").notNull().default(0),
+  goalDifference: integer("goal_difference").notNull().default(0),
+  points: integer("points").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -255,6 +273,12 @@ export const insertOpponentSchema = createInsertSchema(opponents).omit({
   updatedAt: true,
 });
 
+export const insertStandingSchema = createInsertSchema(standings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -300,3 +324,5 @@ export type MatchAttendance = typeof matchAttendances.$inferSelect;
 export type InsertMatchAttendance = z.infer<typeof insertMatchAttendanceSchema>;
 export type Opponent = typeof opponents.$inferSelect;
 export type InsertOpponent = z.infer<typeof insertOpponentSchema>;
+export type Standing = typeof standings.$inferSelect;
+export type InsertStanding = z.infer<typeof insertStandingSchema>;

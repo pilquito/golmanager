@@ -8,6 +8,7 @@ import {
   otherPayments,
   matchAttendances,
   opponents,
+  standings,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -27,6 +28,8 @@ import {
   type InsertMatchAttendance,
   type Opponent,
   type InsertOpponent,
+  type Standing,
+  type InsertStanding,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -100,6 +103,14 @@ export interface IStorage {
   createOpponent(opponent: InsertOpponent): Promise<Opponent>;
   updateOpponent(id: string, opponent: Partial<InsertOpponent>): Promise<Opponent>;
   deleteOpponent(id: string): Promise<void>;
+
+  // Standings operations
+  getStandings(): Promise<Standing[]>;
+  getStanding(id: string): Promise<Standing | undefined>;
+  createStanding(standing: InsertStanding): Promise<Standing>;
+  updateStanding(id: string, standing: Partial<InsertStanding>): Promise<Standing>;
+  deleteStanding(id: string): Promise<void>;
+  createOrUpdateOpponent(opponentData: { name: string; logoUrl?: string; source?: string; }): Promise<Opponent>;
 
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -761,7 +772,6 @@ export class DatabaseStorage implements IStorage {
       return await this.updateOpponent(existing.id, {
         logoUrl: opponentData.logoUrl,
         source: opponentData.source || 'liga_hesperides',
-        updatedAt: new Date(),
       });
     } else {
       // Create new opponent
@@ -772,6 +782,46 @@ export class DatabaseStorage implements IStorage {
         isActive: true,
       });
     }
+  }
+
+  // Standings operations
+  async getStandings(): Promise<Standing[]> {
+    return await db
+      .select()
+      .from(standings)
+      .orderBy(standings.position);
+  }
+
+  async getStanding(id: string): Promise<Standing | undefined> {
+    const [standing] = await db
+      .select()
+      .from(standings)
+      .where(eq(standings.id, id));
+    return standing;
+  }
+
+  async createStanding(standing: InsertStanding): Promise<Standing> {
+    const [newStanding] = await db
+      .insert(standings)
+      .values(standing)
+      .returning();
+    return newStanding;
+  }
+
+  async updateStanding(id: string, standing: Partial<InsertStanding>): Promise<Standing> {
+    const [updated] = await db
+      .update(standings)
+      .set({
+        ...standing,
+        updatedAt: new Date(),
+      })
+      .where(eq(standings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteStanding(id: string): Promise<void> {
+    await db.delete(standings).where(eq(standings.id, id));
   }
 }
 
