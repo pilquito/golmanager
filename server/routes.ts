@@ -987,19 +987,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Scrape matches from Liga Hesperides
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      console.log("🚀 Starting Liga Hesperides import with Puppeteer...");
       
-      const response = await fetch(teamConfig.ligaHesperidesMatchesUrl, {
-        signal: controller.signal
+      // Import puppeteer dynamically
+      const puppeteer = await import('puppeteer');
+      
+      // Launch browser and scrape with JavaScript support
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
-      clearTimeout(timeoutId);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch matches: ${response.status} ${response.statusText}`);
+      
+      let html = '';
+      try {
+        const page = await browser.newPage();
+        
+        // Set a longer timeout and wait for network to be idle
+        await page.setDefaultTimeout(15000);
+        
+        console.log(`🔍 Navigating to: ${teamConfig.ligaHesperidesMatchesUrl}`);
+        await page.goto(teamConfig.ligaHesperidesMatchesUrl, { 
+          waitUntil: 'networkidle2',
+          timeout: 15000 
+        });
+        
+        // Wait a bit more for any dynamic content to load
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Get the full page content after JavaScript execution
+        html = await page.content();
+        console.log(`📄 Retrieved ${html.length} characters of HTML content`);
+        
+      } finally {
+        await browser.close();
       }
-
-      const html = await response.text();
       
       // Enhanced HTML parsing to extract actual match data
       console.log("🔍 Starting match extraction from Liga Hesperides...");
