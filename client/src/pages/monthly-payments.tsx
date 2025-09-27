@@ -60,7 +60,7 @@ export default function MonthlyPayments() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/monthly-payments", data);
+      const response = await apiRequest("/api/monthly-payments", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -94,7 +94,7 @@ export default function MonthlyPayments() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await apiRequest("PATCH", `/api/monthly-payments/${id}`, data);
+      const response = await apiRequest(`/api/monthly-payments/${id}`, "PATCH", data);
       return response.json();
     },
     onSuccess: () => {

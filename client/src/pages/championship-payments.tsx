@@ -58,7 +58,7 @@ export default function ChampionshipPayments() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/championship-payments", data);
+      const response = await apiRequest("/api/championship-payments", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -92,7 +92,7 @@ export default function ChampionshipPayments() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await apiRequest("PATCH", `/api/championship-payments/${id}`, data);
+      const response = await apiRequest(`/api/championship-payments/${id}`, "PATCH", data);
       return response.json();
     },
     onSuccess: () => {
