@@ -46,7 +46,7 @@ export default function Matches() {
     queryFn: async () => {
       const promises = matches?.map(async (match: Match) => {
         try {
-          const response = await apiRequest("GET", `/api/matches/${match.id}/attendances`);
+          const response = await apiRequest(`/api/matches/${match.id}/attendances`, "GET");
           const attendances = await response.json();
           return { matchId: match.id, attendances };
         } catch {
