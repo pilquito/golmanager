@@ -32,6 +32,8 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 export default function Players() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [filterNumber, setFilterNumber] = useState("");
+  const [filterPosition, setFilterPosition] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -39,6 +41,15 @@ export default function Players() {
   const { data: players, isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
   });
+
+  // Filter players based on number and position
+  const filteredPlayers = players?.filter((player) => {
+    const matchesNumber = !filterNumber || 
+      (player.jerseyNumber && player.jerseyNumber.toString().includes(filterNumber));
+    const matchesPosition = !filterPosition || 
+      (player.position && player.position.toLowerCase().includes(filterPosition.toLowerCase()));
+    return matchesNumber && matchesPosition;
+  }) || [];
 
   const form = useForm({
     resolver: zodResolver(insertPlayerSchema),
@@ -579,12 +590,64 @@ export default function Players() {
       </Header>
 
       <main className="flex-1 overflow-auto bg-background p-3 md:p-6">
+        {/* Filter Controls */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="filter-number" className="text-sm font-medium whitespace-nowrap">
+                  Filtrar por número:
+                </Label>
+                <Input
+                  id="filter-number"
+                  type="text"
+                  placeholder="Ej: 10"
+                  value={filterNumber}
+                  onChange={(e) => setFilterNumber(e.target.value)}
+                  className="w-32"
+                  data-testid="filter-jersey-number"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="filter-position" className="text-sm font-medium whitespace-nowrap">
+                  Filtrar por posición:
+                </Label>
+                <Select value={filterPosition} onValueChange={setFilterPosition}>
+                  <SelectTrigger className="w-48" data-testid="filter-position">
+                    <SelectValue placeholder="Todas las posiciones" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas las posiciones</SelectItem>
+                    <SelectItem value="Portero">Portero</SelectItem>
+                    <SelectItem value="Defensa">Defensa</SelectItem>
+                    <SelectItem value="Mediocampista">Mediocampista</SelectItem>
+                    <SelectItem value="Delantero">Delantero</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(filterNumber || filterPosition) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFilterNumber("");
+                    setFilterPosition("");
+                  }}
+                  data-testid="clear-filters"
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <DataTable
                 columns={columns}
-                data={players || []}
+                data={filteredPlayers}
                 isLoading={isLoading}
               />
             </div>
