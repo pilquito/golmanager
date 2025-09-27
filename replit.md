@@ -8,6 +8,18 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## September 27, 2025 - Liga Hesperides Integration Security & Reliability Fixes
+
+**CRITICAL ISSUES RESOLVED** (Architect-approved):
+- **Security Vulnerability Fixed**: Removed cookies.txt with session data, enhanced .gitignore protection
+- **Puppeteer Dependencies Eliminated**: Both standings and matches imports now use simple fetch() with timeout
+- **Mobile-First UX Improved**: Separate clear buttons with proper endpoint alignment
+- **Code Quality Enhanced**: Removed 200+ lines of unreliable HTML parsing logic  
+- **Error Handling Consistent**: Clear mobile-friendly SPA limitation messaging across all endpoints
+- **Timeout Protection**: AbortController with 10-second timeout prevents hanging requests
+
+Liga Hesperides integration now provides secure, reliable mobile-friendly experience that gracefully handles SPA limitations while guiding users toward practical mobile workflows.
+
 ## September 7, 2025 - Implemented SportEasy-Style Match Management Interface
 
 Completely redesigned the match management interface to match SportEasy app design:

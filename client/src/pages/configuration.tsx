@@ -738,44 +738,45 @@ export default function Configuration() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-white rounded-lg p-4 border">
-                    <h3 className="font-medium mb-2">Importar partidos desde Liga Hespérides</h3>
+                    <h3 className="font-medium mb-2">Importar datos desde Liga Hespérides</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Importa automáticamente todos los partidos de AF. SOBRADILLO desde Liga Hespérides.
-                      El proceso es completamente automático y funciona perfectamente desde cualquier dispositivo.
+                      <span className="font-medium">⚠️ Limitación técnica:</span> Liga Hespérides es una SPA que requiere JavaScript. 
+                      La importación automática desde el servidor no funciona de forma confiable.
                       <br />
-                      <span className="font-medium">Nota:</span> Solo se importarán partidos que no existan ya en el sistema.
+                      <span className="font-medium text-blue-600">💡 Tip:</span> Los botones mostrarán errores explicativos con soluciones móviles.
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       <Button
                         type="button"
-                        onClick={() => importLigaHesperidesMutation.mutate()}
-                        disabled={isImporting || importLigaHesperidesMutation.isPending}
+                        onClick={() => window.open("https://ligahesperides.mygol.es/tournaments/21", "_blank")}
                         variant="default"
-                        className="bg-green-600 hover:bg-green-700"
-                        data-testid="button-import-liga-hesperides-matches"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        data-testid="button-view-liga-hesperides"
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        {isImporting ? "Importando partidos..." : "Importar Partidos"}
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Ver Liga Hespérides
                       </Button>
                       <Button
                         type="button"
                         onClick={() => importLigaHesperidesStandingsMutation.mutate()}
                         disabled={isImporting || importLigaHesperidesStandingsMutation.isPending}
                         variant="default"
-                        className="bg-blue-600 hover:bg-blue-700"
-                        data-testid="button-import-liga-hesperides-standings"
+                        className="bg-green-600 hover:bg-green-700"
+                        data-testid="button-import-standings"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        {isImporting ? "Importando clasificación..." : "Importar Clasificación"}
+                        {importLigaHesperidesStandingsMutation.isPending ? "Importando clasificación..." : "Importar Clasificación"}
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        onClick={() => window.open("https://ligahesperides.mygol.es/tournaments/21", "_blank")}
-                        data-testid="button-view-liga-hesperides"
+                        onClick={() => importLigaHesperidesMutation.mutate()}
+                        disabled={isImporting || importLigaHesperidesMutation.isPending}
+                        variant="default"
+                        className="bg-orange-600 hover:bg-orange-700"
+                        data-testid="button-import-matches"
                       >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver Liga Hespérides
+                        <Download className="h-4 w-4 mr-2" />
+                        {importLigaHesperidesMutation.isPending ? "Importando partidos..." : "Importar Partidos"}
                       </Button>
                     </div>
                   </div>
