@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,11 @@ import { TrendingUp, TrendingDown, DollarSign, Calendar, Filter } from "lucide-r
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export default function CollectionBalancePage() {
-  const [startMonth, setStartMonth] = useState("September");
-  const [endMonth, setEndMonth] = useState("June");
+  const [startMonth, setStartMonth] = useState("01");
+  const [endMonth, setEndMonth] = useState("12");
   const [startYear, setStartYear] = useState("2024");
   const [endYear, setEndYear] = useState("2025");
-
-  const { data: dashboardStats } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
-  });
+  const [isFiltered, setIsFiltered] = useState(false);
 
   const { data: monthlyPayments = [] } = useQuery({
     queryKey: ["/api/monthly-payments"],
@@ -28,27 +25,101 @@ export default function CollectionBalancePage() {
     queryKey: ["/api/championship-payments"],
   });
 
-  // Mock data for charts based on real system
-  const paymentMethodData = [
-    { method: "Efectivo", amount: 1686.00, color: "#0088FE" },
-    { method: "Transferencia", amount: 0.00, color: "#00C49F" },
-    { method: "Tarjeta", amount: 0.00, color: "#FFBB28" },
-    { method: "Otros", amount: 65.00, color: "#FF8042" },
-  ];
+  // Filter data based on date range
+  const filteredData = useMemo(() => {
+    if (!isFiltered) {
+      // If not filtered, show all data
+      return {
+        monthlyPayments: monthlyPayments,
+        championshipPayments: championshipPayments
+      };
+    }
 
-  const monthlyData = [
-    { month: "Efectivo", income: 800, expenses: 200 },
-    { month: "Transferencia", income: 600, expenses: 150 },
-    { month: "Tarjeta", income: 400, expenses: 100 },
-    { month: "Otros", income: 200, expenses: 50 },
-  ];
+    const startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, 1);
+    const endDate = new Date(parseInt(endYear), parseInt(endMonth), 0); // Last day of month
 
-  const recentPayments = monthlyPayments.slice(0, 5);
-  const recentChampionshipPayments = championshipPayments.slice(0, 5);
+    const filteredMonthly = monthlyPayments.filter((payment: any) => {
+      if (!payment.dueDate) return false;
+      const paymentDate = new Date(payment.dueDate);
+      return paymentDate >= startDate && paymentDate <= endDate;
+    });
 
-  const totalIncome = dashboardStats?.totalIncome || 1751.00;
-  const totalExpenses = dashboardStats?.totalExpenses || 1400.00;
-  const balance = totalIncome - totalExpenses;
+    const filteredChampionship = championshipPayments.filter((payment: any) => {
+      if (!payment.paymentDate) return false;
+      const paymentDate = new Date(payment.paymentDate);
+      return paymentDate >= startDate && paymentDate <= endDate;
+    });
+
+    return {
+      monthlyPayments: filteredMonthly,
+      championshipPayments: filteredChampionship
+    };
+  }, [monthlyPayments, championshipPayments, startMonth, endMonth, startYear, endYear, isFiltered]);
+
+  // Calculate real data based on filtered payments
+  const calculatedData = useMemo(() => {
+    const { monthlyPayments: filteredMonthly, championshipPayments: filteredChampionship } = filteredData;
+
+    // Income: Only from monthly payments (player fees)
+    const totalIncome = filteredMonthly
+      .filter((payment: any) => payment.status === 'paid')
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+
+    // Expenses: Championship payments are team expenses
+    const totalExpenses = filteredChampionship
+      .filter((payment: any) => payment.status === 'paid')
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+
+    const balance = totalIncome - totalExpenses;
+
+    // Group income by payment method (only monthly payments)
+    const paymentMethodStats: { [key: string]: number } = {};
+    
+    filteredMonthly
+      .filter((payment: any) => payment.status === 'paid')
+      .forEach((payment: any) => {
+        const method = payment.paymentMethod || 'Efectivo';
+        paymentMethodStats[method] = (paymentMethodStats[method] || 0) + Number(payment.amount || 0);
+      });
+
+    const paymentMethodData = [
+      { method: "Efectivo", amount: paymentMethodStats["Efectivo"] || 0, color: "#0088FE" },
+      { method: "Transferencia", amount: paymentMethodStats["Transferencia"] || 0, color: "#00C49F" },
+      { method: "Tarjeta", amount: paymentMethodStats["Tarjeta"] || 0, color: "#FFBB28" },
+      { method: "Otros", amount: paymentMethodStats["Otros"] || 0, color: "#FF8042" },
+    ];
+
+    // Chart data shows only income by method (no mock expense allocation)
+    const chartData = paymentMethodData.map(method => ({
+      method: method.method,
+      income: method.amount
+    }));
+
+    // Sort recent payments by date (most recent first)
+    const sortedMonthly = [...filteredMonthly].sort((a: any, b: any) => {
+      const dateA = new Date(a.dueDate || 0);
+      const dateB = new Date(b.dueDate || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    const sortedChampionship = [...filteredChampionship].sort((a: any, b: any) => {
+      const dateA = new Date(a.paymentDate || 0);
+      const dateB = new Date(b.paymentDate || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return {
+      totalIncome,
+      totalExpenses,
+      balance,
+      paymentMethodData,
+      chartData,
+      recentPayments: sortedMonthly.slice(0, 5),
+      recentChampionshipPayments: sortedChampionship.slice(0, 5)
+    };
+  }, [filteredData]);
+
+  const { totalIncome, totalExpenses, balance, paymentMethodData, chartData, recentPayments, recentChampionshipPayments } = calculatedData;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -72,10 +143,18 @@ export default function CollectionBalancePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="September">Septiembre</SelectItem>
-                <SelectItem value="October">Octubre</SelectItem>
-                <SelectItem value="November">Noviembre</SelectItem>
-                <SelectItem value="December">Diciembre</SelectItem>
+                <SelectItem value="01">Enero</SelectItem>
+                <SelectItem value="02">Febrero</SelectItem>
+                <SelectItem value="03">Marzo</SelectItem>
+                <SelectItem value="04">Abril</SelectItem>
+                <SelectItem value="05">Mayo</SelectItem>
+                <SelectItem value="06">Junio</SelectItem>
+                <SelectItem value="07">Julio</SelectItem>
+                <SelectItem value="08">Agosto</SelectItem>
+                <SelectItem value="09">Septiembre</SelectItem>
+                <SelectItem value="10">Octubre</SelectItem>
+                <SelectItem value="11">Noviembre</SelectItem>
+                <SelectItem value="12">Diciembre</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -87,10 +166,18 @@ export default function CollectionBalancePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="June">Junio</SelectItem>
-                <SelectItem value="July">Julio</SelectItem>
-                <SelectItem value="August">Agosto</SelectItem>
-                <SelectItem value="September">Septiembre</SelectItem>
+                <SelectItem value="01">Enero</SelectItem>
+                <SelectItem value="02">Febrero</SelectItem>
+                <SelectItem value="03">Marzo</SelectItem>
+                <SelectItem value="04">Abril</SelectItem>
+                <SelectItem value="05">Mayo</SelectItem>
+                <SelectItem value="06">Junio</SelectItem>
+                <SelectItem value="07">Julio</SelectItem>
+                <SelectItem value="08">Agosto</SelectItem>
+                <SelectItem value="09">Septiembre</SelectItem>
+                <SelectItem value="10">Octubre</SelectItem>
+                <SelectItem value="11">Noviembre</SelectItem>
+                <SelectItem value="12">Diciembre</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -121,10 +208,24 @@ export default function CollectionBalancePage() {
             </Select>
           </div>
 
-          <Button className="flex items-center gap-2" data-testid="button-filter">
+          <Button 
+            className="flex items-center gap-2" 
+            data-testid="button-filter"
+            onClick={() => setIsFiltered(true)}
+          >
             <Filter className="h-4 w-4" />
             Filtrar
           </Button>
+          {isFiltered && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2" 
+              data-testid="button-clear-filter"
+              onClick={() => setIsFiltered(false)}
+            >
+              Limpiar
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -178,17 +279,16 @@ export default function CollectionBalancePage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Saldo por Método de Pago</CardTitle>
+            <CardTitle>Ingresos por Método de Pago</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis dataKey="method" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value, name) => [`€${Number(value).toFixed(2)}`, name]} />
                 <Bar dataKey="income" fill="#0088FE" name="Ingresos" />
-                <Bar dataKey="expenses" fill="#FF8042" name="Gastos" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
