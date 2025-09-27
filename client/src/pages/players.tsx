@@ -46,7 +46,7 @@ export default function Players() {
   const filteredPlayers = players?.filter((player) => {
     const matchesNumber = !filterNumber || 
       (player.jerseyNumber && player.jerseyNumber.toString().includes(filterNumber));
-    const matchesPosition = !filterPosition || 
+    const matchesPosition = !filterPosition || filterPosition === "all" ||
       (player.position && player.position.toLowerCase().includes(filterPosition.toLowerCase()));
     return matchesNumber && matchesPosition;
   }) || [];
@@ -617,7 +617,7 @@ export default function Players() {
                     <SelectValue placeholder="Todas las posiciones" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las posiciones</SelectItem>
+                    <SelectItem value="all">Todas las posiciones</SelectItem>
                     <SelectItem value="Portero">Portero</SelectItem>
                     <SelectItem value="Defensa">Defensa</SelectItem>
                     <SelectItem value="Mediocampista">Mediocampista</SelectItem>
@@ -625,13 +625,13 @@ export default function Players() {
                   </SelectContent>
                 </Select>
               </div>
-              {(filterNumber || filterPosition) && (
+              {(filterNumber || (filterPosition && filterPosition !== "all")) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setFilterNumber("");
-                    setFilterPosition("");
+                    setFilterPosition("all");
                   }}
                   data-testid="clear-filters"
                 >
