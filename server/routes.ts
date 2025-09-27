@@ -976,51 +976,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Liga Hesperides integration routes
+  // Liga Hesperides integration routes - accepts pre-scraped data from client
   app.post("/api/liga-hesperides/import-matches", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      // Get team configuration to retrieve Liga Hesperides URLs
-      const teamConfig = await storage.getTeamConfig();
-      if (!teamConfig?.ligaHesperidesMatchesUrl) {
+      // Accept scraped HTML data from client
+      const { html } = req.body;
+      if (!html || typeof html !== 'string' || html.length < 100) {
         return res.status(400).json({ 
-          message: "Liga Hesperides URL no configurada. Configúrala en la página de configuración." 
+          message: "No se recibieron datos HTML válidos para procesar." 
         });
       }
 
-      console.log("🚀 Starting Liga Hesperides import with Puppeteer...");
-      
-      // Import puppeteer dynamically
-      const puppeteer = await import('puppeteer');
-      
-      // Launch browser and scrape with JavaScript support
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
-      
-      let html = '';
-      try {
-        const page = await browser.newPage();
-        
-        // Set a longer timeout and wait for network to be idle
-        await page.setDefaultTimeout(15000);
-        
-        console.log(`🔍 Navigating to: ${teamConfig.ligaHesperidesMatchesUrl}`);
-        await page.goto(teamConfig.ligaHesperidesMatchesUrl, { 
-          waitUntil: 'networkidle2',
-          timeout: 15000 
-        });
-        
-        // Wait a bit more for any dynamic content to load
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Get the full page content after JavaScript execution
-        html = await page.content();
-        console.log(`📄 Retrieved ${html.length} characters of HTML content`);
-        
-      } finally {
-        await browser.close();
-      }
+      console.log("🔍 Processing Liga Hesperides data from client...");
       
       // Enhanced HTML parsing to extract actual match data
       console.log("🔍 Starting match extraction from Liga Hesperides...");
@@ -1300,8 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Importación completada. ${importedCount} partidos importados, ${updatedCount} actualizados, ${skippedCount} omitidos`,
         importedCount,
         updatedCount,
-        skippedCount,
-        url: teamConfig.ligaHesperidesMatchesUrl
+        skippedCount
       });
 
     } catch (error) {

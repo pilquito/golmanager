@@ -130,11 +130,70 @@ export default function Configuration() {
     },
   });
 
-  // Liga Hesperides import mutation - simplified approach
+  // Liga Hesperides import mutation - client-side scraping approach
   const importLigaHesperidesMutation = useMutation({
     mutationFn: async () => {
-      // Use the existing server-side import endpoint
-      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", {});
+      // Get team configuration first
+      const configResponse = await fetch('/api/team-config');
+      const config = await configResponse.json();
+      
+      if (!config.ligaHesperidesMatchesUrl) {
+        throw new Error("Liga Hesperides URL no configurada");
+      }
+      
+      // Scrape data directly from the browser using CORS proxy or iframe
+      console.log("🔍 Obteniendo datos de Liga Hesperides...");
+      
+      // Create a hidden iframe to load the Liga Hesperides page
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = config.ligaHesperidesMatchesUrl;
+      document.body.appendChild(iframe);
+      
+      // Wait for iframe to load
+      const html = await new Promise<string>((resolve, reject) => {
+        iframe.onload = () => {
+          try {
+            // Get the HTML content from the iframe
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (iframeDoc) {
+              const htmlContent = iframeDoc.documentElement.outerHTML;
+              resolve(htmlContent);
+            } else {
+              // If iframe is blocked by CORS, try direct fetch
+              fetch(config.ligaHesperidesMatchesUrl)
+                .then(response => response.text())
+                .then(resolve)
+                .catch(() => {
+                  reject(new Error("No se pudo acceder a Liga Hesperides. La página puede estar bloqueada por CORS."));
+                });
+            }
+          } catch (error) {
+            // Fallback to fetch if iframe access fails
+            fetch(config.ligaHesperidesMatchesUrl)
+              .then(response => response.text())
+              .then(resolve)
+              .catch(() => {
+                reject(new Error("Error al obtener datos de Liga Hesperides"));
+              });
+          }
+        };
+        
+        iframe.onerror = () => {
+          reject(new Error("Error al cargar Liga Hesperides"));
+        };
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          reject(new Error("Timeout al cargar Liga Hesperides"));
+        }, 10000);
+      });
+      
+      // Clean up
+      document.body.removeChild(iframe);
+      
+      // Send HTML to server for processing
+      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", { html });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
