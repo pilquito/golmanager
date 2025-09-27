@@ -130,70 +130,30 @@ export default function Configuration() {
     },
   });
 
-  // Liga Hesperides import mutation - client-side scraping approach
+  // Liga Hesperides import mutation - manual copy-paste approach
   const importLigaHesperidesMutation = useMutation({
     mutationFn: async () => {
-      // Get team configuration first
-      const configResponse = await fetch('/api/team-config');
-      const config = await configResponse.json();
+      // Ask user to manually copy HTML content
+      const htmlContent = prompt(`
+INSTRUCCIONES SIMPLES:
+
+1. Abre Liga Hesperides en una nueva pestaña: https://ligahesperides.mygol.es/tournaments/21/matches
+
+2. Cuando cargue la página, presiona F12 para abrir las herramientas de desarrollador
+
+3. Copia todo este código y pégalo en la consola:
+document.documentElement.outerHTML
+
+4. Copia el resultado completo (todo el texto que aparece) y pégalo abajo:
+
+PEGA EL CÓDIGO HTML AQUÍ:`);
       
-      if (!config.ligaHesperidesMatchesUrl) {
-        throw new Error("Liga Hesperides URL no configurada");
+      if (!htmlContent || htmlContent.trim().length < 100) {
+        throw new Error("No se proporcionó contenido HTML válido. Inténtalo de nuevo siguiendo las instrucciones.");
       }
       
-      // Scrape data directly from the browser using CORS proxy or iframe
-      console.log("🔍 Obteniendo datos de Liga Hesperides...");
-      
-      // Create a hidden iframe to load the Liga Hesperides page
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = config.ligaHesperidesMatchesUrl;
-      document.body.appendChild(iframe);
-      
-      // Wait for iframe to load
-      const html = await new Promise<string>((resolve, reject) => {
-        iframe.onload = () => {
-          try {
-            // Get the HTML content from the iframe
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (iframeDoc) {
-              const htmlContent = iframeDoc.documentElement.outerHTML;
-              resolve(htmlContent);
-            } else {
-              // If iframe is blocked by CORS, try direct fetch
-              fetch(config.ligaHesperidesMatchesUrl)
-                .then(response => response.text())
-                .then(resolve)
-                .catch(() => {
-                  reject(new Error("No se pudo acceder a Liga Hesperides. La página puede estar bloqueada por CORS."));
-                });
-            }
-          } catch (error) {
-            // Fallback to fetch if iframe access fails
-            fetch(config.ligaHesperidesMatchesUrl)
-              .then(response => response.text())
-              .then(resolve)
-              .catch(() => {
-                reject(new Error("Error al obtener datos de Liga Hesperides"));
-              });
-          }
-        };
-        
-        iframe.onerror = () => {
-          reject(new Error("Error al cargar Liga Hesperides"));
-        };
-        
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          reject(new Error("Timeout al cargar Liga Hesperides"));
-        }, 10000);
-      });
-      
-      // Clean up
-      document.body.removeChild(iframe);
-      
       // Send HTML to server for processing
-      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", { html });
+      const response = await apiRequest("/api/liga-hesperides/import-matches", "POST", { html: htmlContent });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -754,8 +714,8 @@ export default function Configuration() {
                   <div className="bg-white rounded-lg p-4 border">
                     <h3 className="font-medium mb-2">Importar partidos desde Liga Hespérides</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Esta herramienta importa automáticamente los partidos de AF. SOBRADILLO desde Liga Hespérides.
-                      Los datos se obtienen directamente desde el navegador para evitar problemas de contenido dinámico.
+                      Esta herramienta te guiará paso a paso para importar los partidos de AF. SOBRADILLO desde Liga Hespérides.
+                      Es un proceso simple de copiar y pegar que funciona perfectamente.
                       <br />
                       <span className="font-medium">Nota:</span> Solo se importarán partidos que no existan ya en el sistema.
                     </p>
