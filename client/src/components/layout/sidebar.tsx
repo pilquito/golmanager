@@ -154,16 +154,10 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Header with Hamburger */}
-      <div className="lg:hidden bg-sidebar border-b border-sidebar-border p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Gamepad2 className="text-sidebar-primary-foreground text-sm" />
-          </div>
-          <h1 className="text-lg font-bold text-sidebar-foreground">GolManager</h1>
-        </div>
+      <div className="lg:hidden bg-sidebar border-b border-sidebar-border p-4 flex items-center">
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-sidebar-foreground">
+            <Button variant="ghost" size="sm" className="text-sidebar-foreground mr-3">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
@@ -171,6 +165,12 @@ export default function Sidebar() {
             <SidebarContent />
           </SheetContent>
         </Sheet>
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
+            <Gamepad2 className="text-sidebar-primary-foreground text-sm" />
+          </div>
+          <h1 className="text-lg font-bold text-sidebar-foreground">GolManager</h1>
+        </div>
       </div>
 
       {/* Desktop Sidebar */}
