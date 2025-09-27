@@ -108,8 +108,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Emergency endpoint to create/reset admin user (NO AUTH REQUIRED - USE ONLY IN PRODUCTION EMERGENCY)
+  // Emergency endpoint to create/reset admin user (DEVELOPMENT ONLY)
   app.post('/api/emergency/reset-admin', async (req, res) => {
+    // Only allow in development environment
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(403).json({ message: "Emergency endpoint only available in development" });
+    }
     try {
       console.log('🚨 EMERGENCY: Creating/resetting admin user...');
       

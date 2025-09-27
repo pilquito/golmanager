@@ -74,7 +74,7 @@ export default function Matches() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/matches", data);
+      const response = await apiRequest("/api/matches", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ export default function Matches() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await apiRequest("PATCH", `/api/matches/${id}`, data);
+      const response = await apiRequest(`/api/matches/${id}`, "PATCH", data);
       return response.json();
     },
     onSuccess: () => {
@@ -143,7 +143,7 @@ export default function Matches() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/matches/${id}`);
+      await apiRequest(`/api/matches/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
