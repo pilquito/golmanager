@@ -401,8 +401,8 @@ export default function ChampionshipPayments() {
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                            value={field.value ? (typeof field.value === 'string' ? field.value : new Date(field.value).toISOString().split('T')[0]) : ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
                             data-testid="input-due-date"
                           />
                         </FormControl>
@@ -420,8 +420,8 @@ export default function ChampionshipPayments() {
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                            value={field.value ? (typeof field.value === 'string' ? field.value : new Date(field.value).toISOString().split('T')[0]) : ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
                             data-testid="input-payment-date"
                           />
                         </FormControl>
