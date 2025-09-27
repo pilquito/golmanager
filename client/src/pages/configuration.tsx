@@ -40,6 +40,8 @@ export default function Configuration() {
       footballType: "11",
       playerStatsEnabled: true,
       myCompetitionEnabled: true,
+      ligaHesperidesMatchesUrl: "",
+      ligaHesperidesStandingsUrl: "",
     },
   });
 
@@ -58,6 +60,8 @@ export default function Configuration() {
         footballType: config.footballType || "11",
         playerStatsEnabled: config.playerStatsEnabled ?? true,
         myCompetitionEnabled: config.myCompetitionEnabled ?? true,
+        ligaHesperidesMatchesUrl: config.ligaHesperidesMatchesUrl || "",
+        ligaHesperidesStandingsUrl: config.ligaHesperidesStandingsUrl || "",
       });
     }
   }, [config, form]);
@@ -575,6 +579,57 @@ export default function Configuration() {
                             data-testid="switch-my-competition"
                           />
                         </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Liga Hesperides Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Liga Hesperides - Importación</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="ligaHesperidesMatchesUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL de Partidos</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="url" 
+                            placeholder="https://ligahesperides.com/tournaments/21/matches"
+                            {...field} 
+                            data-testid="input-liga-matches-url"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          URL de Liga Hesperides para importar partidos automáticamente
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="ligaHesperidesStandingsUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL de Clasificación</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="url" 
+                            placeholder="https://ligahesperides.com/tournaments/21"
+                            {...field} 
+                            data-testid="input-liga-standings-url"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          URL de Liga Hesperides para importar la clasificación de la liga
+                        </p>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />

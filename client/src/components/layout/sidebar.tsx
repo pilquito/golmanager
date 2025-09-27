@@ -18,13 +18,15 @@ import {
   Gamepad2,
   BarChart3,
   Wallet,
-  Menu
+  Menu,
+  Award
 } from "lucide-react";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/matches", label: "Partidos", icon: Calendar },
+  { href: "/standings", label: "Clasificación", icon: Award },
   { href: "/monthly-payments", label: "Mensualidades", icon: CreditCard },
   { href: "/championship-payments", label: "Pagos Campeonato", icon: Trophy },
   { href: "/collection-balance", label: "Recaudación", icon: BarChart3 },

@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Eye, Users, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Users, FileText, Download, AlertCircle } from "lucide-react";
 import { insertMatchSchema } from "@shared/schema";
 import type { Match } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -167,6 +167,38 @@ export default function Matches() {
       toast({
         title: "Error",
         description: "Error al eliminar partido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const importMatchesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/liga-hesperides/import-matches", {});
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+      toast({
+        title: "Importación completada",
+        description: data.message || "Partidos importados desde Liga Hesperides",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error en la importación",
+        description: "No se pudieron importar los partidos desde Liga Hesperides",
         variant: "destructive",
       });
     },
@@ -348,13 +380,23 @@ export default function Matches() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header title="Partidos" subtitle="Calendario y resultados de partidos">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-match">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Partido
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => importMatchesMutation.mutate()}
+            disabled={importMatchesMutation.isPending}
+            variant="outline"
+            data-testid="button-import-matches"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {importMatchesMutation.isPending ? "Importando..." : "Importar Partidos"}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-match">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Partido
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>
@@ -526,6 +568,7 @@ export default function Matches() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </Header>
 
       <main className="flex-1 overflow-auto bg-background p-3 md:p-6">

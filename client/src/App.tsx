@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Players from "@/pages/players";
 import Matches from "@/pages/matches";
+import Standings from "@/pages/standings";
 import MonthlyPayments from "@/pages/monthly-payments";
 import ChampionshipPayments from "@/pages/championship-payments";
 import CollectionBalance from "@/pages/collection-balance";
@@ -57,6 +58,7 @@ function AuthenticatedApp() {
             <Route path="/players" component={Players} />
             <Route path="/players/:id" component={PlayerProfile} />
             <Route path="/matches" component={Matches} />
+            <Route path="/standings" component={Standings} />
             <Route path="/match-sheet/:id" component={MatchSheetPage} />
             <Route path="/monthly-payments" component={MonthlyPayments} />
             <Route path="/championship-payments" component={ChampionshipPayments} />

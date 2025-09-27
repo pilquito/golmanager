@@ -971,6 +971,267 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Liga Hesperides integration routes
+  app.post("/api/liga-hesperides/import-matches", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Get team configuration to retrieve Liga Hesperides URLs
+      const teamConfig = await storage.getTeamConfig();
+      if (!teamConfig?.ligaHesperidesMatchesUrl) {
+        return res.status(400).json({ 
+          message: "Liga Hesperides URL no configurada. Configúrala en la página de configuración." 
+        });
+      }
+
+      // Scrape matches from Liga Hesperides
+      const response = await fetch(teamConfig.ligaHesperidesMatchesUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch matches: ${response.status} ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      
+      // Simple HTML parsing to find AF. Sobradillo matches
+      // This is a basic implementation - in production you'd use a proper HTML parser
+      const matchRegex = /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi;
+      const lines = html.split('\n');
+      const matches = [];
+      
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (matchRegex.test(line)) {
+          // Found a line with AF. Sobradillo, try to extract match info
+          // This is a simplified parser - would need more sophisticated parsing for real data
+          console.log("Found match line:", line.trim());
+          
+          // Here you would implement proper parsing logic to extract:
+          // - Date and time
+          // - Opponent name
+          // - Venue
+          // - Competition
+          // - Score (if already played)
+          
+          // For now, we'll just log the finding
+          importedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Búsqueda completada. Encontradas ${importedCount} referencias a AF. Sobradillo`,
+        importedCount,
+        skippedCount,
+        url: teamConfig.ligaHesperidesMatchesUrl
+      });
+
+    } catch (error) {
+      console.error("Error importing matches from Liga Hesperides:", error);
+      res.status(500).json({ 
+        message: "Error al importar partidos desde Liga Hesperides",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/liga-hesperides/import-standings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Get team configuration to retrieve Liga Hesperides URLs
+      const teamConfig = await storage.getTeamConfig();
+      if (!teamConfig?.ligaHesperidesStandingsUrl) {
+        return res.status(400).json({ 
+          message: "Liga Hesperides URL de clasificación no configurada. Configúrala en la página de configuración." 
+        });
+      }
+
+      // Scrape standings from Liga Hesperides
+      const response = await fetch(teamConfig.ligaHesperidesStandingsUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch standings: ${response.status} ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      
+      // Enhanced HTML parsing to find teams and their logos
+      const teamRegex = /AF\.\s*Sobradillo|A\.F\.\s*Sobradillo|Sobradillo/gi;
+      const logoRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+      const teamNameRegex = /<[^>]*class[^>]*team[^>]*>([^<]+)<\/[^>]*>/gi;
+      
+      const lines = html.split('\n');
+      const foundTeams = new Set();
+      const teamLogos = new Map();
+      
+      // Look for team names and associated logos
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Check for team mentions
+        if (teamRegex.test(line)) {
+          console.log("Found standings line:", line.trim());
+          foundTeams.add("AF. Sobradillo");
+        }
+        
+        // Extract team logos - look for img tags in the context
+        let logoMatch;
+        while ((logoMatch = logoRegex.exec(line)) !== null) {
+          const logoUrl = logoMatch[1];
+          if (logoUrl && !logoUrl.startsWith('data:') && (logoUrl.includes('.png') || logoUrl.includes('.jpg') || logoUrl.includes('.jpeg') || logoUrl.includes('.svg'))) {
+            console.log("Found potential team logo:", logoUrl);
+            
+            // Try to associate logo with team name in the same or nearby lines
+            const contextLines = lines.slice(Math.max(0, i-2), Math.min(lines.length, i+3)).join(' ');
+            
+            // Simple heuristic: if the context contains team name keywords, associate logo
+            if (/club|fc|cf|real|athletic|sociedad|osasuna|eibar/gi.test(contextLines)) {
+              // Extract team name from context (simplified)
+              const teamMatch = contextLines.match(/([A-Z][a-z]+ [A-Z][a-z]+|[A-Z][a-z]+)/g);
+              if (teamMatch && teamMatch.length > 0) {
+                const teamName = teamMatch[0];
+                if (!teamLogos.has(teamName)) {
+                  teamLogos.set(teamName, logoUrl.startsWith('http') ? logoUrl : `https://ligahesperides.com${logoUrl}`);
+                  console.log(`Associated logo ${logoUrl} with team ${teamName}`);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Try to download and store team logos
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      let savedLogos = 0;
+      
+      for (const [teamName, logoUrl] of teamLogos) {
+        try {
+          console.log(`Downloading logo for ${teamName} from ${logoUrl}`);
+          
+          const logoResponse = await fetch(logoUrl);
+          if (!logoResponse.ok) {
+            console.warn(`Failed to download logo for ${teamName}: ${logoResponse.status}`);
+            continue;
+          }
+          
+          const logoBuffer = await logoResponse.arrayBuffer();
+          const logoData = Buffer.from(logoBuffer);
+          
+          // Determine file extension
+          const urlPath = new URL(logoUrl).pathname;
+          const ext = urlPath.split('.').pop() || 'png';
+          const fileName = `team-logos/${teamName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${ext}`;
+          
+          // Upload to object storage
+          const uploadResult = await objectStorageService.getObjectEntityUploadURL(fileName, `image/${ext}`, 'public');
+          
+          // Upload the image data
+          const uploadResponse = await fetch(uploadResult.uploadURL, {
+            method: 'PUT',
+            body: logoData,
+            headers: {
+              'Content-Type': `image/${ext}`,
+            },
+          });
+          
+          if (uploadResponse.ok) {
+            // Save team info to opponents table
+            await storage.createOrUpdateOpponent({
+              name: teamName,
+              logoUrl: uploadResult.objectPath,
+              source: 'liga_hesperides'
+            });
+            savedLogos++;
+            console.log(`Successfully saved logo for ${teamName}`);
+          } else {
+            console.warn(`Failed to upload logo for ${teamName}`);
+          }
+          
+        } catch (logoError) {
+          console.warn(`Error processing logo for ${teamName}:`, logoError);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Clasificación consultada. Encontradas ${foundTeams.size} referencias de equipos y ${savedLogos} escudos descargados`,
+        foundTeams: foundTeams.size,
+        savedLogos,
+        url: teamConfig.ligaHesperidesStandingsUrl
+      });
+
+    } catch (error) {
+      console.error("Error importing standings from Liga Hesperides:", error);
+      res.status(500).json({ 
+        message: "Error al importar clasificación desde Liga Hesperides",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Opponents/Teams routes
+  app.get("/api/opponents", isAuthenticated, async (req, res) => {
+    try {
+      const opponents = await storage.getOpponents();
+      res.json(opponents);
+    } catch (error) {
+      console.error("Error fetching opponents:", error);
+      res.status(500).json({ message: "Failed to fetch opponents" });
+    }
+  });
+
+  // Standings/Classification routes
+  app.get("/api/standings", isAuthenticated, async (req, res) => {
+    try {
+      // TODO: Implement real standings data from imported classification
+      // For now, return sample data - this will be replaced with real data from Liga Hesperides import
+      const standings = [
+        {
+          position: 1,
+          team: "AF. Sobradillo",
+          matches: 10,
+          wins: 8,
+          draws: 1,
+          losses: 1,
+          goalsFor: 25,
+          goalsAgainst: 8,
+          goalDifference: 17,
+          points: 25,
+          form: ['W', 'W', 'D', 'W', 'W']
+        },
+        {
+          position: 2,
+          team: "Real Sociedad B",
+          matches: 10,
+          wins: 7,
+          draws: 2,
+          losses: 1,
+          goalsFor: 22,
+          goalsAgainst: 10,
+          goalDifference: 12,
+          points: 23,
+          form: ['W', 'L', 'W', 'W', 'D']
+        },
+        {
+          position: 3,
+          team: "Athletic Club B",
+          matches: 10,
+          wins: 6,
+          draws: 3,
+          losses: 1,
+          goalsFor: 18,
+          goalsAgainst: 9,
+          goalDifference: 9,
+          points: 21,
+          form: ['D', 'W', 'W', 'D', 'W']
+        }
+      ];
+      res.json(standings);
+    } catch (error) {
+      console.error("Error fetching standings:", error);
+      res.status(500).json({ message: "Failed to fetch standings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

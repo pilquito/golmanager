@@ -7,6 +7,7 @@ import {
   teamConfig,
   otherPayments,
   matchAttendances,
+  opponents,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -24,6 +25,8 @@ import {
   type InsertOtherPayment,
   type MatchAttendance,
   type InsertMatchAttendance,
+  type Opponent,
+  type InsertOpponent,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -88,6 +91,15 @@ export interface IStorage {
   getUserAttendances(userId: string): Promise<MatchAttendance[]>;
   createOrUpdateAttendance(attendance: InsertMatchAttendance): Promise<MatchAttendance>;
   updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>): Promise<MatchAttendance>;
+
+  // Opponent operations
+  getOpponents(): Promise<Opponent[]>;
+  getOpponent(id: string): Promise<Opponent | undefined>;
+  getOpponentByName(name: string): Promise<Opponent | undefined>;
+  getOpponentByLigaHesperidesId(ligaHesperidesId: string): Promise<Opponent | undefined>;
+  createOpponent(opponent: InsertOpponent): Promise<Opponent>;
+  updateOpponent(id: string, opponent: Partial<InsertOpponent>): Promise<Opponent>;
+  deleteOpponent(id: string): Promise<void>;
 
   // Dashboard statistics
   getDashboardStats(): Promise<{
@@ -677,6 +689,89 @@ export class DatabaseStorage implements IStorage {
       .where(eq(matchAttendances.id, id))
       .returning();
     return updated;
+  }
+
+  // Opponent operations
+  async getOpponents(): Promise<Opponent[]> {
+    return await db
+      .select()
+      .from(opponents)
+      .where(eq(opponents.isActive, true))
+      .orderBy(opponents.name);
+  }
+
+  async getOpponent(id: string): Promise<Opponent | undefined> {
+    const [opponent] = await db
+      .select()
+      .from(opponents)
+      .where(eq(opponents.id, id));
+    return opponent;
+  }
+
+  async getOpponentByName(name: string): Promise<Opponent | undefined> {
+    const [opponent] = await db
+      .select()
+      .from(opponents)
+      .where(eq(opponents.name, name));
+    return opponent;
+  }
+
+  async getOpponentByLigaHesperidesId(ligaHesperidesId: string): Promise<Opponent | undefined> {
+    const [opponent] = await db
+      .select()
+      .from(opponents)
+      .where(eq(opponents.ligaHesperidesId, ligaHesperidesId));
+    return opponent;
+  }
+
+  async createOpponent(opponent: InsertOpponent): Promise<Opponent> {
+    const [newOpponent] = await db
+      .insert(opponents)
+      .values(opponent)
+      .returning();
+    return newOpponent;
+  }
+
+  async updateOpponent(id: string, opponent: Partial<InsertOpponent>): Promise<Opponent> {
+    const [updated] = await db
+      .update(opponents)
+      .set({
+        ...opponent,
+        updatedAt: new Date(),
+      })
+      .where(eq(opponents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOpponent(id: string): Promise<void> {
+    await db.delete(opponents).where(eq(opponents.id, id));
+  }
+
+  async createOrUpdateOpponent(opponentData: {
+    name: string;
+    logoUrl?: string;
+    source?: string;
+  }): Promise<Opponent> {
+    // Check if opponent already exists by name
+    const existing = await this.getOpponentByName(opponentData.name);
+    
+    if (existing) {
+      // Update existing opponent
+      return await this.updateOpponent(existing.id, {
+        logoUrl: opponentData.logoUrl,
+        source: opponentData.source || 'liga_hesperides',
+        updatedAt: new Date(),
+      });
+    } else {
+      // Create new opponent
+      return await this.createOpponent({
+        name: opponentData.name,
+        logoUrl: opponentData.logoUrl,
+        source: opponentData.source || 'liga_hesperides',
+        isActive: true,
+      });
+    }
   }
 }
 

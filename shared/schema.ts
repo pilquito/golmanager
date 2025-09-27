@@ -102,6 +102,24 @@ export const championshipPayments = pgTable("championship_payments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Opponents (rival teams) table
+export const opponents = pgTable("opponents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  shortName: varchar("short_name"), // Nombre corto/abreviado
+  logoUrl: text("logo_url"), // URL del escudo del equipo
+  city: varchar("city"),
+  stadium: varchar("stadium"),
+  foundedYear: integer("founded_year"),
+  website: varchar("website"),
+  colors: varchar("colors"), // Colores del equipo
+  // Datos específicos de Liga Hesperides
+  ligaHesperidesId: varchar("liga_hesperides_id"), // ID único en Liga Hesperides
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Team configuration table
 export const teamConfig = pgTable("team_config", {
   id: varchar("id").primaryKey().default("team_config"),
@@ -118,6 +136,9 @@ export const teamConfig = pgTable("team_config", {
   // Configuraciones del modo jugador
   playerStatsEnabled: boolean("player_stats_enabled").default(true), // Mostrar "Estadísticas de jugador"
   myCompetitionEnabled: boolean("my_competition_enabled").default(true), // Mostrar "Mi competición"
+  // URLs de Liga Hesperides para importación
+  ligaHesperidesMatchesUrl: varchar("liga_hesperides_matches_url"), // URL para importar partidos
+  ligaHesperidesStandingsUrl: varchar("liga_hesperides_standings_url"), // URL para importar clasificación
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -182,6 +203,10 @@ export const matchAttendancesRelations = relations(matchAttendances, ({ one }) =
   }),
 }));
 
+export const opponentsRelations = relations(opponents, ({ many }) => ({
+  // No direct relations yet, but can be added later for match history
+}));
+
 // Schemas for validation
 export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
@@ -220,6 +245,12 @@ export const insertOtherPaymentSchema = createInsertSchema(otherPayments).omit({
 });
 
 export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOpponentSchema = createInsertSchema(opponents).omit({
+  id: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -267,3 +298,5 @@ export type OtherPayment = typeof otherPayments.$inferSelect;
 export type InsertOtherPayment = z.infer<typeof insertOtherPaymentSchema>;
 export type MatchAttendance = typeof matchAttendances.$inferSelect;
 export type InsertMatchAttendance = z.infer<typeof insertMatchAttendanceSchema>;
+export type Opponent = typeof opponents.$inferSelect;
+export type InsertOpponent = z.infer<typeof insertOpponentSchema>;
