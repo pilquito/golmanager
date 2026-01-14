@@ -21,16 +21,24 @@ Preferred communication style: Simple, everyday language.
 - **Registration Flow**: Two-tab system - "Unirse" (join existing) or "Crear Equipo" (create new org)
 - **Slug Generation**: Auto-generates from organization name with collision handling
 
+### Multi-Team Player Support:
+- **User Organizations Table**: Many-to-many relationship (user_organizations) allowing players to belong to multiple teams
+- **Admin Organizations Page**: `/admin/organizations` for managing all teams with stats, edit names, toggle active status
+- **Organization Selector Component**: Dropdown in sidebar (admin) and player dashboard header for switching between teams
+- **Team Switching API**: `/api/user/switch-organization` updates user's active organizationId with full query invalidation
+
 ### Security:
 - Complete tenant isolation - no cross-organization data access possible
 - All database queries enforce organizationId filter
 - Session contains organizationId from authenticated user
 - Registration atomically creates organization + admin user + team config
+- Admin-only access to `/admin/organizations` page
 
 ### Tested:
 - Successfully created multiple test organizations
 - Verified empty player list for new org (0 players) while original org retains 20 players
 - E2E Playwright test passed for registration flow
+- E2E test passed for admin organization editing and toggle functionality
 
 ## September 27, 2025 - Liga Hesperides Integration Security & Reliability Fixes
 
