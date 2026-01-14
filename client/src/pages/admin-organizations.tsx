@@ -33,7 +33,13 @@ export default function AdminOrganizations() {
   const [editingOrg, setEditingOrg] = useState<OrganizationWithStats | null>(null);
   const [editName, setEditName] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
   const [newOrgName, setNewOrgName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminFirstName, setAdminFirstName] = useState("");
+  const [adminLastName, setAdminLastName] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [deletingOrg, setDeletingOrg] = useState<OrganizationWithStats | null>(null);
 
   const { data: organizations = [], isLoading } = useQuery<OrganizationWithStats[]>({
@@ -55,23 +61,40 @@ export default function AdminOrganizations() {
   });
 
   const createOrgMutation = useMutation({
-    mutationFn: async (data: { name: string }) => {
+    mutationFn: async (data: { 
+      name: string; 
+      adminEmail: string; 
+      adminFirstName: string; 
+      adminLastName?: string; 
+      adminPassword: string 
+    }) => {
       const slug = data.name
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
-      return await apiRequest("/api/admin/organizations", "POST", { name: data.name, slug });
+      return await apiRequest("/api/admin/organizations", "POST", { 
+        name: data.name, 
+        slug,
+        adminEmail: data.adminEmail,
+        adminFirstName: data.adminFirstName,
+        adminLastName: data.adminLastName,
+        adminPassword: data.adminPassword,
+      });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
-      toast({ title: "Organización creada" });
-      setCreateDialogOpen(false);
-      setNewOrgName("");
+      toast({ title: "Equipo y administrador creados" });
+      setCreatedCredentials({
+        email: data.adminUser.email,
+        password: data.tempPassword,
+      });
+      setWizardStep(3);
     },
-    onError: () => {
-      toast({ title: "Error al crear organización", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Error al crear organización";
+      toast({ title: message, variant: "destructive" });
     },
   });
 
@@ -117,8 +140,30 @@ export default function AdminOrganizations() {
   };
 
   const handleCreateOrg = () => {
-    if (!newOrgName.trim()) return;
-    createOrgMutation.mutate({ name: newOrgName.trim() });
+    if (wizardStep === 1) {
+      if (!newOrgName.trim()) return;
+      setWizardStep(2);
+    } else if (wizardStep === 2) {
+      if (!adminEmail.trim() || !adminFirstName.trim() || !adminPassword.trim()) return;
+      createOrgMutation.mutate({ 
+        name: newOrgName.trim(),
+        adminEmail: adminEmail.trim(),
+        adminFirstName: adminFirstName.trim(),
+        adminLastName: adminLastName.trim() || undefined,
+        adminPassword: adminPassword.trim(),
+      });
+    }
+  };
+
+  const resetCreateDialog = () => {
+    setCreateDialogOpen(false);
+    setWizardStep(1);
+    setNewOrgName("");
+    setAdminEmail("");
+    setAdminFirstName("");
+    setAdminLastName("");
+    setAdminPassword("");
+    setCreatedCredentials(null);
   };
 
   const handleDeleteOrg = () => {
@@ -145,38 +190,130 @@ export default function AdminOrganizations() {
           <h1 className="text-2xl font-bold text-gray-900">Gestionar Organizaciones</h1>
           <p className="text-gray-600 mt-1">Administra todos los equipos registrados</p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <Dialog open={createDialogOpen} onOpenChange={(open) => {
+          if (!open) resetCreateDialog();
+          else setCreateDialogOpen(true);
+        }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
               Nuevo Equipo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Crear Nuevo Equipo</DialogTitle>
+              <DialogTitle>
+                {wizardStep === 1 && "Paso 1: Datos del Equipo"}
+                {wizardStep === 2 && "Paso 2: Administrador del Equipo"}
+                {wizardStep === 3 && "Equipo Creado"}
+              </DialogTitle>
               <DialogDescription>
-                Ingresa el nombre del nuevo equipo. Se generará automáticamente una URL amigable.
+                {wizardStep === 1 && "Ingresa el nombre del nuevo equipo."}
+                {wizardStep === 2 && "Define las credenciales del administrador que gestionará este equipo."}
+                {wizardStep === 3 && "Guarda estas credenciales para compartirlas con el administrador."}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-org-name">Nombre del equipo</Label>
-                <Input
-                  id="new-org-name"
-                  value={newOrgName}
-                  onChange={(e) => setNewOrgName(e.target.value)}
-                  placeholder="Ej: Los Tigres FC"
-                />
+            
+            {wizardStep === 1 && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-org-name">Nombre del equipo</Label>
+                  <Input
+                    id="new-org-name"
+                    value={newOrgName}
+                    onChange={(e) => setNewOrgName(e.target.value)}
+                    placeholder="Ej: Los Tigres FC"
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-email">Email del administrador</Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="admin@equipo.com"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-first-name">Nombre</Label>
+                    <Input
+                      id="admin-first-name"
+                      value={adminFirstName}
+                      onChange={(e) => setAdminFirstName(e.target.value)}
+                      placeholder="Juan"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-last-name">Apellido (opcional)</Label>
+                    <Input
+                      id="admin-last-name"
+                      value={adminLastName}
+                      onChange={(e) => setAdminLastName(e.target.value)}
+                      placeholder="Pérez"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-password">Contraseña temporal</Label>
+                  <Input
+                    id="admin-password"
+                    type="text"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <p className="text-xs text-gray-500">El administrador podrá cambiarla después</p>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 3 && createdCredentials && (
+              <div className="space-y-4 py-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-green-800">Credenciales del administrador:</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-white p-2 rounded border">
+                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="font-mono text-sm">{createdCredentials.email}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-white p-2 rounded border">
+                      <span className="text-sm text-gray-600">Contraseña:</span>
+                      <span className="font-mono text-sm">{createdCredentials.password}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-green-700">Comparte estas credenciales con el administrador del equipo para que pueda iniciar sesión.</p>
+                </div>
+              </div>
+            )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateOrg} disabled={createOrgMutation.isPending || !newOrgName.trim()}>
-                {createOrgMutation.isPending ? "Creando..." : "Crear Equipo"}
-              </Button>
+              {wizardStep === 1 && (
+                <>
+                  <Button variant="outline" onClick={resetCreateDialog}>Cancelar</Button>
+                  <Button onClick={handleCreateOrg} disabled={!newOrgName.trim()}>Siguiente</Button>
+                </>
+              )}
+              {wizardStep === 2 && (
+                <>
+                  <Button variant="outline" onClick={() => setWizardStep(1)}>Atrás</Button>
+                  <Button 
+                    onClick={handleCreateOrg} 
+                    disabled={createOrgMutation.isPending || !adminEmail.trim() || !adminFirstName.trim() || !adminPassword.trim() || adminPassword.length < 6}
+                  >
+                    {createOrgMutation.isPending ? "Creando..." : "Crear Equipo"}
+                  </Button>
+                </>
+              )}
+              {wizardStep === 3 && (
+                <Button onClick={resetCreateDialog}>Cerrar</Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

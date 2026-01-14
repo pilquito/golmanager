@@ -166,6 +166,12 @@ export interface IStorage {
   
   // Admin: Organization management
   deleteOrganization(id: string): Promise<void>;
+  
+  // Admin: Create organization with admin user and complete config
+  createOrganizationWithAdmin(data: {
+    organization: InsertOrganization;
+    admin: { email: string; firstName: string; lastName?: string; password: string };
+  }): Promise<{ organization: Organization; adminUser: User; tempPassword: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1365,6 +1371,78 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Organization not found");
     }
     await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  // Admin: Create organization with admin user and complete config in one transaction
+  async createOrganizationWithAdmin(data: {
+    organization: InsertOrganization;
+    admin: { email: string; firstName: string; lastName?: string; password: string };
+  }): Promise<{ organization: Organization; adminUser: User; tempPassword: string }> {
+    const { organization: orgData, admin: adminData } = data;
+    
+    // Check if email already exists before transaction
+    const existingUser = await this.getUserByEmail(adminData.email);
+    if (existingUser) {
+      throw new Error("Ya existe un usuario con ese email");
+    }
+    
+    // Prepare password hash and username before transaction
+    const hashedPassword = await bcrypt.hash(adminData.password, 10);
+    const username = adminData.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Check for unique username
+    let finalUsername = username;
+    let counter = 1;
+    while (await this.getUserByUsername(finalUsername)) {
+      finalUsername = `${username}${counter}`;
+      counter++;
+    }
+    
+    // Execute all DB operations in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Create organization
+      const [newOrg] = await tx.insert(organizations).values(orgData).returning();
+      
+      // Create admin user
+      const [adminUser] = await tx.insert(users).values({
+        email: adminData.email,
+        username: finalUsername,
+        firstName: adminData.firstName,
+        lastName: adminData.lastName || null,
+        password: hashedPassword,
+        role: 'admin',
+        organizationId: newOrg.id,
+        isActive: true,
+      }).returning();
+      
+      // Add user to organization with org_admin role
+      await tx.insert(userOrganizations).values({
+        userId: adminUser.id,
+        organizationId: newOrg.id,
+        role: 'org_admin',
+      });
+      
+      // Create complete team configuration with all defaults
+      await tx.insert(teamConfig).values({
+        organizationId: newOrg.id,
+        teamName: newOrg.name,
+        teamColors: "#dc2626,#ffffff",
+        monthlyFee: "15.00",
+        paymentDueDay: 1,
+        footballType: "11",
+        playerStatsEnabled: true,
+        myCompetitionEnabled: true,
+        contactEmail: adminData.email,
+      });
+      
+      return { organization: newOrg, adminUser };
+    });
+    
+    return {
+      organization: result.organization,
+      adminUser: result.adminUser,
+      tempPassword: adminData.password,
+    };
   }
 }
 

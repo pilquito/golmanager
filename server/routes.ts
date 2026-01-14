@@ -256,10 +256,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Create new organization
+  // Admin: Create new organization with admin user
   app.post("/api/admin/organizations", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const validatedData = insertOrganizationSchema.parse(req.body);
+      const schema = z.object({
+        name: z.string().min(1, "Nombre requerido"),
+        slug: z.string().min(1, "Slug requerido"),
+        adminEmail: z.string().email("Email inválido"),
+        adminFirstName: z.string().min(1, "Nombre del admin requerido"),
+        adminLastName: z.string().optional(),
+        adminPassword: z.string().min(6, "Contraseña mínimo 6 caracteres"),
+      });
+      
+      const validatedData = schema.parse(req.body);
       
       // Check if slug already exists and make it unique if needed
       let slug = validatedData.slug;
@@ -271,24 +280,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         counter++;
       }
       
-      const newOrg = await storage.createOrganization({ ...validatedData, slug });
-      // Create default team config for the new organization
-      await storage.updateTeamConfig({
-        teamName: newOrg.name,
-        teamColors: "#dc2626,#ffffff",
-        monthlyFee: "15.00",
-        paymentDueDay: 1,
-        footballType: "11",
-        playerStatsEnabled: true,
-        myCompetitionEnabled: true,
-      }, newOrg.id);
-      res.status(201).json(newOrg);
+      const result = await storage.createOrganizationWithAdmin({
+        organization: { name: validatedData.name, slug },
+        admin: {
+          email: validatedData.adminEmail,
+          firstName: validatedData.adminFirstName,
+          lastName: validatedData.adminLastName,
+          password: validatedData.adminPassword,
+        },
+      });
+      
+      res.status(201).json({
+        organization: result.organization,
+        adminUser: {
+          id: result.adminUser.id,
+          email: result.adminUser.email,
+          username: result.adminUser.username,
+          firstName: result.adminUser.firstName,
+        },
+        tempPassword: result.tempPassword,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid organization data", errors: error.errors });
+        return res.status(400).json({ message: "Datos inválidos", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        if (error.message.includes("email")) {
+          return res.status(409).json({ message: error.message });
+        }
       }
       console.error("Error creating organization:", error);
-      res.status(500).json({ message: "Failed to create organization" });
+      res.status(500).json({ message: "Error al crear la organización" });
     }
   });
 
