@@ -260,9 +260,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/organizations", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const validatedData = insertOrganizationSchema.parse(req.body);
-      const newOrg = await storage.createOrganization(validatedData);
+      
+      // Check if slug already exists and make it unique if needed
+      let slug = validatedData.slug;
+      let existingOrg = await storage.getOrganizationBySlug(slug);
+      let counter = 1;
+      while (existingOrg) {
+        slug = `${validatedData.slug}-${counter}`;
+        existingOrg = await storage.getOrganizationBySlug(slug);
+        counter++;
+      }
+      
+      const newOrg = await storage.createOrganization({ ...validatedData, slug });
       // Create default team config for the new organization
-      await storage.createTeamConfig({
+      await storage.updateTeamConfig({
         teamName: newOrg.name,
         teamColors: "#dc2626,#ffffff",
         monthlyFee: "15.00",
