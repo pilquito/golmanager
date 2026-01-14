@@ -1,12 +1,36 @@
 # Overview
 
-GolManager is a comprehensive football (soccer) team management system built for amateur teams. The application provides tools to manage players, matches, monthly payments, championship payments, and team configuration. It features a modern web interface with role-based access control and complete CRUD operations for all entities.
+GolManager is a **multi-tenant** football (soccer) team management system built for amateur teams. The application provides tools to manage players, matches, monthly payments, championship payments, and team configuration. It features a modern web interface with role-based access control, complete CRUD operations, and **complete data isolation between organizations**.
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 # Recent Changes
+
+## January 14, 2026 - Multi-Tenant Architecture Implementation
+
+**MAJOR FEATURE**: Converted entire application from single-tenant to multi-tenant architecture supporting multiple teams/organizations.
+
+### Key Changes:
+- **Organizations Table**: New central table with id, name, slug, logoUrl, isActive fields
+- **Tenant Scoping**: Added organizationId column to ALL 9 data tables: users, players, matches, monthly_payments, championship_payments, match_attendances, other_payments, opponents, standings
+- **Team Config**: Modified to use organizationId as filter key with auto-generated UUID primary key
+- **Storage Layer**: All 32+ storage functions now filter by organizationId using AND clauses
+- **API Routes**: All 64+ routes pass orgId from authenticated session to storage
+- **Registration Flow**: Two-tab system - "Unirse" (join existing) or "Crear Equipo" (create new org)
+- **Slug Generation**: Auto-generates from organization name with collision handling
+
+### Security:
+- Complete tenant isolation - no cross-organization data access possible
+- All database queries enforce organizationId filter
+- Session contains organizationId from authenticated user
+- Registration atomically creates organization + admin user + team config
+
+### Tested:
+- Successfully created multiple test organizations
+- Verified empty player list for new org (0 players) while original org retains 20 players
+- E2E Playwright test passed for registration flow
 
 ## September 27, 2025 - Liga Hesperides Integration Security & Reliability Fixes
 
@@ -73,14 +97,26 @@ Removed all drag & drop functionality from the MatchSheet component:
 - **Authorization**: Role-based access control (admin/user roles)
 - **Security**: HTTP-only cookies with secure settings in production
 
+## Multi-Tenant Architecture
+The system uses organization-based multi-tenancy:
+- **Organizations**: Central tenant entity with id, name, slug, logoUrl, isActive
+- **Tenant Scoping**: All data tables include organizationId column
+- **Data Isolation**: Storage layer enforces organizationId filtering on ALL queries
+- **Session Context**: User session contains organizationId for request scoping
+
 ## Data Models
-The system manages five core entities:
-- **Users**: Authentication and role management
+The system manages the following entities (all scoped by organizationId):
+- **Organizations**: Tenant containers with name, slug, logo, active status
+- **Users**: Authentication, role management, linked to organization
 - **Players**: Team roster with positions, contact info, and status
 - **Matches**: Game scheduling with scores and competition tracking
 - **Monthly Payments**: Recurring player fees with payment status
 - **Championship Payments**: Event-specific payments for tournaments
-- **Team Configuration**: Global settings for fees and team information
+- **Other Payments**: Additional payment types
+- **Match Attendances**: Player attendance tracking per match
+- **Opponents**: External teams for match scheduling
+- **Standings**: League/competition standings
+- **Team Configuration**: Organization-specific settings for fees and team information
 
 ## Development Environment
 - **Development Server**: Concurrent frontend (Vite) and backend (tsx) processes
