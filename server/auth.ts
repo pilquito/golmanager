@@ -91,11 +91,10 @@ export async function loginUser(loginData: LoginData) {
 export async function registerUser(registerData: RegisterData & { organizationId?: string }) {
   const validatedData = registerSchema.parse(registerData);
   
-  if (validatedData.username) {
-    const existingUser = await storage.getUserByUsername(validatedData.username);
-    if (existingUser) {
-      throw new Error("Username already exists");
-    }
+  // Check email uniqueness
+  const existingUser = await storage.getUserByEmail(validatedData.email);
+  if (existingUser) {
+    throw new Error("Ya existe una cuenta con este email");
   }
   
   const { confirmPassword, ...userData } = validatedData;
@@ -121,11 +120,10 @@ export async function registerUserWithOrganization(
 ) {
   const validatedData = registerSchema.parse(registerData);
   
-  if (validatedData.username) {
-    const existingUser = await storage.getUserByUsername(validatedData.username);
-    if (existingUser) {
-      throw new Error("Username already exists");
-    }
+  // Check email uniqueness
+  const existingUser = await storage.getUserByEmail(validatedData.email);
+  if (existingUser) {
+    throw new Error("Ya existe una cuenta con este email");
   }
   
   const baseSlug = orgData.slug || generateSlug(orgData.name);
