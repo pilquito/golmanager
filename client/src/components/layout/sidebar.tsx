@@ -38,7 +38,7 @@ const navigationItems = [
 export default function Sidebar() {
   const [location, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -74,11 +74,21 @@ export default function Sidebar() {
       {/* Logo and Brand */}
       <div className="p-4 md:p-6 border-b border-white/20">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/30">
-            <Gamepad2 className="text-white text-sm md:text-lg" />
-          </div>
+          {organization?.logoUrl ? (
+            <img 
+              src={organization.logoUrl} 
+              alt={organization.name} 
+              className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover border border-white/30"
+            />
+          ) : (
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/30">
+              <Gamepad2 className="text-white text-sm md:text-lg" />
+            </div>
+          )}
           <div>
-            <h1 className="text-lg md:text-xl font-bold text-white">GolManager</h1>
+            <h1 className="text-lg md:text-xl font-bold text-white" data-testid="org-name">
+              {organization?.name || "GolManager"}
+            </h1>
             <p className="text-xs md:text-sm text-white/70">Team Manager</p>
           </div>
         </div>
@@ -168,10 +178,18 @@ export default function Sidebar() {
           </SheetContent>
         </Sheet>
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Gamepad2 className="text-sidebar-primary-foreground text-sm" />
-          </div>
-          <h1 className="text-lg font-bold text-sidebar-foreground">GolManager</h1>
+          {organization?.logoUrl ? (
+            <img 
+              src={organization.logoUrl} 
+              alt={organization.name} 
+              className="w-8 h-8 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
+              <Gamepad2 className="text-sidebar-primary-foreground text-sm" />
+            </div>
+          )}
+          <h1 className="text-lg font-bold text-sidebar-foreground">{organization?.name || "GolManager"}</h1>
         </div>
       </div>
 
