@@ -39,6 +39,7 @@ const navigationItems = [
 
 const adminItems = [
   { href: "/admin/organizations", label: "Organizaciones", icon: Building2 },
+  { href: "/admin/players", label: "Jugadores Global", icon: Users },
 ];
 
 export default function Sidebar() {

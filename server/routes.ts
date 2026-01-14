@@ -255,6 +255,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get single organization with details
+  app.get("/api/admin/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const org = await storage.getOrganizationWithDetails(req.params.id);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      res.json(org);
+    } catch (error) {
+      console.error("Error fetching organization details:", error);
+      res.status(500).json({ message: "Failed to fetch organization" });
+    }
+  });
+
+  // Admin: Get all players across all organizations
+  app.get("/api/admin/players", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const players = await storage.getAllPlayersWithOrganizations();
+      res.json(players);
+    } catch (error) {
+      console.error("Error fetching all players:", error);
+      res.status(500).json({ message: "Failed to fetch players" });
+    }
+  });
+
+  // Admin: Get single player with details
+  app.get("/api/admin/players/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const player = await storage.getPlayerWithOrganizations(req.params.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      res.json(player);
+    } catch (error) {
+      console.error("Error fetching player details:", error);
+      res.status(500).json({ message: "Failed to fetch player" });
+    }
+  });
+
+  // Admin: Update player
+  app.patch("/api/admin/players/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertPlayerSchema.partial().parse(req.body);
+      const player = await storage.updatePlayer(req.params.id, validatedData);
+      res.json(player);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid player data", errors: error.errors });
+      }
+      console.error("Error updating player:", error);
+      res.status(500).json({ message: "Failed to update player" });
+    }
+  });
+
+  // Admin: Add player to organization
+  app.post("/api/admin/player-organizations", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        playerId: z.string().min(1, "Player ID is required"),
+        organizationId: z.string().min(1, "Organization ID is required"),
+        jerseyNumber: z.number().optional(),
+        position: z.string().optional(),
+      });
+      
+      const { playerId, organizationId, jerseyNumber, position } = schema.parse(req.body);
+      
+      // Verify organization exists
+      const org = await storage.getOrganization(organizationId);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Verify player exists (use admin function without org scope)
+      const player = await storage.getPlayerWithOrganizations(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
+      // Check for duplicate membership (player already in this org)
+      const alreadyMember = player.organizations?.some(o => o.id === organizationId);
+      if (alreadyMember) {
+        return res.status(400).json({ message: "Player is already a member of this organization" });
+      }
+      
+      const result = await storage.addPlayerToOrganization(playerId, organizationId, jerseyNumber, position);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      // Handle unique constraint violation
+      if (error instanceof Error && error.message.includes('unique') || 
+          (error as any)?.code === '23505') {
+        return res.status(409).json({ message: "Player is already a member of this organization" });
+      }
+      console.error("Error adding player to organization:", error);
+      res.status(500).json({ message: "Failed to add player to organization" });
+    }
+  });
+
+  // Admin: Remove player from organization
+  app.delete("/api/admin/player-organizations/:playerId/:organizationId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { playerId, organizationId } = req.params;
+      
+      if (!playerId || !organizationId) {
+        return res.status(400).json({ message: "Player ID and Organization ID are required" });
+      }
+      
+      // Verify organization exists
+      const org = await storage.getOrganization(organizationId);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Verify player exists
+      const player = await storage.getPlayerWithOrganizations(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
+      // Check if player is actually a member of this org
+      const isMember = player.organizations?.some(o => o.id === organizationId);
+      if (!isMember) {
+        return res.status(400).json({ message: "Player is not a member of this organization" });
+      }
+      
+      await storage.removePlayerFromOrganization(playerId, organizationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing player from organization:", error);
+      res.status(500).json({ message: "Failed to remove player from organization" });
+    }
+  });
+
   // User's organizations (for org selector - multi-team support)
   app.get("/api/user/organizations", isAuthenticated, async (req, res) => {
     try {

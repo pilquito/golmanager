@@ -11,6 +11,7 @@ import {
   standings,
   organizations,
   userOrganizations,
+  playerOrganizations,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -36,6 +37,7 @@ import {
   type InsertOrganization,
   type UserOrganization,
   type InsertUserOrganization,
+  type PlayerOrganization,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -74,7 +76,7 @@ export interface IStorage {
   getPlayerByUserId(userId: string, orgId: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer, orgId: string): Promise<Player>;
   createPlayerForExistingUser(playerData: InsertPlayer, userId: string, orgId: string): Promise<Player>;
-  updatePlayer(id: string, player: Partial<InsertPlayer>, orgId: string): Promise<Player>;
+  updatePlayer(id: string, player: Partial<InsertPlayer>, orgId?: string): Promise<Player>;
   deletePlayer(id: string, orgId: string): Promise<void>;
 
   // Match operations
@@ -144,6 +146,22 @@ export interface IStorage {
     totalExpenses: number;
     currentBalance: number;
   }>;
+
+  // Admin: Organization with details (players with membership data and config)
+  getOrganizationWithDetails(orgId: string): Promise<(Organization & { 
+    players: (Player & { membershipId?: string; orgJerseyNumber?: number; orgPosition?: string })[];
+    teamConfig: TeamConfig | null;
+  }) | undefined>;
+
+  // Admin: All players with their organizations
+  getAllPlayersWithOrganizations(): Promise<(Player & { organizations: { id: string; name: string; jerseyNumber?: number; position?: string }[] })[]>;
+
+  // Admin: Single player with organizations
+  getPlayerWithOrganizations(playerId: string): Promise<(Player & { organizations: { id: string; name: string; jerseyNumber?: number; position?: string }[] }) | undefined>;
+
+  // Admin: Player-Organization management (multi-team support for players)
+  addPlayerToOrganization(playerId: string, orgId: string, jerseyNumber?: number, position?: string): Promise<PlayerOrganization>;
+  removePlayerFromOrganization(playerId: string, orgId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -462,18 +480,43 @@ export class DatabaseStorage implements IStorage {
     console.log(`✅ Finished creating users: ${created} created, ${skipped} skipped`);
   }
 
-  async updatePlayer(id: string, player: Partial<InsertPlayer>, orgId: string): Promise<Player> {
+  async updatePlayer(id: string, player: Partial<InsertPlayer>, orgId?: string): Promise<Player> {
     console.log(`Storage: Updating player ${id} with:`, player);
     
-    const currentPlayer = await this.getPlayer(id, orgId);
+    if (orgId) {
+      const currentPlayer = await this.getPlayer(id, orgId);
+      if (!currentPlayer) {
+        throw new Error(`Player with ID ${id} not found in organization`);
+      }
+
+      const [updatedPlayer] = await db
+        .update(players)
+        .set({ ...player, updatedAt: new Date() })
+        .where(and(eq(players.id, id), eq(players.organizationId, orgId)))
+        .returning();
+
+      if (player.isActive !== undefined && currentPlayer.email) {
+        console.log(`🔄 Syncing user status for player ${currentPlayer.name} (${currentPlayer.email})`);
+        const user = await this.getUserByEmail(currentPlayer.email);
+        if (user) {
+          await this.updateUser(user.id, { isActive: player.isActive });
+          console.log(`✅ User status synced to ${player.isActive ? 'active' : 'inactive'}`);
+        }
+      }
+
+      return updatedPlayer;
+    }
+
+    // Admin update without org filter
+    const [currentPlayer] = await db.select().from(players).where(eq(players.id, id));
     if (!currentPlayer) {
-      throw new Error(`Player with ID ${id} not found in organization`);
+      throw new Error(`Player with ID ${id} not found`);
     }
 
     const [updatedPlayer] = await db
       .update(players)
       .set({ ...player, updatedAt: new Date() })
-      .where(and(eq(players.id, id), eq(players.organizationId, orgId)))
+      .where(eq(players.id, id))
       .returning();
     
     if (player.isActive !== undefined && currentPlayer.email) {
@@ -1056,6 +1099,238 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAllStandings(orgId: string): Promise<void> {
     await db.delete(standings).where(eq(standings.organizationId, orgId));
+  }
+
+  // Admin: Get organization with full details including membership metadata
+  async getOrganizationWithDetails(orgId: string): Promise<(Organization & { 
+    players: (Player & { membershipId?: string; orgJerseyNumber?: number; orgPosition?: string })[];
+    teamConfig: TeamConfig | null;
+  }) | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId));
+    if (!org) return undefined;
+
+    // Get players from junction table (player_organizations)
+    const playerOrgs = await db.select()
+      .from(playerOrganizations)
+      .where(eq(playerOrganizations.organizationId, orgId));
+    
+    const orgPlayers: (Player & { membershipId?: string; orgJerseyNumber?: number; orgPosition?: string })[] = [];
+    
+    for (const po of playerOrgs) {
+      const [player] = await db.select().from(players).where(eq(players.id, po.playerId));
+      if (player) {
+        // Include player with org-specific metadata
+        orgPlayers.push({
+          ...player,
+          membershipId: po.id,
+          orgJerseyNumber: po.jerseyNumber || undefined,
+          orgPosition: po.position || undefined,
+          // Override for display purposes but keep original for reference
+          jerseyNumber: po.jerseyNumber || player.jerseyNumber,
+          position: po.position || player.position,
+        });
+      }
+    }
+    
+    // Also include players from legacy organizationId field (not in junction table)
+    const legacyPlayers = await db.select().from(players).where(eq(players.organizationId, orgId));
+    for (const lp of legacyPlayers) {
+      if (!orgPlayers.some(p => p.id === lp.id)) {
+        orgPlayers.push({
+          ...lp,
+          membershipId: undefined,
+          orgJerseyNumber: undefined,
+          orgPosition: undefined,
+        });
+      }
+    }
+    
+    const config = await this.getTeamConfig(orgId);
+
+    return {
+      ...org,
+      players: orgPlayers,
+      teamConfig: config || null,
+    };
+  }
+
+  // Admin: Get all players across all organizations
+  async getAllPlayersWithOrganizations(): Promise<(Player & { organizations: { id: string; name: string; jerseyNumber?: number; position?: string }[] })[]> {
+    const allPlayers = await db.select().from(players).orderBy(players.name);
+    
+    const result = await Promise.all(allPlayers.map(async (player) => {
+      // Get organizations from player_organizations junction table
+      const playerOrgs = await db.select()
+        .from(playerOrganizations)
+        .where(eq(playerOrganizations.playerId, player.id));
+      
+      // Build organization list from junction table
+      const orgsList: { id: string; name: string; jerseyNumber?: number; position?: string }[] = [];
+      
+      for (const po of playerOrgs) {
+        const [org] = await db.select().from(organizations).where(eq(organizations.id, po.organizationId));
+        if (org) {
+          orgsList.push({
+            id: org.id,
+            name: org.name,
+            jerseyNumber: po.jerseyNumber || undefined,
+            position: po.position || undefined,
+          });
+        }
+      }
+      
+      // Also include the legacy organizationId if not in junction table
+      if (player.organizationId && !orgsList.some(o => o.id === player.organizationId)) {
+        const [org] = await db.select().from(organizations).where(eq(organizations.id, player.organizationId));
+        if (org) {
+          orgsList.push({
+            id: org.id,
+            name: org.name,
+            jerseyNumber: player.jerseyNumber || undefined,
+            position: player.position || undefined,
+          });
+        }
+      }
+      
+      return {
+        ...player,
+        organizations: orgsList,
+      };
+    }));
+
+    return result;
+  }
+
+  // Admin: Get single player with organizations
+  async getPlayerWithOrganizations(playerId: string): Promise<(Player & { organizations: { id: string; name: string; jerseyNumber?: number; position?: string }[] }) | undefined> {
+    const [player] = await db.select().from(players).where(eq(players.id, playerId));
+    if (!player) return undefined;
+
+    // Get organizations from player_organizations junction table
+    const playerOrgs = await db.select()
+      .from(playerOrganizations)
+      .where(eq(playerOrganizations.playerId, playerId));
+    
+    const orgsList: { id: string; name: string; jerseyNumber?: number; position?: string }[] = [];
+    
+    for (const po of playerOrgs) {
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, po.organizationId));
+      if (org) {
+        orgsList.push({
+          id: org.id,
+          name: org.name,
+          jerseyNumber: po.jerseyNumber || undefined,
+          position: po.position || undefined,
+        });
+      }
+    }
+    
+    // Also include the legacy organizationId if not in junction table
+    if (player.organizationId && !orgsList.some(o => o.id === player.organizationId)) {
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, player.organizationId));
+      if (org) {
+        orgsList.push({
+          id: org.id,
+          name: org.name,
+          jerseyNumber: player.jerseyNumber || undefined,
+          position: player.position || undefined,
+        });
+      }
+    }
+
+    return {
+      ...player,
+      organizations: orgsList,
+    };
+  }
+
+  // Admin: Add player to organization (uses player_organizations junction table)
+  async addPlayerToOrganization(playerId: string, orgId: string, jerseyNumber?: number, position?: string): Promise<PlayerOrganization> {
+    const [player] = await db.select().from(players).where(eq(players.id, playerId));
+    if (!player) {
+      throw new Error("Player not found");
+    }
+
+    // Check if relationship already exists
+    const existing = await db.select()
+      .from(playerOrganizations)
+      .where(and(
+        eq(playerOrganizations.playerId, playerId),
+        eq(playerOrganizations.organizationId, orgId)
+      ));
+    
+    if (existing.length > 0) {
+      // Update existing record
+      const [updated] = await db
+        .update(playerOrganizations)
+        .set({
+          jerseyNumber: jerseyNumber || existing[0].jerseyNumber,
+          position: position || existing[0].position,
+          isActive: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(playerOrganizations.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    // Create new relationship in junction table
+    const [newPlayerOrg] = await db.insert(playerOrganizations).values({
+      playerId,
+      organizationId: orgId,
+      jerseyNumber: jerseyNumber || player.jerseyNumber,
+      position: position || player.position,
+      isActive: true,
+    }).returning();
+
+    // Also update the legacy organizationId if player doesn't have one
+    if (!player.organizationId) {
+      await db
+        .update(players)
+        .set({ organizationId: orgId, updatedAt: new Date() })
+        .where(eq(players.id, playerId));
+    }
+
+    return newPlayerOrg;
+  }
+
+  // Admin: Remove player from organization (deletes from player_organizations)
+  async removePlayerFromOrganization(playerId: string, orgId: string): Promise<void> {
+    // Delete from junction table
+    const result = await db.delete(playerOrganizations)
+      .where(and(
+        eq(playerOrganizations.playerId, playerId),
+        eq(playerOrganizations.organizationId, orgId)
+      ))
+      .returning();
+    
+    if (result.length === 0) {
+      // Check if it's the legacy relationship
+      const [player] = await db.select().from(players).where(
+        and(eq(players.id, playerId), eq(players.organizationId, orgId))
+      );
+      if (player) {
+        // Clear the legacy organizationId
+        await db
+          .update(players)
+          .set({ organizationId: null, updatedAt: new Date() })
+          .where(eq(players.id, playerId));
+        return;
+      }
+      throw new Error("Player not found in this organization");
+    }
+
+    // If this was the only org, clear the legacy field too
+    const remainingOrgs = await db.select()
+      .from(playerOrganizations)
+      .where(eq(playerOrganizations.playerId, playerId));
+    
+    if (remainingOrgs.length === 0) {
+      await db
+        .update(players)
+        .set({ organizationId: null, updatedAt: new Date() })
+        .where(eq(players.id, playerId));
+    }
   }
 }
 

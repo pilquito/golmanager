@@ -1,6 +1,7 @@
 import { sql, relations } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -64,10 +65,10 @@ export const userOrganizations = pgTable("user_organizations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Players table
+// Players table - now independent of organizations (can be free agents)
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "set null" }),
   name: varchar("name").notNull(),
   jerseyNumber: integer("jersey_number"),
   position: varchar("position").notNull(),
@@ -80,6 +81,21 @@ export const players = pgTable("players", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Player Organizations - Many-to-Many relationship for players in multiple teams
+export const playerOrganizations = pgTable("player_organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  jerseyNumber: integer("jersey_number"),
+  position: varchar("position"),
+  isActive: boolean("is_active").default(true),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("IDX_player_org_unique").on(table.playerId, table.organizationId),
+]);
 
 // Matches table
 export const matches = pgTable("matches", {
@@ -219,6 +235,7 @@ export const organizationsRelations = relations(organizations, ({ many, one }) =
   users: many(users),
   userOrganizations: many(userOrganizations),
   players: many(players),
+  playerOrganizations: many(playerOrganizations),
   matches: many(matches),
   monthlyPayments: many(monthlyPayments),
   championshipPayments: many(championshipPayments),
@@ -250,8 +267,20 @@ export const userOrganizationsRelations = relations(userOrganizations, ({ one })
 
 export const playersRelations = relations(players, ({ many, one }) => ({
   monthlyPayments: many(monthlyPayments),
+  playerOrganizations: many(playerOrganizations),
   organization: one(organizations, {
     fields: [players.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const playerOrganizationsRelations = relations(playerOrganizations, ({ one }) => ({
+  player: one(players, {
+    fields: [playerOrganizations.playerId],
+    references: [players.id],
+  }),
+  organization: one(organizations, {
+    fields: [playerOrganizations.organizationId],
     references: [organizations.id],
   }),
 }));
@@ -397,6 +426,12 @@ export const insertUserOrganizationSchema = createInsertSchema(userOrganizations
   updatedAt: true,
 });
 
+export const insertPlayerOrganizationSchema = createInsertSchema(playerOrganizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -449,3 +484,5 @@ export type Standing = typeof standings.$inferSelect;
 export type InsertStanding = z.infer<typeof insertStandingSchema>;
 export type UserOrganization = typeof userOrganizations.$inferSelect;
 export type InsertUserOrganization = z.infer<typeof insertUserOrganizationSchema>;
+export type PlayerOrganization = typeof playerOrganizations.$inferSelect;
+export type InsertPlayerOrganization = z.infer<typeof insertPlayerOrganizationSchema>;
