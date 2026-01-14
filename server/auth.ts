@@ -105,9 +105,19 @@ export async function registerUser(registerData: RegisterData & { organizationId
   });
 }
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50);
+}
+
 export async function registerUserWithOrganization(
   registerData: RegisterData,
-  orgData: InsertOrganization
+  orgData: { name: string; slug?: string; logoUrl?: string | null }
 ) {
   const validatedData = registerSchema.parse(registerData);
   
@@ -118,12 +128,19 @@ export async function registerUserWithOrganization(
     }
   }
   
-  const existingOrg = await storage.getOrganizationBySlug(orgData.slug);
-  if (existingOrg) {
-    throw new Error("Organization slug already exists");
+  const baseSlug = orgData.slug || generateSlug(orgData.name);
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (await storage.getOrganizationBySlug(slug)) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
   }
   
-  const organization = await storage.createOrganization(orgData);
+  const organization = await storage.createOrganization({
+    ...orgData,
+    slug,
+  });
   
   const { confirmPassword, ...userData } = validatedData;
   const user = await storage.createUser({

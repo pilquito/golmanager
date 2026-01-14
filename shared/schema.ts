@@ -350,6 +350,7 @@ export const insertOtherPaymentSchema = createInsertSchema(otherPayments).omit({
 });
 
 export const insertTeamConfigSchema = createInsertSchema(teamConfig).omit({
+  id: true,
   createdAt: true,
   updatedAt: true,
 });

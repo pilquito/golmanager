@@ -721,18 +721,19 @@ export class DatabaseStorage implements IStorage {
 
   async updateTeamConfig(configData: Partial<InsertTeamConfig>, orgId: string): Promise<TeamConfig> {
     const existing = await this.getTeamConfig(orgId);
+    const { id: _, organizationId: __, ...safeConfigData } = configData as any;
     
     if (existing) {
       const [config] = await db
         .update(teamConfig)
-        .set({ ...configData, updatedAt: new Date() })
+        .set({ ...safeConfigData, updatedAt: new Date() })
         .where(eq(teamConfig.organizationId, orgId))
         .returning();
       return config;
     } else {
       const [config] = await db
         .insert(teamConfig)
-        .values({ ...configData, organizationId: orgId })
+        .values({ ...safeConfigData, organizationId: orgId })
         .returning();
       return config;
     }
