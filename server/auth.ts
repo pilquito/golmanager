@@ -1,12 +1,11 @@
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express, RequestHandler, Request } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { loginSchema, registerSchema, type LoginData, type RegisterData } from "@shared/schema";
+import { loginSchema, registerSchema, type LoginData, type RegisterData, type InsertOrganization } from "@shared/schema";
 
-// Session configuration
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000;
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -28,7 +27,6 @@ export function getSession() {
   });
 }
 
-// Authentication middleware
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -41,6 +39,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     }
     
     req.user = user;
+    req.orgId = user.organizationId || undefined;
+    
+    if (user.organizationId) {
+      const org = await storage.getOrganization(user.organizationId);
+      req.organization = org;
+    }
+    
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);
@@ -48,21 +53,26 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 };
 
-// Admin-only middleware
 export const isAdmin: RequestHandler = async (req, res, next) => {
-  if (!req.user || req.user.role !== "admin") {
+  if (!req.user || (req.user as any).role !== "admin") {
     return res.status(403).json({ message: "Forbidden: Admin access required" });
   }
   next();
 };
 
-// Setup authentication system
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
 }
 
-// Login function
+export function getOrgId(req: Request): string {
+  const orgId = req.orgId || (req.user as any)?.organizationId;
+  if (!orgId) {
+    throw new Error("Organization ID not found in request");
+  }
+  return orgId;
+}
+
 export async function loginUser(loginData: LoginData) {
   const validatedData = loginSchema.parse(loginData);
   const user = await storage.validateUserCredentials(validatedData.username, validatedData.password);
@@ -78,21 +88,53 @@ export async function loginUser(loginData: LoginData) {
   return user;
 }
 
-// Register function
-export async function registerUser(registerData: RegisterData) {
+export async function registerUser(registerData: RegisterData & { organizationId?: string }) {
   const validatedData = registerSchema.parse(registerData);
   
-  // Check if username already exists
-  const existingUser = await storage.getUserByUsername(validatedData.username);
-  if (existingUser) {
-    throw new Error("Username already exists");
-  }
-  
-  // Check if email already exists (if provided)
-  if (validatedData.email) {
-    // We could add email uniqueness check here if needed
+  if (validatedData.username) {
+    const existingUser = await storage.getUserByUsername(validatedData.username);
+    if (existingUser) {
+      throw new Error("Username already exists");
+    }
   }
   
   const { confirmPassword, ...userData } = validatedData;
-  return await storage.createUser(userData);
+  return await storage.createUser({
+    ...userData,
+    organizationId: registerData.organizationId || null,
+  });
+}
+
+export async function registerUserWithOrganization(
+  registerData: RegisterData,
+  orgData: InsertOrganization
+) {
+  const validatedData = registerSchema.parse(registerData);
+  
+  if (validatedData.username) {
+    const existingUser = await storage.getUserByUsername(validatedData.username);
+    if (existingUser) {
+      throw new Error("Username already exists");
+    }
+  }
+  
+  const existingOrg = await storage.getOrganizationBySlug(orgData.slug);
+  if (existingOrg) {
+    throw new Error("Organization slug already exists");
+  }
+  
+  const organization = await storage.createOrganization(orgData);
+  
+  const { confirmPassword, ...userData } = validatedData;
+  const user = await storage.createUser({
+    ...userData,
+    organizationId: organization.id,
+    role: 'admin',
+  });
+  
+  await storage.updateTeamConfig({
+    teamName: organization.name,
+  }, organization.id);
+  
+  return { user, organization };
 }

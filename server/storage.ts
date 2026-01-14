@@ -9,6 +9,7 @@ import {
   matchAttendances,
   opponents,
   standings,
+  organizations,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -30,90 +31,100 @@ import {
   type InsertOpponent,
   type Standing,
   type InsertStanding,
+  type Organization,
+  type InsertOrganization,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Organization operations
+  getOrganization(id: string): Promise<Organization | undefined>;
+  getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization>;
+
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
+  getAllUsers(orgId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
-  createUserForPlayer(player: Player): Promise<User | null>;
-  createUsersForAllExistingPlayers(): Promise<void>;
+  createUserForPlayer(player: Player, orgId: string): Promise<User | null>;
+  createUsersForAllExistingPlayers(orgId: string): Promise<void>;
 
   // Player operations
-  getPlayers(): Promise<Player[]>;
-  getPlayer(id: string): Promise<Player | undefined>;
-  getPlayerByUserId(userId: string): Promise<Player | undefined>;
-  createPlayer(player: InsertPlayer): Promise<Player>;
-  createPlayerForExistingUser(playerData: InsertPlayer, userId: string): Promise<Player>;
-  updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
-  deletePlayer(id: string): Promise<void>;
+  getPlayers(orgId: string): Promise<Player[]>;
+  getPlayer(id: string, orgId: string): Promise<Player | undefined>;
+  getPlayerByUserId(userId: string, orgId: string): Promise<Player | undefined>;
+  createPlayer(player: InsertPlayer, orgId: string): Promise<Player>;
+  createPlayerForExistingUser(playerData: InsertPlayer, userId: string, orgId: string): Promise<Player>;
+  updatePlayer(id: string, player: Partial<InsertPlayer>, orgId: string): Promise<Player>;
+  deletePlayer(id: string, orgId: string): Promise<void>;
 
   // Match operations
-  getMatches(): Promise<Match[]>;
-  getMatch(id: string): Promise<Match | undefined>;
-  createMatch(match: InsertMatch): Promise<Match>;
-  updateMatch(id: string, match: Partial<InsertMatch>): Promise<Match>;
-  deleteMatch(id: string): Promise<void>;
+  getMatches(orgId: string): Promise<Match[]>;
+  getMatch(id: string, orgId: string): Promise<Match | undefined>;
+  createMatch(match: InsertMatch, orgId: string): Promise<Match>;
+  updateMatch(id: string, match: Partial<InsertMatch>, orgId: string): Promise<Match>;
+  deleteMatch(id: string, orgId: string): Promise<void>;
 
   // Monthly payment operations
-  getMonthlyPayments(): Promise<(MonthlyPayment & { player: Player })[]>;
-  getMonthlyPayment(id: string): Promise<MonthlyPayment | undefined>;
-  createMonthlyPayment(payment: InsertMonthlyPayment): Promise<MonthlyPayment>;
-  updateMonthlyPayment(id: string, payment: Partial<InsertMonthlyPayment>): Promise<MonthlyPayment>;
-  deleteMonthlyPayment(id: string): Promise<void>;
-  getPlayerMonthlyPayments(playerId: string): Promise<MonthlyPayment[]>;
+  getMonthlyPayments(orgId: string): Promise<(MonthlyPayment & { player: Player })[]>;
+  getMonthlyPayment(id: string, orgId: string): Promise<MonthlyPayment | undefined>;
+  createMonthlyPayment(payment: InsertMonthlyPayment, orgId: string): Promise<MonthlyPayment>;
+  updateMonthlyPayment(id: string, payment: Partial<InsertMonthlyPayment>, orgId: string): Promise<MonthlyPayment>;
+  deleteMonthlyPayment(id: string, orgId: string): Promise<void>;
+  getPlayerMonthlyPayments(playerId: string, orgId: string): Promise<MonthlyPayment[]>;
 
   // Championship payment operations
-  getChampionshipPayments(): Promise<(ChampionshipPayment & { match?: Match })[]>;
-  getChampionshipPayment(id: string): Promise<ChampionshipPayment | undefined>;
-  createChampionshipPayment(payment: InsertChampionshipPayment): Promise<ChampionshipPayment>;
-  updateChampionshipPayment(id: string, payment: Partial<InsertChampionshipPayment>): Promise<ChampionshipPayment>;
-  deleteChampionshipPayment(id: string): Promise<void>;
+  getChampionshipPayments(orgId: string): Promise<(ChampionshipPayment & { match?: Match })[]>;
+  getChampionshipPayment(id: string, orgId: string): Promise<ChampionshipPayment | undefined>;
+  createChampionshipPayment(payment: InsertChampionshipPayment, orgId: string): Promise<ChampionshipPayment>;
+  updateChampionshipPayment(id: string, payment: Partial<InsertChampionshipPayment>, orgId: string): Promise<ChampionshipPayment>;
+  deleteChampionshipPayment(id: string, orgId: string): Promise<void>;
 
   // Team configuration operations
-  getTeamConfig(): Promise<TeamConfig | undefined>;
-  updateTeamConfig(config: InsertTeamConfig): Promise<TeamConfig>;
+  getTeamConfig(orgId: string): Promise<TeamConfig | undefined>;
+  updateTeamConfig(config: InsertTeamConfig, orgId: string): Promise<TeamConfig>;
 
   // Other payments operations
-  getOtherPayments(): Promise<OtherPayment[]>;
-  getOtherPayment(id: string): Promise<OtherPayment | undefined>;
-  createOtherPayment(payment: InsertOtherPayment): Promise<OtherPayment>;
-  updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>): Promise<OtherPayment>;
-  deleteOtherPayment(id: string): Promise<void>;
+  getOtherPayments(orgId: string): Promise<OtherPayment[]>;
+  getOtherPayment(id: string, orgId: string): Promise<OtherPayment | undefined>;
+  createOtherPayment(payment: InsertOtherPayment, orgId: string): Promise<OtherPayment>;
+  updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>, orgId: string): Promise<OtherPayment>;
+  deleteOtherPayment(id: string, orgId: string): Promise<void>;
 
   // Match attendance operations
-  getMatchAttendances(matchId: string): Promise<MatchAttendance[]>;
-  getUserAttendances(userId: string): Promise<MatchAttendance[]>;
-  createOrUpdateAttendance(attendance: InsertMatchAttendance): Promise<MatchAttendance>;
-  updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>): Promise<MatchAttendance>;
+  getMatchAttendances(matchId: string, orgId: string): Promise<MatchAttendance[]>;
+  getUserAttendances(userId: string, orgId: string): Promise<MatchAttendance[]>;
+  createOrUpdateAttendance(attendance: InsertMatchAttendance, orgId: string): Promise<MatchAttendance>;
+  updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>, orgId: string): Promise<MatchAttendance>;
 
   // Opponent operations
-  getOpponents(): Promise<Opponent[]>;
-  getOpponent(id: string): Promise<Opponent | undefined>;
-  getOpponentByName(name: string): Promise<Opponent | undefined>;
-  getOpponentByLigaHesperidesId(ligaHesperidesId: string): Promise<Opponent | undefined>;
-  createOpponent(opponent: InsertOpponent): Promise<Opponent>;
-  updateOpponent(id: string, opponent: Partial<InsertOpponent>): Promise<Opponent>;
-  deleteOpponent(id: string): Promise<void>;
+  getOpponents(orgId: string): Promise<Opponent[]>;
+  getOpponent(id: string, orgId: string): Promise<Opponent | undefined>;
+  getOpponentByName(name: string, orgId: string): Promise<Opponent | undefined>;
+  getOpponentByLigaHesperidesId(ligaHesperidesId: string, orgId: string): Promise<Opponent | undefined>;
+  createOpponent(opponent: InsertOpponent, orgId: string): Promise<Opponent>;
+  updateOpponent(id: string, opponent: Partial<InsertOpponent>, orgId: string): Promise<Opponent>;
+  deleteOpponent(id: string, orgId: string): Promise<void>;
+  createOrUpdateOpponent(opponentData: { name: string; logoUrl?: string; source?: string; }, orgId: string): Promise<Opponent>;
 
   // Standings operations
-  getStandings(): Promise<Standing[]>;
-  getStanding(id: string): Promise<Standing | undefined>;
-  createStanding(standing: InsertStanding): Promise<Standing>;
-  updateStanding(id: string, standing: Partial<InsertStanding>): Promise<Standing>;
-  deleteStanding(id: string): Promise<void>;
-  createOrUpdateOpponent(opponentData: { name: string; logoUrl?: string; source?: string; }): Promise<Opponent>;
+  getStandings(orgId: string): Promise<Standing[]>;
+  getStanding(id: string, orgId: string): Promise<Standing | undefined>;
+  createStanding(standing: InsertStanding, orgId: string): Promise<Standing>;
+  updateStanding(id: string, standing: Partial<InsertStanding>, orgId: string): Promise<Standing>;
+  deleteStanding(id: string, orgId: string): Promise<void>;
+  deleteAllStandings(orgId: string): Promise<void>;
 
   // Dashboard statistics
-  getDashboardStats(): Promise<{
+  getDashboardStats(orgId: string): Promise<{
     totalPlayers: number;
     activePlayers: number;
     upcomingMatches: number;
@@ -125,6 +136,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Organization operations
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org;
+  }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    return org;
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
+  }
+
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    const [newOrg] = await db.insert(organizations).values(org).returning();
+    return newOrg;
+  }
+
+  async updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization> {
+    const [updated] = await db
+      .update(organizations)
+      .set({ ...org, updatedAt: new Date() })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -144,8 +184,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users).orderBy(desc(users.createdAt));
+  async getAllUsers(orgId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.organizationId, orgId))
+      .orderBy(desc(users.createdAt));
   }
 
   async updateUser(id: string, updateData: Partial<UpsertUser>): Promise<User> {
@@ -205,16 +247,16 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
     
-    // Update last access
     await db.update(users).set({ lastAccess: new Date() }).where(eq(users.id, user.id));
     return user;
   }
 
   // Player operations  
-  async getPlayers(): Promise<Player[]> {
+  async getPlayers(orgId: string): Promise<Player[]> {
     const result = await db
       .select({
         id: players.id,
+        organizationId: players.organizationId,
         name: players.name,
         jerseyNumber: players.jerseyNumber,
         position: players.position,
@@ -229,23 +271,22 @@ export class DatabaseStorage implements IStorage {
       })
       .from(players)
       .leftJoin(users, eq(players.email, users.email))
+      .where(eq(players.organizationId, orgId))
       .orderBy(desc(players.createdAt));
     
     return result;
   }
 
-  async getPlayer(id: string): Promise<Player | undefined> {
-    const [player] = await db.select().from(players).where(eq(players.id, id));
+  async getPlayer(id: string, orgId: string): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(and(eq(players.id, id), eq(players.organizationId, orgId)));
     return player;
   }
 
-  async getPlayerByUserId(userId: string): Promise<Player | undefined> {
-    // First get the user to get their email
+  async getPlayerByUserId(userId: string, orgId: string): Promise<Player | undefined> {
     const user = await this.getUser(userId);
     if (!user || !user.email) return undefined;
     
-    // Find player by matching email
-    const allPlayers = await this.getPlayers();
+    const allPlayers = await this.getPlayers(orgId);
     const player = allPlayers.find(p => 
       p.email && p.email.toLowerCase() === user.email!.toLowerCase()
     );
@@ -253,18 +294,19 @@ export class DatabaseStorage implements IStorage {
     return player;
   }
 
-  async createPlayer(player: InsertPlayer): Promise<Player> {
-    const [newPlayer] = await db.insert(players).values(player).returning();
+  async createPlayer(player: InsertPlayer, orgId: string): Promise<Player> {
+    const [newPlayer] = await db.insert(players).values({
+      ...player,
+      organizationId: orgId,
+    }).returning();
     
-    // Auto-create user account for player
-    await this.createUserForPlayer(newPlayer);
+    await this.createUserForPlayer(newPlayer, orgId);
     
     return newPlayer;
   }
 
-  async createUserForPlayer(player: Player): Promise<User | null> {
+  async createUserForPlayer(player: Player, orgId: string): Promise<User | null> {
     try {
-      // Check if user already exists for this player (by email)
       if (player.email) {
         const existingUser = await this.getUserByEmail(player.email);
         if (existingUser) {
@@ -273,7 +315,6 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Generate username, handle duplicates
       let username = player.name.toLowerCase().replace(/\s+/g, '.').replace(/[^\w.]/g, '');
       let counter = 1;
       let finalUsername = username;
@@ -283,7 +324,7 @@ export class DatabaseStorage implements IStorage {
         counter++;
       }
 
-      const defaultPassword = 'jugador123'; // Default password for players
+      const defaultPassword = 'jugador123';
       
       console.log(`🔧 Creating user account for player: ${player.name} with username: ${finalUsername}`);
       
@@ -295,6 +336,7 @@ export class DatabaseStorage implements IStorage {
         email: player.email || `${finalUsername}@golmanager.local`,
         role: 'user',
         isActive: true,
+        organizationId: orgId,
       });
       
       console.log(`✅ User account created successfully for ${player.name}: ${finalUsername}`);
@@ -305,15 +347,15 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createUsersForAllExistingPlayers(): Promise<void> {
+  async createUsersForAllExistingPlayers(orgId: string): Promise<void> {
     console.log('🔄 Creating user accounts for all existing players...');
     
-    const allPlayers = await db.select().from(players);
+    const allPlayers = await db.select().from(players).where(eq(players.organizationId, orgId));
     let created = 0;
     let skipped = 0;
 
     for (const player of allPlayers) {
-      const result = await this.createUserForPlayer(player);
+      const result = await this.createUserForPlayer(player, orgId);
       if (result) {
         created++;
       } else {
@@ -324,22 +366,20 @@ export class DatabaseStorage implements IStorage {
     console.log(`✅ Finished creating users: ${created} created, ${skipped} skipped`);
   }
 
-  async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player> {
+  async updatePlayer(id: string, player: Partial<InsertPlayer>, orgId: string): Promise<Player> {
     console.log(`Storage: Updating player ${id} with:`, player);
     
-    // Get current player data to check for associated user
-    const currentPlayer = await this.getPlayer(id);
+    const currentPlayer = await this.getPlayer(id, orgId);
     if (!currentPlayer) {
-      throw new Error(`Player with ID ${id} not found`);
+      throw new Error(`Player with ID ${id} not found in organization`);
     }
 
     const [updatedPlayer] = await db
       .update(players)
       .set({ ...player, updatedAt: new Date() })
-      .where(eq(players.id, id))
+      .where(and(eq(players.id, id), eq(players.organizationId, orgId)))
       .returning();
     
-    // If isActive status is being changed, sync it with associated user
     if (player.isActive !== undefined && currentPlayer.email) {
       console.log(`🔄 Syncing user status for player ${currentPlayer.name} (${currentPlayer.email})`);
       
@@ -360,17 +400,18 @@ export class DatabaseStorage implements IStorage {
     return updatedPlayer;
   }
 
-  async deletePlayer(id: string): Promise<void> {
-    // Get player data to check for associated user before deletion
-    const player = await this.getPlayer(id);
+  async deletePlayer(id: string, orgId: string): Promise<void> {
+    const player = await this.getPlayer(id, orgId);
+    if (!player) {
+      throw new Error(`Player with ID ${id} not found in organization`);
+    }
     
-    if (player && player.email) {
+    if (player.email) {
       console.log(`🔄 Checking for associated user before deleting player ${player.name} (${player.email})`);
       
       try {
         const associatedUser = await this.getUserByEmail(player.email);
         if (associatedUser) {
-          // Delete associated user first
           await db.delete(users).where(eq(users.id, associatedUser.id));
           console.log(`✅ Associated user ${associatedUser.username} deleted`);
         }
@@ -379,36 +420,42 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Delete the player
-    await db.delete(players).where(eq(players.id, id));
-    console.log(`✅ Player ${player?.name || id} deleted successfully`);
+    await db.delete(players).where(and(eq(players.id, id), eq(players.organizationId, orgId)));
+    console.log(`✅ Player ${player.name} deleted successfully`);
   }
 
-  async createPlayerForExistingUser(playerData: InsertPlayer, userId: string): Promise<Player> {
-    // Create the player without trying to create a user (since user already exists)
-    const [newPlayer] = await db.insert(players).values(playerData).returning();
+  async createPlayerForExistingUser(playerData: InsertPlayer, userId: string, orgId: string): Promise<Player> {
+    const [newPlayer] = await db.insert(players).values({
+      ...playerData,
+      organizationId: orgId,
+    }).returning();
     return newPlayer;
   }
 
   // Match operations
-  async getMatches(): Promise<Match[]> {
-    return await db.select().from(matches).orderBy(desc(matches.date));
+  async getMatches(orgId: string): Promise<Match[]> {
+    return await db.select().from(matches)
+      .where(eq(matches.organizationId, orgId))
+      .orderBy(desc(matches.date));
   }
 
-  async getMatch(id: string): Promise<Match | undefined> {
-    const [match] = await db.select().from(matches).where(eq(matches.id, id));
+  async getMatch(id: string, orgId: string): Promise<Match | undefined> {
+    const [match] = await db.select().from(matches).where(and(eq(matches.id, id), eq(matches.organizationId, orgId)));
     return match;
   }
 
-  async createMatch(match: InsertMatch): Promise<Match> {
-    const [newMatch] = await db.insert(matches).values(match).returning();
+  async createMatch(match: InsertMatch, orgId: string): Promise<Match> {
+    const [newMatch] = await db.insert(matches).values({
+      ...match,
+      organizationId: orgId,
+    }).returning();
     
-    // Auto-create championship payment in pending status
     try {
-      const teamConfig = await this.getTeamConfig();
-      const championshipFee = teamConfig?.monthlyFee || "15.00"; // Default fee
+      const config = await this.getTeamConfig(orgId);
+      const championshipFee = config?.monthlyFee || "15.00";
       
       await db.insert(championshipPayments).values({
+        organizationId: orgId,
         matchId: newMatch.id,
         concept: `Inscripción - ${match.competition || 'Competición'}`,
         amount: championshipFee,
@@ -417,32 +464,40 @@ export class DatabaseStorage implements IStorage {
         notes: `Pago automático generado para partido vs ${match.opponent}`,
       });
     } catch (error) {
-      // Log error but don't fail match creation if payment creation fails
       console.warn('Failed to create automatic championship payment:', error);
     }
     
     return newMatch;
   }
 
-  async updateMatch(id: string, match: Partial<InsertMatch>): Promise<Match> {
+  async updateMatch(id: string, match: Partial<InsertMatch>, orgId: string): Promise<Match> {
+    const existing = await this.getMatch(id, orgId);
+    if (!existing) {
+      throw new Error(`Match with ID ${id} not found in organization`);
+    }
     const [updatedMatch] = await db
       .update(matches)
       .set({ ...match, updatedAt: new Date() })
-      .where(eq(matches.id, id))
+      .where(and(eq(matches.id, id), eq(matches.organizationId, orgId)))
       .returning();
     return updatedMatch;
   }
 
-  async deleteMatch(id: string): Promise<void> {
-    await db.delete(matches).where(eq(matches.id, id));
+  async deleteMatch(id: string, orgId: string): Promise<void> {
+    const existing = await this.getMatch(id, orgId);
+    if (!existing) {
+      throw new Error(`Match with ID ${id} not found in organization`);
+    }
+    await db.delete(matches).where(and(eq(matches.id, id), eq(matches.organizationId, orgId)));
   }
 
   // Monthly payment operations
-  async getMonthlyPayments(): Promise<(MonthlyPayment & { player: Player })[]> {
+  async getMonthlyPayments(orgId: string): Promise<(MonthlyPayment & { player: Player })[]> {
     const payments = await db
       .select()
       .from(monthlyPayments)
       .leftJoin(players, eq(monthlyPayments.playerId, players.id))
+      .where(eq(monthlyPayments.organizationId, orgId))
       .orderBy(desc(monthlyPayments.createdAt));
     
     return payments.map(({ monthly_payments, players: player }) => ({
@@ -451,43 +506,55 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getMonthlyPayment(id: string): Promise<MonthlyPayment | undefined> {
-    const [payment] = await db.select().from(monthlyPayments).where(eq(monthlyPayments.id, id));
+  async getMonthlyPayment(id: string, orgId: string): Promise<MonthlyPayment | undefined> {
+    const [payment] = await db.select().from(monthlyPayments).where(and(eq(monthlyPayments.id, id), eq(monthlyPayments.organizationId, orgId)));
     return payment;
   }
 
-  async createMonthlyPayment(payment: InsertMonthlyPayment): Promise<MonthlyPayment> {
-    const [newPayment] = await db.insert(monthlyPayments).values(payment).returning();
+  async createMonthlyPayment(payment: InsertMonthlyPayment, orgId: string): Promise<MonthlyPayment> {
+    const [newPayment] = await db.insert(monthlyPayments).values({
+      ...payment,
+      organizationId: orgId,
+    }).returning();
     return newPayment;
   }
 
-  async updateMonthlyPayment(id: string, payment: Partial<InsertMonthlyPayment>): Promise<MonthlyPayment> {
+  async updateMonthlyPayment(id: string, payment: Partial<InsertMonthlyPayment>, orgId: string): Promise<MonthlyPayment> {
+    const existing = await this.getMonthlyPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Monthly payment with ID ${id} not found in organization`);
+    }
     const [updatedPayment] = await db
       .update(monthlyPayments)
       .set({ ...payment, updatedAt: new Date() })
-      .where(eq(monthlyPayments.id, id))
+      .where(and(eq(monthlyPayments.id, id), eq(monthlyPayments.organizationId, orgId)))
       .returning();
     return updatedPayment;
   }
 
-  async deleteMonthlyPayment(id: string): Promise<void> {
-    await db.delete(monthlyPayments).where(eq(monthlyPayments.id, id));
+  async deleteMonthlyPayment(id: string, orgId: string): Promise<void> {
+    const existing = await this.getMonthlyPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Monthly payment with ID ${id} not found in organization`);
+    }
+    await db.delete(monthlyPayments).where(and(eq(monthlyPayments.id, id), eq(monthlyPayments.organizationId, orgId)));
   }
 
-  async getPlayerMonthlyPayments(playerId: string): Promise<MonthlyPayment[]> {
+  async getPlayerMonthlyPayments(playerId: string, orgId: string): Promise<MonthlyPayment[]> {
     return await db
       .select()
       .from(monthlyPayments)
-      .where(eq(monthlyPayments.playerId, playerId))
+      .where(and(eq(monthlyPayments.playerId, playerId), eq(monthlyPayments.organizationId, orgId)))
       .orderBy(desc(monthlyPayments.month));
   }
 
   // Championship payment operations
-  async getChampionshipPayments(): Promise<(ChampionshipPayment & { match?: Match })[]> {
+  async getChampionshipPayments(orgId: string): Promise<(ChampionshipPayment & { match?: Match })[]> {
     const payments = await db
       .select()
       .from(championshipPayments)
       .leftJoin(matches, eq(championshipPayments.matchId, matches.id))
+      .where(eq(championshipPayments.organizationId, orgId))
       .orderBy(desc(championshipPayments.createdAt));
     
     return payments.map(({ championship_payments, matches: match }) => ({
@@ -496,23 +563,26 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getChampionshipPayment(id: string): Promise<ChampionshipPayment | undefined> {
-    const [payment] = await db.select().from(championshipPayments).where(eq(championshipPayments.id, id));
+  async getChampionshipPayment(id: string, orgId: string): Promise<ChampionshipPayment | undefined> {
+    const [payment] = await db.select().from(championshipPayments).where(and(eq(championshipPayments.id, id), eq(championshipPayments.organizationId, orgId)));
     return payment;
   }
 
-  async createChampionshipPayment(payment: InsertChampionshipPayment): Promise<ChampionshipPayment> {
-    // Handle "none" value for matchId (no specific match)
+  async createChampionshipPayment(payment: InsertChampionshipPayment, orgId: string): Promise<ChampionshipPayment> {
     const paymentData = {
       ...payment,
+      organizationId: orgId,
       matchId: payment.matchId === "none" ? null : payment.matchId,
     };
     const [newPayment] = await db.insert(championshipPayments).values(paymentData).returning();
     return newPayment;
   }
 
-  async updateChampionshipPayment(id: string, payment: Partial<InsertChampionshipPayment>): Promise<ChampionshipPayment> {
-    // Handle "none" value for matchId (no specific match)
+  async updateChampionshipPayment(id: string, payment: Partial<InsertChampionshipPayment>, orgId: string): Promise<ChampionshipPayment> {
+    const existing = await this.getChampionshipPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Championship payment with ID ${id} not found in organization`);
+    }
     const paymentData = {
       ...payment,
       matchId: payment.matchId === "none" ? null : payment.matchId,
@@ -521,18 +591,21 @@ export class DatabaseStorage implements IStorage {
     const [updatedPayment] = await db
       .update(championshipPayments)
       .set(paymentData)
-      .where(eq(championshipPayments.id, id))
+      .where(and(eq(championshipPayments.id, id), eq(championshipPayments.organizationId, orgId)))
       .returning();
     return updatedPayment;
   }
 
-  async deleteChampionshipPayment(id: string): Promise<void> {
-    await db.delete(championshipPayments).where(eq(championshipPayments.id, id));
+  async deleteChampionshipPayment(id: string, orgId: string): Promise<void> {
+    const existing = await this.getChampionshipPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Championship payment with ID ${id} not found in organization`);
+    }
+    await db.delete(championshipPayments).where(and(eq(championshipPayments.id, id), eq(championshipPayments.organizationId, orgId)));
   }
 
-
   // Dashboard statistics
-  async getDashboardStats(): Promise<{
+  async getDashboardStats(orgId: string): Promise<{
     totalPlayers: number;
     activePlayers: number;
     upcomingMatches: number;
@@ -541,40 +614,48 @@ export class DatabaseStorage implements IStorage {
     totalExpenses: number;
     currentBalance: number;
   }> {
-    // Count all players
     const [totalPlayersResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(players);
+      .from(players)
+      .where(eq(players.organizationId, orgId));
 
-    // Count active players
     const [activePlayersResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(players)
-      .where(eq(players.isActive, true));
+      .where(and(eq(players.organizationId, orgId), eq(players.isActive, true)));
 
-    // Count upcoming matches
     const [upcomingMatchesResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(matches)
-      .where(and(eq(matches.status, "scheduled"), sql`${matches.date} > now()`));
+      .where(and(
+        eq(matches.organizationId, orgId),
+        eq(matches.status, "scheduled"),
+        sql`${matches.date} > now()`
+      ));
 
-    // Count pending payments
     const [pendingPaymentsResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(monthlyPayments)
-      .where(eq(monthlyPayments.status, "pending"));
+      .where(and(
+        eq(monthlyPayments.organizationId, orgId),
+        eq(monthlyPayments.status, "pending")
+      ));
 
-    // Calculate total income from paid monthly payments
     const [totalIncomeResult] = await db
       .select({ total: sql<number>`coalesce(sum(${monthlyPayments.amount}), 0)` })
       .from(monthlyPayments)
-      .where(eq(monthlyPayments.status, "paid"));
+      .where(and(
+        eq(monthlyPayments.organizationId, orgId),
+        eq(monthlyPayments.status, "paid")
+      ));
 
-    // Calculate total expenses from paid championship payments
     const [totalExpensesResult] = await db
       .select({ total: sql<number>`coalesce(sum(${championshipPayments.amount}), 0)` })
       .from(championshipPayments)
-      .where(eq(championshipPayments.status, "paid"));
+      .where(and(
+        eq(championshipPayments.organizationId, orgId),
+        eq(championshipPayments.status, "paid")
+      ));
 
     const totalIncome = Number(totalIncomeResult.total) || 0;
     const totalExpenses = Number(totalExpensesResult.total) || 0;
@@ -591,70 +672,90 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Other payments operations
-  async getOtherPayments(): Promise<OtherPayment[]> {
-    return await db.select().from(otherPayments).orderBy(desc(otherPayments.createdAt));
+  async getOtherPayments(orgId: string): Promise<OtherPayment[]> {
+    return await db.select().from(otherPayments)
+      .where(eq(otherPayments.organizationId, orgId))
+      .orderBy(desc(otherPayments.createdAt));
   }
 
-  async getOtherPayment(id: string): Promise<OtherPayment | undefined> {
-    const [payment] = await db.select().from(otherPayments).where(eq(otherPayments.id, id));
+  async getOtherPayment(id: string, orgId: string): Promise<OtherPayment | undefined> {
+    const [payment] = await db.select().from(otherPayments).where(and(eq(otherPayments.id, id), eq(otherPayments.organizationId, orgId)));
     return payment;
   }
 
-  async createOtherPayment(payment: InsertOtherPayment): Promise<OtherPayment> {
-    const [newPayment] = await db.insert(otherPayments).values(payment).returning();
+  async createOtherPayment(payment: InsertOtherPayment, orgId: string): Promise<OtherPayment> {
+    const [newPayment] = await db.insert(otherPayments).values({
+      ...payment,
+      organizationId: orgId,
+    }).returning();
     return newPayment;
   }
 
-  async updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>): Promise<OtherPayment> {
+  async updateOtherPayment(id: string, payment: Partial<InsertOtherPayment>, orgId: string): Promise<OtherPayment> {
+    const existing = await this.getOtherPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Other payment with ID ${id} not found in organization`);
+    }
     const [updatedPayment] = await db
       .update(otherPayments)
       .set({ ...payment, updatedAt: new Date() })
-      .where(eq(otherPayments.id, id))
+      .where(and(eq(otherPayments.id, id), eq(otherPayments.organizationId, orgId)))
       .returning();
     return updatedPayment;
   }
 
-  async deleteOtherPayment(id: string): Promise<void> {
-    await db.delete(otherPayments).where(eq(otherPayments.id, id));
+  async deleteOtherPayment(id: string, orgId: string): Promise<void> {
+    const existing = await this.getOtherPayment(id, orgId);
+    if (!existing) {
+      throw new Error(`Other payment with ID ${id} not found in organization`);
+    }
+    await db.delete(otherPayments).where(and(eq(otherPayments.id, id), eq(otherPayments.organizationId, orgId)));
   }
 
   // Team configuration methods
-  async getTeamConfig(): Promise<TeamConfig | undefined> {
-    const [config] = await db.select().from(teamConfig).where(eq(teamConfig.id, 'team_config'));
+  async getTeamConfig(orgId: string): Promise<TeamConfig | undefined> {
+    const [config] = await db.select().from(teamConfig)
+      .where(eq(teamConfig.organizationId, orgId));
     return config || undefined;
   }
 
-  async updateTeamConfig(configData: Partial<InsertTeamConfig>): Promise<TeamConfig> {
-    const [config] = await db
-      .insert(teamConfig)
-      .values({ id: 'team_config', ...configData })
-      .onConflictDoUpdate({
-        target: teamConfig.id,
-        set: configData,
-      })
-      .returning();
-    return config;
+  async updateTeamConfig(configData: Partial<InsertTeamConfig>, orgId: string): Promise<TeamConfig> {
+    const existing = await this.getTeamConfig(orgId);
+    
+    if (existing) {
+      const [config] = await db
+        .update(teamConfig)
+        .set({ ...configData, updatedAt: new Date() })
+        .where(eq(teamConfig.organizationId, orgId))
+        .returning();
+      return config;
+    } else {
+      const [config] = await db
+        .insert(teamConfig)
+        .values({ ...configData, organizationId: orgId })
+        .returning();
+      return config;
+    }
   }
 
   // Match attendance operations
-  async getMatchAttendances(matchId: string): Promise<MatchAttendance[]> {
+  async getMatchAttendances(matchId: string, orgId: string): Promise<MatchAttendance[]> {
     return await db
       .select()
       .from(matchAttendances)
-      .where(eq(matchAttendances.matchId, matchId))
+      .where(and(eq(matchAttendances.matchId, matchId), eq(matchAttendances.organizationId, orgId)))
       .orderBy(desc(matchAttendances.createdAt));
   }
 
-  async getUserAttendances(userId: string): Promise<MatchAttendance[]> {
+  async getUserAttendances(userId: string, orgId: string): Promise<MatchAttendance[]> {
     return await db
       .select()
       .from(matchAttendances)
-      .where(eq(matchAttendances.userId, userId))
+      .where(and(eq(matchAttendances.userId, userId), eq(matchAttendances.organizationId, orgId)))
       .orderBy(desc(matchAttendances.createdAt));
   }
 
-  async createOrUpdateAttendance(attendance: InsertMatchAttendance): Promise<MatchAttendance> {
-    // Buscar si ya existe una asistencia para este usuario y partido
+  async createOrUpdateAttendance(attendance: InsertMatchAttendance, orgId: string): Promise<MatchAttendance> {
     const [existing] = await db
       .select()
       .from(matchAttendances)
@@ -666,7 +767,6 @@ export class DatabaseStorage implements IStorage {
       );
 
     if (existing) {
-      // Actualizar la existente
       const [updated] = await db
         .update(matchAttendances)
         .set({
@@ -678,11 +778,11 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     } else {
-      // Crear nueva
       const [newAttendance] = await db
         .insert(matchAttendances)
         .values({
           ...attendance,
+          organizationId: orgId,
           confirmedAt: new Date(),
         })
         .returning();
@@ -690,138 +790,175 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>): Promise<MatchAttendance> {
+  async updateAttendance(id: string, attendance: Partial<InsertMatchAttendance>, orgId: string): Promise<MatchAttendance> {
+    const [existing] = await db.select().from(matchAttendances).where(and(eq(matchAttendances.id, id), eq(matchAttendances.organizationId, orgId)));
+    if (!existing) {
+      throw new Error(`Attendance with ID ${id} not found in organization`);
+    }
     const [updated] = await db
       .update(matchAttendances)
       .set({
         ...attendance,
         updatedAt: new Date(),
       })
-      .where(eq(matchAttendances.id, id))
+      .where(and(eq(matchAttendances.id, id), eq(matchAttendances.organizationId, orgId)))
       .returning();
     return updated;
   }
 
   // Opponent operations
-  async getOpponents(): Promise<Opponent[]> {
+  async getOpponents(orgId: string): Promise<Opponent[]> {
     return await db
       .select()
       .from(opponents)
-      .where(eq(opponents.isActive, true))
+      .where(and(
+        eq(opponents.organizationId, orgId),
+        eq(opponents.isActive, true)
+      ))
       .orderBy(opponents.name);
   }
 
-  async getOpponent(id: string): Promise<Opponent | undefined> {
+  async getOpponent(id: string, orgId: string): Promise<Opponent | undefined> {
     const [opponent] = await db
       .select()
       .from(opponents)
-      .where(eq(opponents.id, id));
+      .where(and(eq(opponents.id, id), eq(opponents.organizationId, orgId)));
     return opponent;
   }
 
-  async getOpponentByName(name: string): Promise<Opponent | undefined> {
+  async getOpponentByName(name: string, orgId: string): Promise<Opponent | undefined> {
     const [opponent] = await db
       .select()
       .from(opponents)
-      .where(eq(opponents.name, name));
+      .where(and(
+        eq(opponents.organizationId, orgId),
+        eq(opponents.name, name)
+      ));
     return opponent;
   }
 
-  async getOpponentByLigaHesperidesId(ligaHesperidesId: string): Promise<Opponent | undefined> {
+  async getOpponentByLigaHesperidesId(ligaHesperidesId: string, orgId: string): Promise<Opponent | undefined> {
     const [opponent] = await db
       .select()
       .from(opponents)
-      .where(eq(opponents.ligaHesperidesId, ligaHesperidesId));
+      .where(and(
+        eq(opponents.organizationId, orgId),
+        eq(opponents.ligaHesperidesId, ligaHesperidesId)
+      ));
     return opponent;
   }
 
-  async createOpponent(opponent: InsertOpponent): Promise<Opponent> {
+  async createOpponent(opponent: InsertOpponent, orgId: string): Promise<Opponent> {
     const [newOpponent] = await db
       .insert(opponents)
-      .values(opponent)
+      .values({
+        ...opponent,
+        organizationId: orgId,
+      })
       .returning();
     return newOpponent;
   }
 
-  async updateOpponent(id: string, opponent: Partial<InsertOpponent>): Promise<Opponent> {
+  async updateOpponent(id: string, opponent: Partial<InsertOpponent>, orgId: string): Promise<Opponent> {
+    const existing = await this.getOpponent(id, orgId);
+    if (!existing) {
+      throw new Error(`Opponent with ID ${id} not found in organization`);
+    }
     const [updated] = await db
       .update(opponents)
       .set({
         ...opponent,
         updatedAt: new Date(),
       })
-      .where(eq(opponents.id, id))
+      .where(and(eq(opponents.id, id), eq(opponents.organizationId, orgId)))
       .returning();
     return updated;
   }
 
-  async deleteOpponent(id: string): Promise<void> {
-    await db.delete(opponents).where(eq(opponents.id, id));
+  async deleteOpponent(id: string, orgId: string): Promise<void> {
+    const existing = await this.getOpponent(id, orgId);
+    if (!existing) {
+      throw new Error(`Opponent with ID ${id} not found in organization`);
+    }
+    await db.delete(opponents).where(and(eq(opponents.id, id), eq(opponents.organizationId, orgId)));
   }
 
   async createOrUpdateOpponent(opponentData: {
     name: string;
     logoUrl?: string;
     source?: string;
-  }): Promise<Opponent> {
-    // Check if opponent already exists by name
-    const existing = await this.getOpponentByName(opponentData.name);
+  }, orgId: string): Promise<Opponent> {
+    const existing = await this.getOpponentByName(opponentData.name, orgId);
     
     if (existing) {
-      // Update existing opponent
       return await this.updateOpponent(existing.id, {
         logoUrl: opponentData.logoUrl,
         source: opponentData.source || 'liga_hesperides',
-      });
+      }, orgId);
     } else {
-      // Create new opponent
       return await this.createOpponent({
         name: opponentData.name,
         logoUrl: opponentData.logoUrl,
         source: opponentData.source || 'liga_hesperides',
         isActive: true,
-      });
+      }, orgId);
     }
   }
 
   // Standings operations
-  async getStandings(): Promise<Standing[]> {
+  async getStandings(orgId: string): Promise<Standing[]> {
     return await db
       .select()
       .from(standings)
+      .where(eq(standings.organizationId, orgId))
       .orderBy(standings.position);
   }
 
-  async getStanding(id: string): Promise<Standing | undefined> {
+  async getStanding(id: string, orgId: string): Promise<Standing | undefined> {
     const [standing] = await db
       .select()
       .from(standings)
-      .where(eq(standings.id, id));
+      .where(and(eq(standings.id, id), eq(standings.organizationId, orgId)));
     return standing;
   }
 
-  async createStanding(standing: InsertStanding): Promise<Standing> {
+  async createStanding(standing: InsertStanding, orgId: string): Promise<Standing> {
     const [newStanding] = await db
       .insert(standings)
-      .values(standing)
+      .values({
+        ...standing,
+        organizationId: orgId,
+      })
       .returning();
     return newStanding;
   }
 
-  async updateStanding(id: string, standing: Partial<InsertStanding>): Promise<Standing> {
+  async updateStanding(id: string, standing: Partial<InsertStanding>, orgId: string): Promise<Standing> {
+    const existing = await this.getStanding(id, orgId);
+    if (!existing) {
+      throw new Error(`Standing with ID ${id} not found in organization`);
+    }
     const [updated] = await db
       .update(standings)
       .set({
         ...standing,
         updatedAt: new Date(),
       })
-      .where(eq(standings.id, id))
+      .where(and(eq(standings.id, id), eq(standings.organizationId, orgId)))
       .returning();
     return updated;
   }
 
-  async deleteStanding(id: string): Promise<void> {
-    await db.delete(standings).where(eq(standings.id, id));
+  async deleteStanding(id: string, orgId: string): Promise<void> {
+    const existing = await this.getStanding(id, orgId);
+    if (!existing) {
+      throw new Error(`Standing with ID ${id} not found in organization`);
+    }
+    await db.delete(standings).where(and(eq(standings.id, id), eq(standings.organizationId, orgId)));
+  }
+
+  async deleteAllStandings(orgId: string): Promise<void> {
+    await db.delete(standings).where(eq(standings.organizationId, orgId));
   }
 }
 
