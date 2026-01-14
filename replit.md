@@ -34,11 +34,19 @@ Preferred communication style: Simple, everyday language.
 - Registration atomically creates organization + admin user + team config
 - Admin-only access to `/admin/organizations` page
 
+### Email-Based Authentication:
+- Login and registration use email as primary identifier (not username)
+- registerSchema requires email field
+- validateUserCredentialsByEmail() function for login verification
+- Email uniqueness enforced in registerUser and registerUserWithOrganization
+- E2E test validated: registration with new org + logout + login with email
+
 ### Tested:
 - Successfully created multiple test organizations
 - Verified empty player list for new org (0 players) while original org retains 20 players
 - E2E Playwright test passed for registration flow
 - E2E test passed for admin organization editing and toggle functionality
+- E2E test passed for email-based registration and login
 
 ## September 27, 2025 - Liga Hesperides Integration Security & Reliability Fixes
 
