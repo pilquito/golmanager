@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, UserCircle, Settings, Upload, Plus, Trash2, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Users, UserCircle, Settings, Upload, Plus, Trash2, ArrowRightLeft, Pencil, Check, X } from "lucide-react";
 import type { Player, TeamConfig } from "@shared/schema";
 
 type PlayerWithMembership = Player & {
@@ -41,6 +41,9 @@ export default function AdminOrganizationDetail() {
   const [editName, setEditName] = useState("");
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editJerseyNumber, setEditJerseyNumber] = useState<string>("");
+  const [editPosition, setEditPosition] = useState<string>("");
 
   const { data: org, isLoading } = useQuery<OrganizationDetail>({
     queryKey: ["/api/admin/organizations", id],
@@ -98,6 +101,24 @@ export default function AdminOrganizationDetail() {
     },
     onError: () => {
       toast({ title: "Error al eliminar jugador", variant: "destructive" });
+    },
+  });
+
+  const updatePlayerOrgMutation = useMutation({
+    mutationFn: async ({ playerId, jerseyNumber, position }: { playerId: string; jerseyNumber?: number; position?: string }) => {
+      return await apiRequest(`/api/admin/player-organizations/${playerId}/${id}`, "PATCH", {
+        jerseyNumber,
+        position,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      setEditingPlayerId(null);
+      toast({ title: "Datos del jugador actualizados" });
+    },
+    onError: () => {
+      toast({ title: "Error al actualizar", variant: "destructive" });
     },
   });
 
@@ -252,34 +273,101 @@ export default function AdminOrganizationDetail() {
                   {org.players?.map((player) => (
                     <div
                       key={player.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
-                      onClick={() => setLocation(`/admin/players/${player.id}`)}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
-                          {player.jerseyNumber || player.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-medium">{player.name}</p>
-                          <p className="text-sm text-gray-500">{player.position}</p>
-                        </div>
+                      <div className="flex items-center gap-3 flex-1">
+                        {editingPlayerId === player.id ? (
+                          <>
+                            <Input
+                              className="w-16 text-center"
+                              type="number"
+                              value={editJerseyNumber}
+                              onChange={(e) => setEditJerseyNumber(e.target.value)}
+                              placeholder="#"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium">{player.name}</p>
+                              <Select value={editPosition} onValueChange={setEditPosition}>
+                                <SelectTrigger className="w-40 h-8 text-sm">
+                                  <SelectValue placeholder="Posición" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Portero">Portero</SelectItem>
+                                  <SelectItem value="Defensa">Defensa</SelectItem>
+                                  <SelectItem value="Centrocampista">Centrocampista</SelectItem>
+                                  <SelectItem value="Delantero">Delantero</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
+                              {player.orgJerseyNumber || player.jerseyNumber || player.name.charAt(0)}
+                            </div>
+                            <div className="cursor-pointer" onClick={() => setLocation(`/admin/players/${player.id}`)}>
+                              <p className="font-medium">{player.name}</p>
+                              <p className="text-sm text-gray-500">{player.orgPosition || player.position}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={player.isActive ? "default" : "secondary"}>
-                          {player.isActive ? "Activo" : "Inactivo"}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm("¿Eliminar este jugador del equipo?")) {
-                              removePlayerFromOrgMutation.mutate(player.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
+                        {editingPlayerId === player.id ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                updatePlayerOrgMutation.mutate({
+                                  playerId: player.id,
+                                  jerseyNumber: editJerseyNumber ? parseInt(editJerseyNumber) : undefined,
+                                  position: editPosition || undefined,
+                                });
+                              }}
+                              disabled={updatePlayerOrgMutation.isPending}
+                            >
+                              <Check className="w-4 h-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingPlayerId(null)}
+                            >
+                              <X className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Badge variant={player.isActive ? "default" : "secondary"}>
+                              {player.isActive ? "Activo" : "Inactivo"}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPlayerId(player.id);
+                                setEditJerseyNumber((player.orgJerseyNumber || player.jerseyNumber || "").toString());
+                                setEditPosition(player.orgPosition || player.position || "");
+                              }}
+                            >
+                              <Pencil className="w-4 h-4 text-gray-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("¿Eliminar este jugador del equipo?")) {
+                                  removePlayerFromOrgMutation.mutate(player.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -360,7 +448,7 @@ export default function AdminOrganizationDetail() {
                     freePlayers.map((player) => (
                       <SelectItem key={player.id} value={player.id}>
                         {player.name} - {player.position}
-                        {player.organizationName && ` (${player.organizationName})`}
+                        {player.organizations && player.organizations.length > 0 && ` (${player.organizations.map(o => o.name).join(', ')})`}
                       </SelectItem>
                     ))
                   )}

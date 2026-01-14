@@ -256,6 +256,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Create new organization
+  app.post("/api/admin/organizations", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertOrganizationSchema.parse(req.body);
+      const newOrg = await storage.createOrganization(validatedData);
+      // Create default team config for the new organization
+      await storage.createTeamConfig({
+        teamName: newOrg.name,
+        teamColors: "#dc2626,#ffffff",
+        monthlyFee: "15.00",
+        paymentDueDay: 1,
+        footballType: "11",
+        playerStatsEnabled: true,
+        myCompetitionEnabled: true,
+      }, newOrg.id);
+      res.status(201).json(newOrg);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid organization data", errors: error.errors });
+      }
+      console.error("Error creating organization:", error);
+      res.status(500).json({ message: "Failed to create organization" });
+    }
+  });
+
+  // Admin: Delete organization
+  app.delete("/api/admin/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session.userId;
+      
+      // Get current user to check if they're trying to delete their own org
+      const currentUser = userId ? await storage.getUser(userId) : null;
+      if (currentUser?.organizationId === id) {
+        return res.status(400).json({ message: "No puedes eliminar tu propia organización activa" });
+      }
+      
+      await storage.deleteOrganization(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ message: "Failed to delete organization" });
+    }
+  });
+
   // Admin: Get single organization with details
   app.get("/api/admin/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -388,6 +433,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing player from organization:", error);
       res.status(500).json({ message: "Failed to remove player from organization" });
+    }
+  });
+
+  // Admin: Update player organization settings (jersey number, position per team)
+  app.patch("/api/admin/player-organizations/:playerId/:organizationId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { playerId, organizationId } = req.params;
+      const schema = z.object({
+        jerseyNumber: z.number().min(1).max(99).optional(),
+        position: z.string().optional(),
+      });
+      const data = schema.parse(req.body);
+      
+      const updated = await storage.updatePlayerOrganization(playerId, organizationId, data);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      if (error instanceof Error && error.message.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error("Error updating player organization:", error);
+      res.status(500).json({ message: "Failed to update player organization" });
     }
   });
 

@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Users, UserCircle, MoreVertical, Pencil, Search } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Building2, Users, UserCircle, MoreVertical, Pencil, Search, Plus, Trash2, Eye } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 type OrganizationWithStats = {
   id: string;
@@ -25,9 +28,13 @@ type OrganizationWithStats = {
 
 export default function AdminOrganizations() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingOrg, setEditingOrg] = useState<OrganizationWithStats | null>(null);
   const [editName, setEditName] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [deletingOrg, setDeletingOrg] = useState<OrganizationWithStats | null>(null);
 
   const { data: organizations = [], isLoading } = useQuery<OrganizationWithStats[]>({
     queryKey: ["/api/admin/organizations"],
@@ -44,6 +51,43 @@ export default function AdminOrganizations() {
     },
     onError: () => {
       toast({ title: "Error al actualizar", variant: "destructive" });
+    },
+  });
+
+  const createOrgMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      const slug = data.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      return await apiRequest("/api/admin/organizations", "POST", { name: data.name, slug });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      toast({ title: "Organización creada" });
+      setCreateDialogOpen(false);
+      setNewOrgName("");
+    },
+    onError: () => {
+      toast({ title: "Error al crear organización", variant: "destructive" });
+    },
+  });
+
+  const deleteOrgMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/admin/organizations/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      toast({ title: "Organización eliminada" });
+      setDeletingOrg(null);
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Error al eliminar";
+      toast({ title: message, variant: "destructive" });
+      setDeletingOrg(null);
     },
   });
 
@@ -72,6 +116,16 @@ export default function AdminOrganizations() {
     setEditName(org.name);
   };
 
+  const handleCreateOrg = () => {
+    if (!newOrgName.trim()) return;
+    createOrgMutation.mutate({ name: newOrgName.trim() });
+  };
+
+  const handleDeleteOrg = () => {
+    if (!deletingOrg) return;
+    deleteOrgMutation.mutate(deletingOrg.id);
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -86,9 +140,46 @@ export default function AdminOrganizations() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Gestionar Organizaciones</h1>
-        <p className="text-gray-600 mt-1">Administra todos los equipos registrados</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestionar Organizaciones</h1>
+          <p className="text-gray-600 mt-1">Administra todos los equipos registrados</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Nuevo Equipo
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Equipo</DialogTitle>
+              <DialogDescription>
+                Ingresa el nombre del nuevo equipo. Se generará automáticamente una URL amigable.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-org-name">Nombre del equipo</Label>
+                <Input
+                  id="new-org-name"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  placeholder="Ej: Los Tigres FC"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateOrg} disabled={createOrgMutation.isPending || !newOrgName.trim()}>
+                {createOrgMutation.isPending ? "Creando..." : "Crear Equipo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -151,9 +242,21 @@ export default function AdminOrganizations() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate(`/admin/organizations/${org.id}`)}>
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver detalles
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEditDialog(org)}>
                       <Pencil className="w-4 h-4 mr-2" />
                       Editar nombre
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setDeletingOrg(org)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Eliminar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -201,7 +304,7 @@ export default function AdminOrganizations() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Nombre</label>
+              <Label className="text-sm font-medium text-gray-700">Nombre</Label>
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -219,6 +322,28 @@ export default function AdminOrganizations() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingOrg} onOpenChange={(open) => !open && setDeletingOrg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {deletingOrg?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán todos los datos asociados a este equipo:
+              jugadores, partidos, pagos, y configuración.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteOrg} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteOrgMutation.isPending}
+            >
+              {deleteOrgMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

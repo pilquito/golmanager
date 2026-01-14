@@ -162,6 +162,10 @@ export interface IStorage {
   // Admin: Player-Organization management (multi-team support for players)
   addPlayerToOrganization(playerId: string, orgId: string, jerseyNumber?: number, position?: string): Promise<PlayerOrganization>;
   removePlayerFromOrganization(playerId: string, orgId: string): Promise<void>;
+  updatePlayerOrganization(playerId: string, orgId: string, data: { jerseyNumber?: number; position?: string }): Promise<PlayerOrganization>;
+  
+  // Admin: Organization management
+  deleteOrganization(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1331,6 +1335,36 @@ export class DatabaseStorage implements IStorage {
         .set({ organizationId: null, updatedAt: new Date() })
         .where(eq(players.id, playerId));
     }
+  }
+
+  // Admin: Update player organization settings (jersey number, position per team)
+  async updatePlayerOrganization(playerId: string, orgId: string, data: { jerseyNumber?: number; position?: string }): Promise<PlayerOrganization> {
+    const [updated] = await db
+      .update(playerOrganizations)
+      .set({
+        ...(data.jerseyNumber !== undefined && { jerseyNumber: data.jerseyNumber }),
+        ...(data.position !== undefined && { position: data.position }),
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(playerOrganizations.playerId, playerId),
+        eq(playerOrganizations.organizationId, orgId)
+      ))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Player organization membership not found");
+    }
+    return updated;
+  }
+
+  // Admin: Delete organization (cascades handled by FK constraints)
+  async deleteOrganization(id: string): Promise<void> {
+    const org = await this.getOrganization(id);
+    if (!org) {
+      throw new Error("Organization not found");
+    }
+    await db.delete(organizations).where(eq(organizations.id, id));
   }
 }
 
