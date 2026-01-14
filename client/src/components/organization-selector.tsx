@@ -64,7 +64,7 @@ export function OrganizationSelector({ currentOrganization, onOrganizationChange
       <div className="flex items-center gap-2 px-3 py-2">
         <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
           {currentOrganization?.logoUrl ? (
-            <img src={currentOrganization.logoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img src={currentOrganization.logoUrl} alt="" className="w-8 h-8 rounded-full object-contain bg-white p-0.5" />
           ) : (
             currentOrganization?.name?.charAt(0).toUpperCase() || "?"
           )}
@@ -85,7 +85,7 @@ export function OrganizationSelector({ currentOrganization, onOrganizationChange
       >
         <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">
           {currentOrganization?.logoUrl ? (
-            <img src={currentOrganization.logoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img src={currentOrganization.logoUrl} alt="" className="w-8 h-8 rounded-full object-contain bg-white p-0.5" />
           ) : (
             currentOrganization?.name?.charAt(0).toUpperCase() || "?"
           )}
@@ -115,7 +115,7 @@ export function OrganizationSelector({ currentOrganization, onOrganizationChange
               >
                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
                   {uo.organization.logoUrl ? (
-                    <img src={uo.organization.logoUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={uo.organization.logoUrl} alt="" className="w-10 h-10 rounded-full object-contain bg-white p-0.5" />
                   ) : (
                     uo.organization.name.charAt(0).toUpperCase()
                   )}

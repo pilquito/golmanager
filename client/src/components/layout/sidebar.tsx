@@ -87,7 +87,7 @@ export default function Sidebar() {
             <img 
               src={organization.logoUrl} 
               alt={organization.name} 
-              className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover border border-white/30"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-contain border border-white/30 bg-white/10 p-1"
             />
           ) : (
             <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/30">

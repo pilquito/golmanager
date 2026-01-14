@@ -361,7 +361,7 @@ export default function AdminOrganizations() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-lg">
                     {org.logoUrl ? (
-                      <img src={org.logoUrl} alt={org.name} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={org.logoUrl} alt={org.name} className="w-12 h-12 rounded-full object-contain bg-white p-1" />
                     ) : (
                       org.name.charAt(0).toUpperCase()
                     )}

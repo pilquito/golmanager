@@ -163,7 +163,7 @@ export default function AdminOrganizationDetail() {
       <div className="flex items-center gap-4 mb-6">
         <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-2xl">
           {org.logoUrl ? (
-            <img src={org.logoUrl} alt={org.name} className="w-20 h-20 rounded-full object-cover" />
+            <img src={org.logoUrl} alt={org.name} className="w-20 h-20 rounded-full object-contain bg-white p-1" />
           ) : (
             org.name.charAt(0).toUpperCase()
           )}
@@ -225,7 +225,7 @@ export default function AdminOrganizationDetail() {
                 <div className="mt-2 flex items-center gap-4">
                   <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
                     {org.logoUrl ? (
-                      <img src={org.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                      <img src={org.logoUrl} alt="Logo" className="w-full h-full object-contain rounded-lg p-1" />
                     ) : (
                       <Upload className="w-8 h-8 text-gray-400" />
                     )}
