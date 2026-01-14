@@ -25,15 +25,27 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Organizations table - MULTITENANT CORE
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  slug: varchar("slug").notNull().unique(),
+  logoUrl: text("logo_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   username: varchar("username"),
   password: varchar("password"),
   email: varchar("email"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  profileImageUrl: text("profile_image_url"), // Use text for base64 images
+  profileImageUrl: text("profile_image_url"),
   role: varchar("role").default("user"),
   isActive: boolean("is_active").default(true),
   lastAccess: timestamp("last_access"),
@@ -44,14 +56,15 @@ export const users = pgTable("users", {
 // Players table
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   jerseyNumber: integer("jersey_number"),
-  position: varchar("position").notNull(), // Portero, Defensa, Mediocampista, Delantero
+  position: varchar("position").notNull(),
   phoneNumber: varchar("phone_number"),
   email: varchar("email"),
   birthDate: date("birth_date"),
-  tagline: varchar("tagline"), // Campo "deportista" - sub-eslogan
-  profileImageUrl: text("profile_image_url"), // Campo para foto del jugador
+  tagline: varchar("tagline"),
+  profileImageUrl: text("profile_image_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -60,13 +73,14 @@ export const players = pgTable("players", {
 // Matches table
 export const matches = pgTable("matches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   date: timestamp("date").notNull(),
   opponent: varchar("opponent").notNull(),
   venue: varchar("venue").notNull(),
   competition: varchar("competition").notNull(),
   ourScore: integer("our_score"),
   opponentScore: integer("opponent_score"),
-  status: varchar("status").default("scheduled"), // scheduled, played, cancelled
+  status: varchar("status").default("scheduled"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -75,12 +89,13 @@ export const matches = pgTable("matches", {
 // Monthly payments table
 export const monthlyPayments = pgTable("monthly_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
-  month: varchar("month").notNull(), // YYYY-MM format
+  month: varchar("month").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   dueDate: date("due_date"),
   paymentDate: date("payment_date"),
-  status: varchar("status").default("pending"), // pending, paid, overdue
+  status: varchar("status").default("pending"),
   paymentMethod: varchar("payment_method"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -90,12 +105,13 @@ export const monthlyPayments = pgTable("monthly_payments", {
 // Championship payments table
 export const championshipPayments = pgTable("championship_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   matchId: varchar("match_id").references(() => matches.id, { onDelete: "cascade" }),
   concept: varchar("concept").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   dueDate: date("due_date"),
   paymentDate: date("payment_date"),
-  status: varchar("status").default("pending"), // pending, paid, overdue
+  status: varchar("status").default("pending"),
   paymentMethod: varchar("payment_method"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -105,51 +121,50 @@ export const championshipPayments = pgTable("championship_payments", {
 // Opponents (rival teams) table
 export const opponents = pgTable("opponents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
-  shortName: varchar("short_name"), // Nombre corto/abreviado
-  logoUrl: text("logo_url"), // URL del escudo del equipo
+  shortName: varchar("short_name"),
+  logoUrl: text("logo_url"),
   city: varchar("city"),
   stadium: varchar("stadium"),
   foundedYear: integer("founded_year"),
   website: varchar("website"),
-  colors: varchar("colors"), // Colores del equipo
-  // Datos específicos de Liga Hesperides
-  ligaHesperidesId: varchar("liga_hesperides_id"), // ID único en Liga Hesperides
-  source: varchar("source").default("manual"), // Fuente de importación: manual, liga_hesperides, etc.
+  colors: varchar("colors"),
+  ligaHesperidesId: varchar("liga_hesperides_id"),
+  source: varchar("source").default("manual"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Team configuration table
+// Team configuration table - NOW PER ORGANIZATION
 export const teamConfig = pgTable("team_config", {
-  id: varchar("id").primaryKey().default("team_config"),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }).unique(),
   teamName: varchar("team_name").default("GolManager FC"),
-  teamColors: varchar("team_colors").default("#dc2626,#ffffff"), // Colores principales y secundarios separados por coma
+  teamColors: varchar("team_colors").default("#dc2626,#ffffff"),
   logoUrl: varchar("logo_url"),
   backgroundImageUrl: varchar("background_image_url").default("/attached_assets/file_00000000da1061f9901fd0696bb3bd94_1757108852263.png"),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).default("15.00"),
   paymentDueDay: integer("payment_due_day").default(1),
   contactEmail: varchar("contact_email"),
   contactPhone: varchar("contact_phone"),
-  // Tipo de fútbol: 11 jugadores vs 7 jugadores
-  footballType: varchar("football_type").default("11"), // "11" or "7"
-  // Configuraciones del modo jugador
-  playerStatsEnabled: boolean("player_stats_enabled").default(true), // Mostrar "Estadísticas de jugador"
-  myCompetitionEnabled: boolean("my_competition_enabled").default(true), // Mostrar "Mi competición"
-  // URLs de Liga Hesperides para importación
-  ligaHesperidesMatchesUrl: varchar("liga_hesperides_matches_url"), // URL para importar partidos
-  ligaHesperidesStandingsUrl: varchar("liga_hesperides_standings_url"), // URL para importar clasificación
+  footballType: varchar("football_type").default("11"),
+  playerStatsEnabled: boolean("player_stats_enabled").default(true),
+  myCompetitionEnabled: boolean("my_competition_enabled").default(true),
+  ligaHesperidesMatchesUrl: varchar("liga_hesperides_matches_url"),
+  ligaHesperidesStandingsUrl: varchar("liga_hesperides_standings_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Match attendances table - para confirmar asistencia de jugadores
+// Match attendances table
 export const matchAttendances = pgTable("match_attendances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   matchId: varchar("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => players.id, { onDelete: "cascade" }), // Usando players.id directamente
-  status: varchar("status").notNull().default("pending"), // pending, confirmed, declined
+  userId: varchar("user_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  status: varchar("status").notNull().default("pending"),
   confirmedAt: timestamp("confirmed_at"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -159,9 +174,10 @@ export const matchAttendances = pgTable("match_attendances", {
 // Other payments table
 export const otherPayments = pgTable("other_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   concept: varchar("concept").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  type: varchar("type").notNull(), // income, expense
+  type: varchar("type").notNull(),
   paymentDate: date("payment_date"),
   paymentMethod: varchar("payment_method"),
   notes: text("notes"),
@@ -169,9 +185,10 @@ export const otherPayments = pgTable("other_payments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Standings table - clasificación de la liga
+// Standings table
 export const standings = pgTable("standings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   position: integer("position").notNull(),
   team: varchar("team").notNull(),
   matchesPlayed: integer("matches_played").notNull().default(0),
@@ -187,8 +204,32 @@ export const standings = pgTable("standings", {
 });
 
 // Relations
-export const playersRelations = relations(players, ({ many }) => ({
+export const organizationsRelations = relations(organizations, ({ many, one }) => ({
+  users: many(users),
+  players: many(players),
+  matches: many(matches),
   monthlyPayments: many(monthlyPayments),
+  championshipPayments: many(championshipPayments),
+  otherPayments: many(otherPayments),
+  matchAttendances: many(matchAttendances),
+  opponents: many(opponents),
+  standings: many(standings),
+  teamConfig: one(teamConfig),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [users.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const playersRelations = relations(players, ({ many, one }) => ({
+  monthlyPayments: many(monthlyPayments),
+  organization: one(organizations, {
+    fields: [players.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
 export const monthlyPaymentsRelations = relations(monthlyPayments, ({ one }) => ({
@@ -196,17 +237,29 @@ export const monthlyPaymentsRelations = relations(monthlyPayments, ({ one }) => 
     fields: [monthlyPayments.playerId],
     references: [players.id],
   }),
+  organization: one(organizations, {
+    fields: [monthlyPayments.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
-export const matchesRelations = relations(matches, ({ many }) => ({
+export const matchesRelations = relations(matches, ({ many, one }) => ({
   championshipPayments: many(championshipPayments),
   attendances: many(matchAttendances),
+  organization: one(organizations, {
+    fields: [matches.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
 export const championshipPaymentsRelations = relations(championshipPayments, ({ one }) => ({
   match: one(matches, {
     fields: [championshipPayments.matchId],
     references: [matches.id],
+  }),
+  organization: one(organizations, {
+    fields: [championshipPayments.organizationId],
+    references: [organizations.id],
   }),
 }));
 
@@ -219,13 +272,47 @@ export const matchAttendancesRelations = relations(matchAttendances, ({ one }) =
     fields: [matchAttendances.userId],
     references: [players.id],
   }),
+  organization: one(organizations, {
+    fields: [matchAttendances.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
-export const opponentsRelations = relations(opponents, ({ many }) => ({
-  // No direct relations yet, but can be added later for match history
+export const opponentsRelations = relations(opponents, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [opponents.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const standingsRelations = relations(standings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [standings.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const otherPaymentsRelations = relations(otherPayments, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [otherPayments.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const teamConfigRelations = relations(teamConfig, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [teamConfig.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
 // Schemas for validation
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
   createdAt: true,
@@ -303,6 +390,8 @@ export const registerSchema = insertUserSchema.extend({
 });
 
 // Types
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
