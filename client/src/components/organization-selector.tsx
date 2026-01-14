@@ -31,7 +31,7 @@ export function OrganizationSelector({ currentOrganization, onOrganizationChange
 
   const switchOrgMutation = useMutation({
     mutationFn: async (organizationId: string) => {
-      return await apiRequest("POST", "/api/user/switch-organization", { organizationId });
+      return await apiRequest("/api/user/switch-organization", "POST", { organizationId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

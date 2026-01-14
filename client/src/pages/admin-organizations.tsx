@@ -35,7 +35,7 @@ export default function AdminOrganizations() {
 
   const updateOrgMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest("PATCH", `/api/organizations/${id}`, data);
+      return await apiRequest(`/api/organizations/${id}`, "PATCH", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
