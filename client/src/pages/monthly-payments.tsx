@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
@@ -28,6 +29,9 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 
 export default function MonthlyPayments() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isMonthDialogOpen, setIsMonthDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editingPayment, setEditingPayment] = useState<MonthlyPayment | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -158,16 +162,17 @@ export default function MonthlyPayments() {
     },
   });
 
-  const createCurrentMonthPaymentsMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("/api/monthly-payments/create-current-month", "POST");
+  const createMonthPaymentsMutation = useMutation({
+    mutationFn: async ({ month, year }: { month: number; year: number }) => {
+      const response = await apiRequest("/api/monthly-payments/create-month", "POST", { month, year });
       return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/monthly-payments"] });
+      setIsMonthDialogOpen(false);
       toast({
         title: "Éxito",
-        description: `Se crearon ${data.count} pagos para el mes actual`,
+        description: `Se crearon ${data.count} pagos para ${data.month}`,
       });
     },
     onError: (error) => {
@@ -537,15 +542,85 @@ export default function MonthlyPayments() {
                 </p>
               </div>
               <div className="flex space-x-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => createCurrentMonthPaymentsMutation.mutate()}
-                  disabled={createCurrentMonthPaymentsMutation.isPending}
-                  data-testid="button-create-current-month"
-                >
-                  <CalendarPlus className="h-4 w-4 mr-2" />
-                  {createCurrentMonthPaymentsMutation.isPending ? "Creando..." : "Crear Pagos Mes Actual"}
-                </Button>
+                <Dialog open={isMonthDialogOpen} onOpenChange={setIsMonthDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      data-testid="button-create-month-payments"
+                    >
+                      <CalendarPlus className="h-4 w-4 mr-2" />
+                      Crear Pagos Mes
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                      <DialogTitle>Crear Pagos del Mes</DialogTitle>
+                      <DialogDescription>
+                        Selecciona el mes y año para crear los pagos automáticos para todos los jugadores activos.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Mes</Label>
+                        <Select 
+                          value={selectedMonth.toString()} 
+                          onValueChange={(v) => setSelectedMonth(parseInt(v))}
+                        >
+                          <SelectTrigger data-testid="select-month">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">Enero</SelectItem>
+                            <SelectItem value="2">Febrero</SelectItem>
+                            <SelectItem value="3">Marzo</SelectItem>
+                            <SelectItem value="4">Abril</SelectItem>
+                            <SelectItem value="5">Mayo</SelectItem>
+                            <SelectItem value="6">Junio</SelectItem>
+                            <SelectItem value="7">Julio</SelectItem>
+                            <SelectItem value="8">Agosto</SelectItem>
+                            <SelectItem value="9">Septiembre</SelectItem>
+                            <SelectItem value="10">Octubre</SelectItem>
+                            <SelectItem value="11">Noviembre</SelectItem>
+                            <SelectItem value="12">Diciembre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Año</Label>
+                        <Select 
+                          value={selectedYear.toString()} 
+                          onValueChange={(v) => setSelectedYear(parseInt(v))}
+                        >
+                          <SelectTrigger data-testid="select-year">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[2024, 2025, 2026, 2027].map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsMonthDialogOpen(false)}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={() => createMonthPaymentsMutation.mutate({ month: selectedMonth, year: selectedYear })}
+                        disabled={createMonthPaymentsMutation.isPending}
+                        data-testid="button-confirm-create-payments"
+                      >
+                        {createMonthPaymentsMutation.isPending ? "Creando..." : "Crear Pagos"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
                 <Button variant="default" data-testid="button-filter">
                   <Filter className="h-4 w-4 mr-2" />
                   Filtrar

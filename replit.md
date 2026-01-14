@@ -8,6 +8,27 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## January 14, 2026 - Opponent Management & Match Improvements
+
+### New Features:
+- **Opponents CRUD Page**: New `/opponents` page in sidebar for managing rival teams (name, city, stadium, colors, logo)
+- **Match Form Enhanced**: 
+  - Opponent selector dropdown to choose from registered opponents
+  - Home/Away toggle (Local/Visitante) with visual indicator in match list
+  - Added `opponentId` and `isHomeGame` fields to matches table
+- **Monthly Payments Month Selector**: 
+  - Changed "Crear Pagos Mes Actual" to "Crear Pagos Mes" 
+  - Modal dialog to select any month/year before creating payment batch
+  - API updated to `/api/monthly-payments/create-month` with month/year parameters
+
+### Database Changes:
+- Added `opponent_id` (FK to opponents) and `is_home_game` (boolean) columns to matches table
+- UNIQUE INDEX on player_organizations (player_id, organization_id) for membership integrity
+
+### Import Integration:
+- `createOrUpdateOpponent` storage function handles duplicate detection by name
+- Liga Hesperides imports (when functional) will use opponent lookup before creating
+
 ## January 14, 2026 - Multi-Tenant Architecture Implementation
 
 **MAJOR FEATURE**: Converted entire application from single-tenant to multi-tenant architecture supporting multiple teams/organizations.

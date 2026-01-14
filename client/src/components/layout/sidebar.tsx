@@ -20,7 +20,8 @@ import {
   Wallet,
   Menu,
   Award,
-  Building2
+  Building2,
+  Shield
 } from "lucide-react";
 import { OrganizationSelector } from "@/components/organization-selector";
 
@@ -34,6 +35,7 @@ const navigationItems = [
   { href: "/collection-balance", label: "Recaudación", icon: BarChart3 },
   { href: "/other-payments", label: "Otros Pagos", icon: Wallet },
   { href: "/users", label: "Usuarios", icon: UserCog },
+  { href: "/opponents", label: "Contrincantes", icon: Shield },
   { href: "/configuration", label: "Configuración", icon: Settings },
 ];
 

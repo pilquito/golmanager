@@ -26,6 +26,7 @@ import AdminOrganizations from "@/pages/admin-organizations";
 import AdminOrganizationDetail from "@/pages/admin-organization-detail";
 import AdminPlayers from "@/pages/admin-players";
 import AdminPlayerDetail from "@/pages/admin-player-detail";
+import Opponents from "@/pages/opponents";
 import Sidebar from "@/components/layout/sidebar";
 import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
@@ -70,6 +71,7 @@ function AuthenticatedApp() {
             <Route path="/other-payments" component={OtherPayments} />
             <Route path="/users" component={Users} />
             <Route path="/configuration" component={Configuration} />
+            <Route path="/opponents" component={Opponents} />
             <Route path="/create-players" component={CreatePlayersBatch} />
             <Route path="/fix-users" component={FixPlayersUsers} />
             <Route path="/admin/organizations" component={AdminOrganizations} />

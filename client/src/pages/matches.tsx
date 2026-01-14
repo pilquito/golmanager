@@ -22,9 +22,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Eye, Users, FileText, Download, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Users, FileText, Download, AlertCircle, Home, Plane } from "lucide-react";
 import { insertMatchSchema } from "@shared/schema";
-import type { Match } from "@shared/schema";
+import type { Match, Opponent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -38,6 +38,10 @@ export default function Matches() {
 
   const { data: matches, isLoading } = useQuery<Match[]>({
     queryKey: ["/api/matches"],
+  });
+
+  const { data: opponents } = useQuery<Opponent[]>({
+    queryKey: ["/api/opponents"],
   });
 
   // Query para obtener todas las asistencias de todos los partidos
@@ -63,6 +67,8 @@ export default function Matches() {
     defaultValues: {
       date: new Date(),
       opponent: "",
+      opponentId: "",
+      isHomeGame: true,
       venue: "",
       competition: "",
       ourScore: undefined,
@@ -217,6 +223,8 @@ export default function Matches() {
     form.reset({
       date: new Date(match.date),
       opponent: match.opponent,
+      opponentId: match.opponentId || "",
+      isHomeGame: match.isHomeGame ?? true,
       venue: match.venue,
       competition: match.competition,
       ourScore: match.ourScore || undefined,
@@ -272,8 +280,13 @@ export default function Matches() {
       accessorKey: "opponent",
       header: "Rival",
       cell: ({ row }: any) => (
-        <div className="font-medium" data-testid={`match-opponent-${row.original.id}`}>
-          {row.getValue("opponent")}
+        <div className="flex items-center gap-2" data-testid={`match-opponent-${row.original.id}`}>
+          {row.original.isHomeGame === false ? (
+            <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">V</span>
+          ) : (
+            <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">L</span>
+          )}
+          <span className="font-medium">{row.getValue("opponent")}</span>
         </div>
       ),
     },
@@ -431,13 +444,65 @@ export default function Matches() {
                 />
                 <FormField
                   control={form.control}
-                  name="opponent"
+                  name="opponentId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Rival</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre del equipo rival" {...field} data-testid="input-opponent" />
-                      </FormControl>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          const selectedOpponent = opponents?.find(o => o.id === value);
+                          if (selectedOpponent) {
+                            form.setValue("opponent", selectedOpponent.name);
+                          }
+                        }}
+                        value={field.value || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-opponent">
+                            <SelectValue placeholder="Selecciona un equipo rival" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {opponents?.map((opponent) => (
+                            <SelectItem key={opponent.id} value={opponent.id}>
+                              {opponent.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isHomeGame"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Condición</FormLabel>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={field.value === true ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange(true)}
+                          data-testid="button-home"
+                        >
+                          <Home className="h-4 w-4 mr-2" />
+                          Local
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={field.value === false ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange(false)}
+                          data-testid="button-away"
+                        >
+                          <Plane className="h-4 w-4 mr-2" />
+                          Visitante
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

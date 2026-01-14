@@ -11,6 +11,7 @@ import {
   insertOtherPaymentSchema,
   insertMatchAttendanceSchema,
   insertOrganizationSchema,
+  insertOpponentSchema,
   loginSchema,
   registerSchema
 } from "@shared/schema";
@@ -745,13 +746,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/monthly-payments/create-current-month", isAuthenticated, isAdmin, async (req, res) => {
+  app.post("/api/monthly-payments/create-month", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const orgId = getOrgId(req);
+      const { month: requestedMonth, year: requestedYear } = req.body;
+      
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      const currentMonth = `${year}-${String(month).padStart(2, '0')}`;
+      const year = requestedYear ? parseInt(requestedYear) : now.getFullYear();
+      const month = requestedMonth ? parseInt(requestedMonth) : (now.getMonth() + 1);
+      const targetMonth = `${year}-${String(month).padStart(2, '0')}`;
+      
       const players = await storage.getPlayers(orgId);
       const activePlayers = players.filter(player => player.isActive);
       const config = await storage.getTeamConfig(orgId);
@@ -761,22 +765,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeDay = Math.min(paymentDueDay, daysInMonth);
       const dueDate = `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
       const existingPayments = await storage.getMonthlyPayments(orgId);
-      const existingPlayerIds = new Set(existingPayments.filter(payment => payment.month === currentMonth).map(payment => payment.playerId));
+      const existingPlayerIds = new Set(existingPayments.filter(payment => payment.month === targetMonth).map(payment => payment.playerId));
       const paymentsToCreate = activePlayers.filter(player => !existingPlayerIds.has(player.id));
       let createdCount = 0;
       for (const player of paymentsToCreate) {
         await storage.createMonthlyPayment({
           playerId: player.id,
-          month: currentMonth,
+          month: targetMonth,
           amount: monthlyFee.toString(),
           dueDate: dueDate,
           status: "pending",
           paymentMethod: "",
-          notes: `Pago automático generado para ${currentMonth}`,
+          notes: `Pago automático generado para ${targetMonth}`,
         }, orgId);
         createdCount++;
       }
-      res.json({ count: createdCount, month: currentMonth, totalPlayers: activePlayers.length, existingPayments: existingPlayerIds.size });
+      res.json({ count: createdCount, month: targetMonth, totalPlayers: activePlayers.length, existingPayments: existingPlayerIds.size });
     } catch (error) {
       console.error("Error creating current month payments:", error);
       res.status(500).json({ message: "Failed to create current month payments" });
@@ -1174,6 +1178,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching opponents:", error);
       res.status(500).json({ message: "Failed to fetch opponents" });
+    }
+  });
+
+  app.post("/api/opponents", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const validatedData = insertOpponentSchema.parse(req.body);
+      const newOpponent = await storage.createOpponent(validatedData, orgId);
+      res.status(201).json(newOpponent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating opponent:", error);
+      res.status(500).json({ message: "Failed to create opponent" });
+    }
+  });
+
+  app.patch("/api/opponents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { id } = req.params;
+      const validatedData = insertOpponentSchema.partial().parse(req.body);
+      const updatedOpponent = await storage.updateOpponent(id, validatedData, orgId);
+      res.json(updatedOpponent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating opponent:", error);
+      res.status(500).json({ message: "Failed to update opponent" });
+    }
+  });
+
+  app.delete("/api/opponents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { id } = req.params;
+      await storage.deleteOpponent(id, orgId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting opponent:", error);
+      res.status(500).json({ message: "Failed to delete opponent" });
     }
   });
 

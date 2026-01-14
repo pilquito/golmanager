@@ -103,6 +103,8 @@ export const matches = pgTable("matches", {
   organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
   date: timestamp("date").notNull(),
   opponent: varchar("opponent").notNull(),
+  opponentId: varchar("opponent_id").references(() => opponents.id, { onDelete: "set null" }),
+  isHomeGame: boolean("is_home_game").default(true),
   venue: varchar("venue").notNull(),
   competition: varchar("competition").notNull(),
   ourScore: integer("our_score"),
