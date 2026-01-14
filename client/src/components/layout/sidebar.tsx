@@ -19,8 +19,10 @@ import {
   BarChart3,
   Wallet,
   Menu,
-  Award
+  Award,
+  Building2
 } from "lucide-react";
+import { OrganizationSelector } from "@/components/organization-selector";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -33,6 +35,10 @@ const navigationItems = [
   { href: "/other-payments", label: "Otros Pagos", icon: Wallet },
   { href: "/users", label: "Usuarios", icon: UserCog },
   { href: "/configuration", label: "Configuración", icon: Settings },
+];
+
+const adminItems = [
+  { href: "/admin/organizations", label: "Organizaciones", icon: Building2 },
 ];
 
 export default function Sidebar() {
@@ -121,7 +127,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 mt-4 md:mt-6">
+      <nav className="flex-1 mt-4 md:mt-6 overflow-y-auto">
         <div className="px-3 md:px-4">
           {navigationItems.map((item) => {
             const Icon = item.icon;
@@ -144,6 +150,35 @@ export default function Sidebar() {
               </Button>
             );
           })}
+          
+          {user?.role === "admin" && adminItems.length > 0 && (
+            <>
+              <div className="my-3 border-t border-white/20 pt-3">
+                <p className="text-xs text-white/50 uppercase tracking-wider mb-2 px-2">Admin</p>
+              </div>
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location === item.href;
+                
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    className={`w-full justify-start mb-1 md:mb-2 h-10 md:h-auto text-sm md:text-base ${
+                      isActive
+                        ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    }`}
+                    onClick={() => handleNavigation(item.href)}
+                    data-testid={`nav-${item.href.replace(/\//g, '-').slice(1)}`}
+                  >
+                    <Icon className="mr-2 md:mr-3 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </>
+          )}
         </div>
       </nav>
 

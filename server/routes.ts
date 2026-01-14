@@ -244,6 +244,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get all organizations with stats
+  app.get("/api/admin/organizations", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgs = await storage.getAllOrganizationsWithStats();
+      res.json(orgs);
+    } catch (error) {
+      console.error("Error fetching organizations with stats:", error);
+      res.status(500).json({ message: "Failed to fetch organizations" });
+    }
+  });
+
+  // User's organizations (for org selector - multi-team support)
+  app.get("/api/user/organizations", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const userOrgs = await storage.getUserOrganizations(userId);
+      
+      // Also include the current organization if not in the list
+      const currentOrgId = (req.user as any).organizationId;
+      const currentOrg = req.organization;
+      
+      // Check if current org is already in the list
+      const hasCurrentOrg = userOrgs.some(uo => uo.organizationId === currentOrgId);
+      
+      if (!hasCurrentOrg && currentOrg) {
+        // Add current org to the list
+        userOrgs.push({
+          id: 'current',
+          userId,
+          organizationId: currentOrgId,
+          role: (req.user as any).role || 'user',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          organization: currentOrg,
+        });
+      }
+      
+      res.json(userOrgs);
+    } catch (error) {
+      console.error("Error fetching user organizations:", error);
+      res.status(500).json({ message: "Failed to fetch user organizations" });
+    }
+  });
+
+  // Switch user's active organization
+  app.post("/api/user/switch-organization", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { organizationId } = req.body;
+      
+      if (!organizationId) {
+        return res.status(400).json({ message: "Organization ID is required" });
+      }
+      
+      // Verify the organization exists
+      const org = await storage.getOrganization(organizationId);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Update user's current organization
+      const updatedUser = await storage.switchUserOrganization(userId, organizationId);
+      
+      // Also add to user_organizations if not already there
+      await storage.addUserToOrganization(userId, organizationId, updatedUser.role || 'user');
+      
+      res.json({ success: true, user: updatedUser, organization: org });
+    } catch (error) {
+      console.error("Error switching organization:", error);
+      res.status(500).json({ message: "Failed to switch organization" });
+    }
+  });
+
   // Dashboard routes
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
     try {

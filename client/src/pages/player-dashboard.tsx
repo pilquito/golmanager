@@ -4,14 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar, CreditCard, Users, Trophy, User, Target, Zap, Award } from "lucide-react";
+import { Calendar, CreditCard, Users, Trophy, User, Target, Zap, Award, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { TeamConfig } from "@shared/schema";
+import { OrganizationSelector } from "@/components/organization-selector";
+import type { TeamConfig, Organization } from "@shared/schema";
 
 export default function PlayerDashboard() {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [confirmedMatches, setConfirmedMatches] = useState<Set<string>>(new Set());
@@ -226,7 +227,7 @@ export default function PlayerDashboard() {
               )}
             </div>
 
-            {/* Nombre del equipo */}
+            {/* Nombre del equipo con selector */}
             <div>
               <h1 className="text-3xl font-bold tracking-wider drop-shadow-lg" data-testid="team-name">
                 {teamConfig?.teamName || "GOLMANAGER FC"}
@@ -235,6 +236,12 @@ export default function PlayerDashboard() {
                 <div className="w-8 h-1 bg-white/60 rounded" />
                 <Trophy className="w-5 h-5 text-yellow-300" />
                 <div className="w-8 h-1 bg-white/60 rounded" />
+              </div>
+              {/* Selector de organización para jugadores en varios equipos */}
+              <div className="mt-3">
+                <OrganizationSelector 
+                  currentOrganization={organization as Organization | null} 
+                />
               </div>
             </div>
 

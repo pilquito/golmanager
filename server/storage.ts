@@ -10,6 +10,7 @@ import {
   opponents,
   standings,
   organizations,
+  userOrganizations,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -33,6 +34,8 @@ import {
   type InsertStanding,
   type Organization,
   type InsertOrganization,
+  type UserOrganization,
+  type InsertUserOrganization,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -43,8 +46,15 @@ export interface IStorage {
   getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
   getAllOrganizations(): Promise<Organization[]>;
+  getAllOrganizationsWithStats(): Promise<(Organization & { userCount: number; playerCount: number })[]>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization>;
+  
+  // User-Organization operations (multi-team support)
+  getUserOrganizations(userId: string): Promise<(UserOrganization & { organization: Organization })[]>;
+  addUserToOrganization(userId: string, orgId: string, role: string): Promise<UserOrganization>;
+  removeUserFromOrganization(userId: string, orgId: string): Promise<void>;
+  switchUserOrganization(userId: string, newOrgId: string): Promise<User>;
 
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -161,6 +171,76 @@ export class DatabaseStorage implements IStorage {
       .update(organizations)
       .set({ ...org, updatedAt: new Date() })
       .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAllOrganizationsWithStats(): Promise<(Organization & { userCount: number; playerCount: number })[]> {
+    const orgs = await db.select().from(organizations).orderBy(desc(organizations.createdAt));
+    const result = await Promise.all(orgs.map(async (org) => {
+      const [userCountResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.organizationId, org.id));
+      const [playerCountResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(players)
+        .where(eq(players.organizationId, org.id));
+      return {
+        ...org,
+        userCount: userCountResult?.count || 0,
+        playerCount: playerCountResult?.count || 0,
+      };
+    }));
+    return result;
+  }
+
+  // User-Organization operations (multi-team support)
+  async getUserOrganizations(userId: string): Promise<(UserOrganization & { organization: Organization })[]> {
+    const userOrgs = await db.select().from(userOrganizations)
+      .where(eq(userOrganizations.userId, userId));
+    
+    const result = await Promise.all(userOrgs.map(async (uo) => {
+      const [org] = await db.select().from(organizations)
+        .where(eq(organizations.id, uo.organizationId));
+      return { ...uo, organization: org };
+    }));
+    
+    return result;
+  }
+
+  async addUserToOrganization(userId: string, orgId: string, role: string = 'user'): Promise<UserOrganization> {
+    const existing = await db.select().from(userOrganizations)
+      .where(and(
+        eq(userOrganizations.userId, userId),
+        eq(userOrganizations.organizationId, orgId)
+      ));
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    const [newUserOrg] = await db.insert(userOrganizations).values({
+      userId,
+      organizationId: orgId,
+      role,
+    }).returning();
+    return newUserOrg;
+  }
+
+  async removeUserFromOrganization(userId: string, orgId: string): Promise<void> {
+    await db.delete(userOrganizations)
+      .where(and(
+        eq(userOrganizations.userId, userId),
+        eq(userOrganizations.organizationId, orgId)
+      ));
+  }
+
+  async switchUserOrganization(userId: string, newOrgId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ organizationId: newOrgId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
       .returning();
     return updated;
   }

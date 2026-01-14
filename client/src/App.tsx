@@ -22,6 +22,7 @@ import PaymentsHistory from "@/pages/payments-history";
 import CreatePlayersBatch from "@/pages/create-players-batch";
 import FixPlayersUsers from "@/pages/fix-players-users";
 import MatchSheetPage from "@/pages/match-sheet";
+import AdminOrganizations from "@/pages/admin-organizations";
 import Sidebar from "@/components/layout/sidebar";
 import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
@@ -68,6 +69,7 @@ function AuthenticatedApp() {
             <Route path="/configuration" component={Configuration} />
             <Route path="/create-players" component={CreatePlayersBatch} />
             <Route path="/fix-users" component={FixPlayersUsers} />
+            <Route path="/admin/organizations" component={AdminOrganizations} />
             <Route component={NotFound} />
           </Switch>
         </main>

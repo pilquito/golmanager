@@ -53,6 +53,17 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User Organizations - Many-to-Many relationship for users in multiple teams
+export const userOrganizations = pgTable("user_organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  role: varchar("role").default("user"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Players table
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -206,6 +217,7 @@ export const standings = pgTable("standings", {
 // Relations
 export const organizationsRelations = relations(organizations, ({ many, one }) => ({
   users: many(users),
+  userOrganizations: many(userOrganizations),
   players: many(players),
   matches: many(matches),
   monthlyPayments: many(monthlyPayments),
@@ -217,9 +229,21 @@ export const organizationsRelations = relations(organizations, ({ many, one }) =
   teamConfig: one(teamConfig),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [users.organizationId],
+    references: [organizations.id],
+  }),
+  userOrganizations: many(userOrganizations),
+}));
+
+export const userOrganizationsRelations = relations(userOrganizations, ({ one }) => ({
+  user: one(users, {
+    fields: [userOrganizations.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [userOrganizations.organizationId],
     references: [organizations.id],
   }),
 }));
@@ -367,6 +391,12 @@ export const insertStandingSchema = createInsertSchema(standings).omit({
   updatedAt: true,
 });
 
+export const insertUserOrganizationSchema = createInsertSchema(userOrganizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -416,3 +446,5 @@ export type Opponent = typeof opponents.$inferSelect;
 export type InsertOpponent = z.infer<typeof insertOpponentSchema>;
 export type Standing = typeof standings.$inferSelect;
 export type InsertStanding = z.infer<typeof insertStandingSchema>;
+export type UserOrganization = typeof userOrganizations.$inferSelect;
+export type InsertUserOrganization = z.infer<typeof insertUserOrganizationSchema>;
