@@ -75,14 +75,14 @@ export function getOrgId(req: Request): string {
 
 export async function loginUser(loginData: LoginData) {
   const validatedData = loginSchema.parse(loginData);
-  const user = await storage.validateUserCredentials(validatedData.username, validatedData.password);
+  const user = await storage.validateUserCredentialsByEmail(validatedData.email, validatedData.password);
   
   if (!user) {
-    throw new Error("Invalid username or password");
+    throw new Error("Email o contraseña incorrectos");
   }
   
   if (!user.isActive) {
-    throw new Error("Account is deactivated");
+    throw new Error("La cuenta está desactivada");
   }
   
   return user;

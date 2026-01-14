@@ -23,7 +23,7 @@ export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -66,16 +66,16 @@ export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Usuario</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        type="text"
-                        placeholder="Ingresa tu usuario"
-                        data-testid="input-username"
+                        type="email"
+                        placeholder="Ingresa tu email"
+                        data-testid="input-email"
                       />
                     </FormControl>
                     <FormMessage />

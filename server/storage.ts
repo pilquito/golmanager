@@ -64,6 +64,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
+  validateUserCredentialsByEmail(email: string, password: string): Promise<User | null>;
   createUserForPlayer(player: Player, orgId: string): Promise<User | null>;
   createUsersForAllExistingPlayers(orgId: string): Promise<void>;
 
@@ -318,6 +319,21 @@ export class DatabaseStorage implements IStorage {
 
   async validateUserCredentials(username: string, password: string): Promise<User | null> {
     const user = await this.getUserByUsername(username);
+    if (!user) {
+      return null;
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password!);
+    if (!isValid) {
+      return null;
+    }
+    
+    await db.update(users).set({ lastAccess: new Date() }).where(eq(users.id, user.id));
+    return user;
+  }
+
+  async validateUserCredentialsByEmail(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
     if (!user) {
       return null;
     }

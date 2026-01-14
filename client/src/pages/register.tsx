@@ -18,10 +18,9 @@ interface RegisterPageProps {
 }
 
 const registerWithOrgSchema = z.object({
-  username: z.string().min(1, "El usuario es requerido"),
+  email: z.string().email("Email inválido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   confirmPassword: z.string(),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   organizationName: z.string().min(3, "El nombre del equipo debe tener al menos 3 caracteres"),
@@ -42,10 +41,9 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const joinForm = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
       confirmPassword: "",
-      email: "",
       firstName: "",
       lastName: "",
       role: "user",
@@ -55,10 +53,9 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const createForm = useForm<RegisterWithOrgData>({
     resolver: zodResolver(registerWithOrgSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
       confirmPassword: "",
-      email: "",
       firstName: "",
       lastName: "",
       organizationName: "",
@@ -184,12 +181,12 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     <>
       <FormField
         control={form.control}
-        name="username"
+        name="email"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Usuario *</FormLabel>
+            <FormLabel>Email *</FormLabel>
             <FormControl>
-              <Input {...field} type="text" placeholder="Nombre de usuario" data-testid="input-username" />
+              <Input {...field} type="email" placeholder="tu@email.com" data-testid="input-email" />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -223,19 +220,6 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
           )}
         />
       </div>
-      <FormField
-        control={form.control}
-        name="email"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Email</FormLabel>
-            <FormControl>
-              <Input {...field} type="email" placeholder="tu@email.com" data-testid="input-email" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
     </>
   );
 
