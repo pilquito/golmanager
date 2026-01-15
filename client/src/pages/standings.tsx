@@ -243,11 +243,10 @@ export default function Standings() {
                           <div className="flex items-center gap-3">
                             {getTeamLogo(team.team) ? (
                               <img
-                                src={`/objects${getTeamLogo(team.team)}`}
+                                src={getTeamLogo(team.team)!}
                                 alt={`Escudo de ${team.team}`}
                                 className="w-6 h-6 object-contain rounded"
                                 onError={(e) => {
-                                  // Fallback to shield icon if image fails to load
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
                                   const shield = target.nextElementSibling as HTMLElement;
