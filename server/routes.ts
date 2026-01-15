@@ -1941,13 +1941,14 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
         return res.status(400).json({ message: "Formato de datos inválido" });
       }
 
-      // Get existing players to avoid duplicates
+      // Get existing players for update/create logic
       const existingPlayers = await storage.getPlayers(orgId);
-      const existingPlayerKeys = new Set(
-        existingPlayers.map(p => `${p.name.toLowerCase().trim()}_${p.jerseyNumber || ''}`)
+      const existingPlayerMap = new Map(
+        existingPlayers.map(p => [`${p.name.toLowerCase().trim()}_${p.jerseyNumber || ''}`, p])
       );
 
       let imported = 0;
+      let updated = 0;
       let skipped = 0;
       const results: { name: string; status: string }[] = [];
 
@@ -1968,13 +1969,9 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             }
           }
 
-          // Check for duplicate by name + jersey number combination
+          // Check if player already exists
           const playerKey = `${playerName.toLowerCase()}_${jerseyNumber || ''}`;
-          if (existingPlayerKeys.has(playerKey)) {
-            results.push({ name: playerName, status: "ya existe" });
-            skipped++;
-            continue;
-          }
+          const existingPlayer = existingPlayerMap.get(playerKey);
 
           // Normalize position to canonical values used by the UI filter
           // Canonical values: Portero, Defensa, Mediocampista, Delantero
@@ -2078,24 +2075,45 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             isActive: true,
           };
           
-          if (profileImageUrl) {
+          // Only add photo if existing player doesn't have one
+          if (profileImageUrl && (!existingPlayer || !existingPlayer.profileImageUrl)) {
             playerData.profileImageUrl = profileImageUrl;
           }
 
-          // Validate with schema before inserting
-          const validationResult = insertPlayerSchema.safeParse(playerData);
-          if (!validationResult.success) {
-            console.error(`Schema validation failed for ${playerName}:`, validationResult.error);
-            results.push({ name: playerName, status: "datos inválidos" });
-            skipped++;
-            continue;
+          if (existingPlayer) {
+            // Update existing player with new stats (but keep existing photo if they have one)
+            const updateData: Record<string, any> = {
+              position: position,
+              goals: playerData.goals,
+              assists: playerData.assists,
+              yellowCards: playerData.yellowCards,
+              redCards: playerData.redCards,
+              matchesPlayed: playerData.matchesPlayed,
+            };
+            
+            // Only update photo if player doesn't have one
+            if (profileImageUrl && !existingPlayer.profileImageUrl) {
+              updateData.profileImageUrl = profileImageUrl;
+            }
+            
+            await storage.updatePlayer(existingPlayer.id, updateData, orgId);
+            results.push({ name: playerName, status: "actualizado" });
+            updated++;
+          } else {
+            // Validate with schema before inserting
+            const validationResult = insertPlayerSchema.safeParse(playerData);
+            if (!validationResult.success) {
+              console.error(`Schema validation failed for ${playerName}:`, validationResult.error);
+              results.push({ name: playerName, status: "datos inválidos" });
+              skipped++;
+              continue;
+            }
+
+            await storage.createPlayer(validationResult.data, orgId);
+            existingPlayerMap.set(playerKey, { ...validationResult.data, id: '' } as any);
+            results.push({ name: playerName, status: "importado" });
+            imported++;
           }
-
-          await storage.createPlayer(validationResult.data, orgId);
-
-          existingPlayerKeys.add(playerKey);
-          results.push({ name: playerName, status: "importado" });
-          imported++;
         } catch (err) {
           console.error(`Error importing player ${player.name}:`, err);
           results.push({ name: player.name || "unknown", status: "error" });
@@ -2105,8 +2123,9 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
 
       res.json({ 
         success: true, 
-        message: `Jugadores importados: ${imported}, omitidos: ${skipped}`,
+        message: `Jugadores importados: ${imported}, actualizados: ${updated}, omitidos: ${skipped}`,
         imported,
+        updated,
         skipped,
         results
       });
