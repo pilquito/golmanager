@@ -27,6 +27,7 @@ import AdminOrganizationDetail from "@/pages/admin-organization-detail";
 import AdminPlayers from "@/pages/admin-players";
 import AdminPlayerDetail from "@/pages/admin-player-detail";
 import Opponents from "@/pages/opponents";
+import DatabaseConfig from "@/pages/admin/database";
 import Sidebar from "@/components/layout/sidebar";
 import PlayerNav from "@/components/layout/player-nav";
 import AuthWrapper from "@/components/auth/auth-wrapper";
@@ -78,6 +79,7 @@ function AuthenticatedApp() {
             <Route path="/admin/organizations/:id" component={AdminOrganizationDetail} />
             <Route path="/admin/players" component={AdminPlayers} />
             <Route path="/admin/players/:id" component={AdminPlayerDetail} />
+            <Route path="/admin/database" component={DatabaseConfig} />
             <Route component={NotFound} />
           </Switch>
         </main>

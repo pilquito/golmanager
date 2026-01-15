@@ -493,6 +493,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Database statistics
+  app.get("/api/admin/database/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          schemaname,
+          relname as table_name,
+          n_live_tup as row_count,
+          pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname)) as size_bytes
+        FROM pg_stat_user_tables
+        ORDER BY n_live_tup DESC
+      `);
+      
+      const versionResult = await db.execute(sql`SELECT version()`);
+      const sizeResult = await db.execute(sql`SELECT pg_database_size(current_database()) as total_size`);
+      
+      const tables = result.rows.map((row: any) => ({
+        name: row.table_name,
+        rowCount: parseInt(row.row_count) || 0,
+        sizeBytes: parseInt(row.size_bytes) || 0,
+      }));
+      
+      const totalBytes = parseInt((sizeResult.rows[0] as any)?.total_size) || 0;
+      const formatBytes = (bytes: number) => {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      };
+      
+      res.json({
+        tables,
+        totalSize: formatBytes(totalBytes),
+        connectionStatus: "connected",
+        version: ((versionResult.rows[0] as any)?.version || "").split(" ").slice(0, 2).join(" "),
+      });
+    } catch (error) {
+      console.error("Error fetching database stats:", error);
+      res.status(500).json({ 
+        connectionStatus: "error",
+        message: "Failed to fetch database stats" 
+      });
+    }
+  });
+
+  // Admin: Export database
+  app.get("/api/admin/database/export", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const tables = [
+        "organizations", "users", "players", "player_organizations",
+        "matches", "match_attendances", "monthly_payments", 
+        "championship_payments", "other_payments", "opponents", 
+        "standings", "team_config", "lineups", "user_organizations"
+      ];
+      
+      let sqlDump = `-- GolManager Database Export\n-- Date: ${new Date().toISOString()}\n\n`;
+      
+      for (const tableName of tables) {
+        try {
+          const result = await db.execute(sql.raw(`SELECT * FROM ${tableName}`));
+          if (result.rows.length > 0) {
+            sqlDump += `-- Table: ${tableName}\n`;
+            for (const row of result.rows) {
+              const columns = Object.keys(row as object).join(", ");
+              const values = Object.values(row as object).map(v => {
+                if (v === null) return "NULL";
+                if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
+                if (typeof v === "number") return v.toString();
+                if (v instanceof Date) return `'${v.toISOString()}'`;
+                return `'${String(v).replace(/'/g, "''")}'`;
+              }).join(", ");
+              sqlDump += `INSERT INTO ${tableName} (${columns}) VALUES (${values}) ON CONFLICT DO NOTHING;\n`;
+            }
+            sqlDump += "\n";
+          }
+        } catch (tableError) {
+          sqlDump += `-- Skipped table ${tableName}: not found or error\n\n`;
+        }
+      }
+      
+      res.setHeader("Content-Type", "application/sql");
+      res.setHeader("Content-Disposition", `attachment; filename="golmanager_backup_${new Date().toISOString().split("T")[0]}.sql"`);
+      res.send(sqlDump);
+    } catch (error) {
+      console.error("Error exporting database:", error);
+      res.status(500).json({ message: "Failed to export database" });
+    }
+  });
+
+  // Admin: Restore/execute SQL
+  app.post("/api/admin/database/restore", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { sql: sqlContent } = req.body;
+      
+      if (!sqlContent || typeof sqlContent !== "string") {
+        return res.status(400).json({ message: "SQL content is required" });
+      }
+      
+      // Split into statements and execute each
+      const statements = sqlContent
+        .split(";")
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && !s.startsWith("--"));
+      
+      let executed = 0;
+      let errors: string[] = [];
+      
+      for (const statement of statements) {
+        try {
+          await db.execute(sql.raw(statement));
+          executed++;
+        } catch (stmtError: any) {
+          errors.push(`Error: ${stmtError.message?.substring(0, 100)}`);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        executed,
+        total: statements.length,
+        errors: errors.length > 0 ? errors.slice(0, 5) : undefined
+      });
+    } catch (error) {
+      console.error("Error restoring database:", error);
+      res.status(500).json({ message: "Failed to restore database" });
+    }
+  });
+
   // User's organizations (for org selector - multi-team support)
   app.get("/api/user/organizations", isAuthenticated, async (req, res) => {
     try {

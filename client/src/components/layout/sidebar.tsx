@@ -21,7 +21,8 @@ import {
   Menu,
   Award,
   Building2,
-  Shield
+  Shield,
+  Database
 } from "lucide-react";
 import { OrganizationSelector } from "@/components/organization-selector";
 
@@ -42,6 +43,7 @@ const navigationItems = [
 const adminItems = [
   { href: "/admin/organizations", label: "Organizaciones", icon: Building2 },
   { href: "/admin/players", label: "Jugadores Global", icon: Users },
+  { href: "/admin/database", label: "Base de Datos", icon: Database },
 ];
 
 export default function Sidebar() {
