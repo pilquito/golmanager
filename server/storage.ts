@@ -388,13 +388,17 @@ export class DatabaseStorage implements IStorage {
         email: players.email,
         birthDate: players.birthDate,
         tagline: players.tagline,
-        profileImageUrl: users.profileImageUrl,
+        profileImageUrl: players.profileImageUrl,
+        goals: players.goals,
+        assists: players.assists,
+        yellowCards: players.yellowCards,
+        redCards: players.redCards,
+        matchesPlayed: players.matchesPlayed,
         isActive: players.isActive,
         createdAt: players.createdAt,
         updatedAt: players.updatedAt,
       })
       .from(players)
-      .leftJoin(users, eq(players.email, users.email))
       .where(eq(players.organizationId, orgId))
       .orderBy(desc(players.createdAt));
     
