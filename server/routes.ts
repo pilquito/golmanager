@@ -1840,42 +1840,57 @@ Requisitos:
       });
 
       const prompt = `Analiza esta captura de pantalla de una lista de jugadores de fútbol.
-Extrae los datos de todos los jugadores visibles en formato JSON.
+Extrae los datos de TODOS los jugadores visibles en formato JSON.
 
 Para cada jugador, extrae:
-- name: nombre completo del jugador
+- name: nombre completo del jugador (OBLIGATORIO)
 - jerseyNumber: número de camiseta (número, puede ser null si no aparece)
-- position: posición del jugador (Portero, Defensa, Centrocampista, Delantero, o abreviaciones como PT, DEF, MC, DEL)
-- photoRegion: coordenadas del bounding box de la foto del jugador (si es visible)
-  - x: coordenada X del borde izquierdo (0.0 a 1.0 relativo al ancho de la imagen)
-  - y: coordenada Y del borde superior (0.0 a 1.0 relativo al alto de la imagen)
-  - width: ancho del bounding box (0.0 a 1.0 relativo al ancho de la imagen)
-  - height: alto del bounding box (0.0 a 1.0 relativo al alto de la imagen)
+- position: posición del jugador (OBLIGATORIO)
+- goals: goles marcados (número, 0 si no aparece)
+- assists: asistencias (número, 0 si no aparece)
+- yellowCards: tarjetas amarillas (número, 0 si no aparece)
+- redCards: tarjetas rojas (número, 0 si no aparece)
+- matchesPlayed: partidos jugados (número, 0 si no aparece)
+- photoRegion: bounding box de la foto del jugador (INCLUIR SIEMPRE si hay foto visible)
+  - x: coordenada X del borde izquierdo (0.0 a 1.0 relativo al ancho)
+  - y: coordenada Y del borde superior (0.0 a 1.0 relativo al alto)
+  - width: ancho del bounding box (0.0 a 1.0)
+  - height: alto del bounding box (0.0 a 1.0)
 
-Normaliza las posiciones a estas opciones:
-- "Portero" o "PT" → "Portero"
-- "Defensa" o "DEF" → "Defensa"  
-- "Centrocampista" o "MC" o "MED" → "Mediocampista"
-- "Delantero" o "DEL" → "Delantero"
+IMPORTANTE sobre photoRegion:
+- Las fotos suelen estar a la izquierda de cada fila de jugador
+- Son típicamente cuadradas o circulares
+- El bounding box debe ser preciso y ajustado a la foto
+- Si ves una foto de perfil del jugador, SIEMPRE incluye photoRegion
 
-Responde SOLO con un JSON válido en este formato exacto:
+Normaliza las posiciones a:
+- "Portero" (PT, GK, arquero)
+- "Defensa" (DEF, DF, lateral, central)
+- "Mediocampista" (MC, MED, centrocampista, medio, pivote, interior)
+- "Delantero" (DEL, FW, ST, extremo, punta)
+
+Responde SOLO con JSON válido:
 {
   "players": [
     {
       "name": "Nombre del Jugador",
       "jerseyNumber": 10,
       "position": "Mediocampista",
+      "goals": 5,
+      "assists": 3,
+      "yellowCards": 1,
+      "redCards": 0,
+      "matchesPlayed": 12,
       "photoRegion": {
-        "x": 0.05,
-        "y": 0.1,
-        "width": 0.15,
-        "height": 0.12
+        "x": 0.02,
+        "y": 0.15,
+        "width": 0.08,
+        "height": 0.06
       }
     }
   ]
 }
 
-Si un jugador no tiene foto visible, omite el campo photoRegion para ese jugador.
 Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los datos de la imagen"}`;
 
       const response = await ai.models.generateContent({
@@ -2050,11 +2065,16 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             }
           }
 
-          // Build player data object
+          // Build player data object with stats
           const playerData: Record<string, any> = {
             name: playerName,
             jerseyNumber: jerseyNumber,
             position: position,
+            goals: typeof player.goals === 'number' ? player.goals : 0,
+            assists: typeof player.assists === 'number' ? player.assists : 0,
+            yellowCards: typeof player.yellowCards === 'number' ? player.yellowCards : 0,
+            redCards: typeof player.redCards === 'number' ? player.redCards : 0,
+            matchesPlayed: typeof player.matchesPlayed === 'number' ? player.matchesPlayed : 0,
             isActive: true,
           };
           

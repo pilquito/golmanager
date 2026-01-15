@@ -377,6 +377,12 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  goals: z.number().optional().default(0),
+  assists: z.number().optional().default(0),
+  yellowCards: z.number().optional().default(0),
+  redCards: z.number().optional().default(0),
+  matchesPlayed: z.number().optional().default(0),
 });
 
 export const insertMatchSchema = createInsertSchema(matches).omit({
