@@ -65,6 +65,7 @@ export interface IStorage {
   getAllUsers(orgId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
   validateUserCredentialsByEmail(email: string, password: string): Promise<User | null>;
   createUserForPlayer(player: Player, orgId: string): Promise<User | null>;
@@ -309,6 +310,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+    console.log(`✅ User ${id} deleted`);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
