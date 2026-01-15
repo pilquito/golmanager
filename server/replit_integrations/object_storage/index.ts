@@ -42,6 +42,36 @@ export async function uploadBase64Image(
   }
 }
 
+export async function uploadBuffer(
+  buffer: Buffer,
+  fileName: string,
+  contentType: string = "image/png"
+): Promise<string> {
+  if (!bucketId) {
+    throw new Error("Object storage bucket not configured");
+  }
+
+  try {
+    const storage = getStorage();
+    const bucket = storage.bucket(bucketId);
+    const filePath = `public/players/${fileName}`;
+    const file = bucket.file(filePath);
+
+    await file.save(buffer, {
+      contentType,
+      metadata: {
+        cacheControl: "public, max-age=31536000",
+      },
+      public: true,
+    });
+
+    return `https://storage.googleapis.com/${bucketId}/${filePath}`;
+  } catch (error) {
+    console.error("Error uploading to object storage:", error);
+    throw error;
+  }
+}
+
 export async function deleteObject(filePath: string): Promise<void> {
   if (!bucketId) {
     throw new Error("Object storage bucket not configured");

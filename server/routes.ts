@@ -1823,6 +1823,13 @@ Requisitos:
         return res.status(400).json({ message: "Se requiere una imagen" });
       }
 
+      // Get image dimensions using Sharp for bounding box calculations
+      const sharp = (await import("sharp")).default;
+      const imageBuffer = Buffer.from(imageBase64, "base64");
+      const imageMetadata = await sharp(imageBuffer).metadata();
+      const imageWidth = imageMetadata.width || 1000;
+      const imageHeight = imageMetadata.height || 1000;
+
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({
         apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
@@ -1839,11 +1846,16 @@ Para cada jugador, extrae:
 - name: nombre completo del jugador
 - jerseyNumber: número de camiseta (número, puede ser null si no aparece)
 - position: posición del jugador (Portero, Defensa, Centrocampista, Delantero, o abreviaciones como PT, DEF, MC, DEL)
+- photoRegion: coordenadas del bounding box de la foto del jugador (si es visible)
+  - x: coordenada X del borde izquierdo (0.0 a 1.0 relativo al ancho de la imagen)
+  - y: coordenada Y del borde superior (0.0 a 1.0 relativo al alto de la imagen)
+  - width: ancho del bounding box (0.0 a 1.0 relativo al ancho de la imagen)
+  - height: alto del bounding box (0.0 a 1.0 relativo al alto de la imagen)
 
 Normaliza las posiciones a estas opciones:
 - "Portero" o "PT" → "Portero"
 - "Defensa" o "DEF" → "Defensa"  
-- "Centrocampista" o "MC" o "MED" → "Centrocampista"
+- "Centrocampista" o "MC" o "MED" → "Mediocampista"
 - "Delantero" o "DEL" → "Delantero"
 
 Responde SOLO con un JSON válido en este formato exacto:
@@ -1852,11 +1864,18 @@ Responde SOLO con un JSON válido en este formato exacto:
     {
       "name": "Nombre del Jugador",
       "jerseyNumber": 10,
-      "position": "Centrocampista"
+      "position": "Mediocampista",
+      "photoRegion": {
+        "x": 0.05,
+        "y": 0.1,
+        "width": 0.15,
+        "height": 0.12
+      }
     }
   ]
 }
 
+Si un jugador no tiene foto visible, omite el campo photoRegion para ese jugador.
 Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los datos de la imagen"}`;
 
       const response = await ai.models.generateContent({
@@ -1981,13 +2000,67 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             continue;
           }
 
+          // Process photo if region is provided
+          let profileImageUrl: string | undefined = undefined;
+          
+          if (player.photoRegion && 
+              typeof player.photoRegion.x === 'number' && 
+              typeof player.photoRegion.y === 'number' &&
+              typeof player.photoRegion.width === 'number' &&
+              typeof player.photoRegion.height === 'number') {
+            try {
+              // Convert normalized coordinates to pixel values
+              const cropX = Math.round(player.photoRegion.x * imageWidth);
+              const cropY = Math.round(player.photoRegion.y * imageHeight);
+              const cropWidth = Math.round(player.photoRegion.width * imageWidth);
+              const cropHeight = Math.round(player.photoRegion.height * imageHeight);
+
+              // Validate crop dimensions
+              if (cropWidth > 10 && cropHeight > 10 && 
+                  cropX >= 0 && cropY >= 0 &&
+                  cropX + cropWidth <= imageWidth && 
+                  cropY + cropHeight <= imageHeight) {
+                
+                // Crop the player photo from the screenshot
+                const croppedBuffer = await sharp(imageBuffer)
+                  .extract({ left: cropX, top: cropY, width: cropWidth, height: cropHeight })
+                  .resize(200, 200, { fit: 'cover' })
+                  .png()
+                  .toBuffer();
+
+                // Try to upload to object storage
+                try {
+                  const { uploadBuffer, isStorageConfigured } = await import("./replit_integrations/object_storage");
+                  
+                  if (isStorageConfigured()) {
+                    const fileName = `player_${playerName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}.png`;
+                    profileImageUrl = await uploadBuffer(croppedBuffer, fileName, "image/png");
+                  } else {
+                    // Fallback to data URL if object storage not configured
+                    profileImageUrl = `data:image/png;base64,${croppedBuffer.toString('base64')}`;
+                  }
+                } catch (uploadError) {
+                  console.warn("Object storage upload failed, using data URL:", uploadError);
+                  profileImageUrl = `data:image/png;base64,${croppedBuffer.toString('base64')}`;
+                }
+              }
+            } catch (cropError) {
+              console.warn(`Failed to crop photo for ${playerName}:`, cropError);
+              // Continue without photo - not a critical error
+            }
+          }
+
           // Build player data object
-          const playerData = {
+          const playerData: Record<string, any> = {
             name: playerName,
             jerseyNumber: jerseyNumber,
             position: position,
             isActive: true,
           };
+          
+          if (profileImageUrl) {
+            playerData.profileImageUrl = profileImageUrl;
+          }
 
           // Validate with schema before inserting
           const validationResult = insertPlayerSchema.safeParse(playerData);
