@@ -1618,6 +1618,201 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
     }
   });
 
+  // Import logos from screenshot using AI
+  app.post("/api/liga-hesperides/import-logos-screenshot", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { imageBase64, mimeType } = req.body;
+      
+      if (!imageBase64) {
+        return res.status(400).json({ message: "Se requiere una imagen" });
+      }
+
+      const { GoogleGenAI, Modality } = await import("@google/genai");
+      
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
+      // Step 1: Analyze the screenshot to identify teams and describe their logos
+      const analysisPrompt = `Analiza esta captura de pantalla de fútbol.
+Identifica TODOS los equipos visibles y describe sus escudos/logos en detalle.
+
+Para cada equipo, proporciona:
+- teamName: nombre exacto del equipo como aparece en la imagen
+- logoDescription: descripción detallada del escudo (colores, símbolos, forma, texto, elementos visuales)
+
+Responde SOLO con un JSON válido en este formato:
+{
+  "teams": [
+    {
+      "teamName": "Nombre del Equipo",
+      "logoDescription": "Escudo circular con fondo rojo, un águila dorada en el centro, borde blanco con el nombre del equipo"
+    }
+  ]
+}
+
+Si no puedes identificar los equipos o escudos, responde: {"error": "No se pudieron identificar los escudos"}`;
+
+      const analysisResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: "user",
+          parts: [
+            { text: analysisPrompt },
+            { inlineData: { mimeType: mimeType || "image/png", data: imageBase64 } }
+          ]
+        }]
+      });
+
+      // Get text from response
+      let responseText = "";
+      if (analysisResponse.text) {
+        responseText = analysisResponse.text;
+      } else if (analysisResponse.candidates && analysisResponse.candidates.length > 0) {
+        for (const candidate of analysisResponse.candidates) {
+          if (candidate.content?.parts) {
+            for (const part of candidate.content.parts) {
+              if (part.text) {
+                responseText += part.text;
+              }
+            }
+          }
+        }
+      }
+
+      console.log("Logo analysis response:", responseText);
+
+      if (!responseText) {
+        return res.status(400).json({ message: "No se obtuvo respuesta de la IA" });
+      }
+
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(400).json({ message: "No se pudo extraer JSON de la respuesta" });
+      }
+
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      if (parsedData.error) {
+        return res.status(400).json({ message: parsedData.error });
+      }
+
+      if (!parsedData.teams || !Array.isArray(parsedData.teams)) {
+        return res.status(400).json({ message: "Formato de datos inválido" });
+      }
+
+      // Get team config to identify our team
+      const config = await storage.getTeamConfig(orgId);
+      const ourTeamName = config?.teamName?.toLowerCase() || "";
+
+      let logosGenerated = 0;
+      let skipped = 0;
+      const results: Array<{ team: string; logoUrl: string | null; status: string }> = [];
+
+      // Step 2: For each team (except ours), generate a logo and save it
+      for (const team of parsedData.teams) {
+        try {
+          const teamNameLower = team.teamName?.toLowerCase() || "";
+          
+          // Skip our own team
+          if (ourTeamName && (teamNameLower.includes(ourTeamName) || ourTeamName.includes(teamNameLower))) {
+            results.push({ team: team.teamName, logoUrl: null, status: "skipped (own team)" });
+            continue;
+          }
+
+          // Check if opponent exists
+          const opponent = await storage.getOpponentByName(team.teamName, orgId);
+          if (!opponent) {
+            results.push({ team: team.teamName, logoUrl: null, status: "opponent not found" });
+            skipped++;
+            continue;
+          }
+
+          // Skip if opponent already has a logo
+          if (opponent.logoUrl) {
+            results.push({ team: team.teamName, logoUrl: opponent.logoUrl, status: "already has logo" });
+            continue;
+          }
+
+          // Generate logo using AI
+          const generatePrompt = `Genera un escudo de fútbol profesional para el equipo "${team.teamName}".
+Descripción del escudo original: ${team.logoDescription}
+
+Requisitos:
+- Diseño de escudo de fútbol estilo profesional
+- Incluir el nombre del equipo o sus iniciales
+- Colores basados en la descripción
+- Fondo transparente o sólido
+- Estilo vectorial limpio
+- Dimensiones cuadradas`;
+
+          const imageResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash-image",
+            contents: [{ role: "user", parts: [{ text: generatePrompt }] }],
+            config: {
+              responseModalities: [Modality.TEXT, Modality.IMAGE],
+            },
+          });
+
+          const candidate = imageResponse.candidates?.[0];
+          const imagePart = candidate?.content?.parts?.find(
+            (part: { inlineData?: { data?: string; mimeType?: string } }) => part.inlineData
+          );
+
+          if (!imagePart?.inlineData?.data) {
+            results.push({ team: team.teamName, logoUrl: null, status: "failed to generate image" });
+            skipped++;
+            continue;
+          }
+
+          // Try to upload to object storage, fall back to data URL if it fails
+          let logoUrl: string;
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          
+          try {
+            const { uploadBase64Image, isStorageConfigured } = await import("./replit_integrations/object_storage");
+            
+            if (isStorageConfigured()) {
+              const fileName = `${team.teamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}.png`;
+              logoUrl = await uploadBase64Image(imagePart.inlineData.data, fileName, mimeType);
+            } else {
+              logoUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+            }
+          } catch (uploadError) {
+            console.warn("Object storage upload failed, using data URL:", uploadError);
+            logoUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+          }
+
+          // Update opponent with logo URL
+          await storage.updateOpponent(opponent.id, { logoUrl }, orgId);
+          
+          results.push({ team: team.teamName, logoUrl, status: "success" });
+          logosGenerated++;
+        } catch (err) {
+          console.error(`Error generating logo for ${team.teamName}:`, err);
+          results.push({ team: team.teamName, logoUrl: null, status: "error" });
+          skipped++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Escudos generados: ${logosGenerated}, omitidos: ${skipped}`,
+        logosGenerated,
+        skipped,
+        results
+      });
+    } catch (error) {
+      console.error("Error importing logos from screenshot:", error);
+      res.status(500).json({ message: "Error al procesar la captura de pantalla", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Opponents routes
   app.get("/api/opponents", isAuthenticated, async (req, res) => {
     try {

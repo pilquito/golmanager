@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Image } from "lucide-react";
 import { insertOpponentSchema } from "@shared/schema";
 import type { Opponent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +27,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 export default function Opponents() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOpponent, setEditingOpponent] = useState<Opponent | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -146,6 +147,62 @@ export default function Opponents() {
       });
     },
   });
+
+  const importLogosMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const response = await apiRequest("/api/liga-hesperides/import-logos-screenshot", "POST", {
+        imageBase64: base64,
+        mimeType: file.type,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/opponents"] });
+      toast({
+        title: "Escudos importados",
+        description: data.message || `${data.logosGenerated} escudos generados`,
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Error al importar escudos",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogoFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importLogosMutation.mutate(file);
+    }
+    if (logoFileInputRef.current) {
+      logoFileInputRef.current.value = '';
+    }
+  };
 
   const onSubmit = (data: any) => {
     if (editingOpponent) {
@@ -275,13 +332,29 @@ export default function Opponents() {
               <h3 className="text-lg font-semibold">
                 {opponents?.length || 0} equipos rivales
               </h3>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => { setEditingOpponent(null); form.reset(); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Contrincante
-                  </Button>
-                </DialogTrigger>
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  ref={logoFileInputRef}
+                  onChange={handleLogoFileSelect}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Button 
+                  variant="outline"
+                  onClick={() => logoFileInputRef.current?.click()}
+                  disabled={importLogosMutation.isPending}
+                >
+                  <Image className="h-4 w-4 mr-2" />
+                  {importLogosMutation.isPending ? "Generando escudos..." : "Importar Escudos"}
+                </Button>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => { setEditingOpponent(null); form.reset(); }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuevo Contrincante
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>
@@ -406,6 +479,7 @@ export default function Opponents() {
                   </Form>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             <DataTable 
