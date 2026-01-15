@@ -1375,9 +1375,14 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
         return res.status(400).json({ message: "Formato de datos inválido" });
       }
 
-      // Save standings to database
+      // Get team config to identify our team name
+      const config = await storage.getTeamConfig(orgId);
+      const ourTeamName = config?.teamName?.toLowerCase() || "";
+
+      // Save standings to database and create opponents
       let imported = 0;
       let updated = 0;
+      let opponentsCreated = 0;
       
       for (const team of parsedData.teams) {
         try {
@@ -1406,6 +1411,16 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             await storage.createStanding(standingData, orgId);
             imported++;
           }
+
+          // Create opponent if this is not our team
+          const teamNameLower = team.teamName?.toLowerCase() || "";
+          if (teamNameLower && teamNameLower !== ourTeamName && !ourTeamName.includes(teamNameLower) && !teamNameLower.includes(ourTeamName)) {
+            const existingOpponent = await storage.getOpponentByName(team.teamName, orgId);
+            if (!existingOpponent) {
+              await storage.createOpponent({ name: team.teamName }, orgId);
+              opponentsCreated++;
+            }
+          }
         } catch (err) {
           console.error("Error saving standing:", err);
         }
@@ -1413,9 +1428,10 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
 
       res.json({ 
         success: true, 
-        message: `Clasificación importada: ${imported} nuevos, ${updated} actualizados`,
+        message: `Clasificación importada: ${imported} nuevos, ${updated} actualizados. ${opponentsCreated} contrincantes creados.`,
         importedTeams: imported,
         updatedTeams: updated,
+        opponentsCreated: opponentsCreated,
         teams: parsedData.teams
       });
     } catch (error) {
