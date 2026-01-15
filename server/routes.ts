@@ -1549,8 +1549,11 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
       for (const match of parsedData.matches) {
         try {
           // Determine if we're home or away
-          const isHomeGame = match.homeTeam?.toLowerCase().includes(teamName.toLowerCase()) || 
-                            teamName.toLowerCase().includes(match.homeTeam?.toLowerCase() || "");
+          const teamNameLower = teamName.toLowerCase();
+          const homeTeamLower = match.homeTeam?.toLowerCase() || "";
+          const awayTeamLower = match.awayTeam?.toLowerCase() || "";
+          
+          const isHomeGame = homeTeamLower.includes(teamNameLower) || teamNameLower.includes(homeTeamLower);
           const opponentName = isHomeGame ? match.awayTeam : match.homeTeam;
 
           // Check for or create opponent
@@ -1559,19 +1562,41 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             opponent = await storage.createOpponent({ name: opponentName }, orgId);
           }
 
-          // Create match
+          // Build date with time
+          let matchDate: Date;
+          const dateStr = match.date || new Date().toISOString().split('T')[0];
+          const timeStr = match.time || "12:00";
+          try {
+            matchDate = new Date(`${dateStr}T${timeStr}:00`);
+            if (isNaN(matchDate.getTime())) {
+              matchDate = new Date(dateStr);
+            }
+          } catch {
+            matchDate = new Date();
+          }
+
+          // Calculate scores based on home/away
+          let ourScore = null;
+          let opponentScore = null;
+          if (match.homeScore !== null && match.awayScore !== null) {
+            ourScore = isHomeGame ? match.homeScore : match.awayScore;
+            opponentScore = isHomeGame ? match.awayScore : match.homeScore;
+          }
+
+          // Create match with correct field names
           const matchData = {
-            date: match.date || new Date().toISOString().split('T')[0],
-            time: match.time || "00:00",
+            date: matchDate,
             opponent: opponentName || "Rival",
-            location: match.venue || "Campo",
-            homeScore: match.homeScore !== null ? (isHomeGame ? match.homeScore : match.awayScore) : null,
-            awayScore: match.awayScore !== null ? (isHomeGame ? match.awayScore : match.homeScore) : null,
+            venue: match.venue || "Por definir",
             competition: match.competition || "Liga",
+            ourScore: ourScore,
+            opponentScore: opponentScore,
+            status: (ourScore !== null) ? "played" : "scheduled",
             isHomeGame: isHomeGame,
             opponentId: opponent?.id || null,
           };
 
+          console.log("Creating match:", matchData);
           await storage.createMatch(matchData as any, orgId);
           imported++;
         } catch (err) {
