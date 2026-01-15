@@ -509,14 +509,8 @@ export class DatabaseStorage implements IStorage {
         .where(and(eq(players.id, id), eq(players.organizationId, orgId)))
         .returning();
 
-      if (player.isActive !== undefined && currentPlayer.email) {
-        console.log(`🔄 Syncing user status for player ${currentPlayer.name} (${currentPlayer.email})`);
-        const user = await this.getUserByEmail(currentPlayer.email);
-        if (user) {
-          await this.updateUser(user.id, { isActive: player.isActive });
-          console.log(`✅ User status synced to ${player.isActive ? 'active' : 'inactive'}`);
-        }
-      }
+      // Sync user data when player is updated
+      await this.syncUserFromPlayer(currentPlayer, player);
 
       return updatedPlayer;
     }
@@ -533,24 +527,59 @@ export class DatabaseStorage implements IStorage {
       .where(eq(players.id, id))
       .returning();
     
-    if (player.isActive !== undefined && currentPlayer.email) {
-      console.log(`🔄 Syncing user status for player ${currentPlayer.name} (${currentPlayer.email})`);
-      
-      try {
-        const associatedUser = await this.getUserByEmail(currentPlayer.email);
-        if (associatedUser) {
-          await this.updateUser(associatedUser.id, { 
-            isActive: player.isActive 
-          });
-          console.log(`✅ User ${associatedUser.username} status synced: isActive = ${player.isActive}`);
-        }
-      } catch (error) {
-        console.warn(`⚠️ Could not sync user status for player ${currentPlayer.name}:`, error);
-      }
-    }
+    // Sync user data when player is updated
+    await this.syncUserFromPlayer(currentPlayer, player);
     
     console.log(`Storage: Player updated successfully:`, updatedPlayer);
     return updatedPlayer;
+  }
+
+  // Helper to sync user data when player is updated
+  private async syncUserFromPlayer(currentPlayer: Player, playerUpdate: Partial<InsertPlayer>): Promise<void> {
+    if (!currentPlayer.email) return;
+    
+    try {
+      const associatedUser = await this.getUserByEmail(currentPlayer.email);
+      if (!associatedUser) {
+        console.log(`⚠️ No user found for player ${currentPlayer.name} (${currentPlayer.email})`);
+        return;
+      }
+
+      const userUpdateData: Partial<UpsertUser> = {};
+
+      // Sync email change
+      if (playerUpdate.email && playerUpdate.email !== currentPlayer.email) {
+        // Check if new email is already taken by another user
+        const existingUserWithNewEmail = await this.getUserByEmail(playerUpdate.email);
+        if (existingUserWithNewEmail && existingUserWithNewEmail.id !== associatedUser.id) {
+          console.warn(`⚠️ Cannot sync email: ${playerUpdate.email} already belongs to another user`);
+        } else {
+          userUpdateData.email = playerUpdate.email;
+          console.log(`🔄 Syncing email change: ${currentPlayer.email} → ${playerUpdate.email}`);
+        }
+      }
+
+      // Sync active status
+      if (playerUpdate.isActive !== undefined) {
+        userUpdateData.isActive = playerUpdate.isActive;
+        console.log(`🔄 Syncing status: isActive = ${playerUpdate.isActive}`);
+      }
+
+      // Sync name change
+      if (playerUpdate.name && playerUpdate.name !== currentPlayer.name) {
+        const nameParts = playerUpdate.name.trim().split(' ');
+        userUpdateData.firstName = nameParts[0];
+        userUpdateData.lastName = nameParts.slice(1).join(' ') || undefined;
+        console.log(`🔄 Syncing name: ${playerUpdate.name}`);
+      }
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await this.updateUser(associatedUser.id, userUpdateData);
+        console.log(`✅ User ${associatedUser.username} synced successfully`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not sync user for player ${currentPlayer.name}:`, error);
+    }
   }
 
   async deletePlayer(id: string, orgId: string): Promise<void> {
