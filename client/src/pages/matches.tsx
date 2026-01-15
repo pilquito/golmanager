@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Edit, Trash2, Eye, Users, FileText, Download, AlertCircle, Home, Plane } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Users, FileText, Download, AlertCircle, Home, Plane, Camera, Loader2 } from "lucide-react";
 import { insertMatchSchema } from "@shared/schema";
 import type { Match, Opponent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -35,6 +35,7 @@ export default function Matches() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: matches, isLoading } = useQuery<Match[]>({
     queryKey: ["/api/matches"],
@@ -209,6 +210,62 @@ export default function Matches() {
       });
     },
   });
+
+  const importFromScreenshotMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const response = await apiRequest("/api/liga-hesperides/import-matches-screenshot", "POST", {
+        imageBase64: base64,
+        mimeType: file.type,
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+      toast({
+        title: "Importación completada",
+        description: data.message || `Partidos importados: ${data.importedCount} nuevos`,
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error en la importación",
+        description: error.message || "No se pudo procesar la captura de pantalla",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importFromScreenshotMutation.mutate(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const onSubmit = (data: any) => {
     if (editingMatch) {
@@ -394,6 +451,26 @@ export default function Matches() {
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header title="Partidos" subtitle="Calendario y resultados de partidos">
         <div className="flex gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*"
+            className="hidden"
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importFromScreenshotMutation.isPending}
+            variant="default"
+            data-testid="button-import-screenshot"
+          >
+            {importFromScreenshotMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4 mr-2" />
+            )}
+            {importFromScreenshotMutation.isPending ? "Analizando..." : "Importar Captura"}
+          </Button>
           <Button
             onClick={() => importMatchesMutation.mutate()}
             disabled={importMatchesMutation.isPending}
@@ -401,7 +478,7 @@ export default function Matches() {
             data-testid="button-import-matches"
           >
             <Download className="h-4 w-4 mr-2" />
-            {importMatchesMutation.isPending ? "Importando..." : "Importar Partidos"}
+            {importMatchesMutation.isPending ? "Importando..." : "Importar URL"}
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

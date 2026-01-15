@@ -1271,6 +1271,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Screenshot import routes using Gemini AI
+  app.post("/api/liga-hesperides/import-standings-screenshot", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { imageBase64, mimeType } = req.body;
+      
+      if (!imageBase64) {
+        return res.status(400).json({ message: "Se requiere una imagen" });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
+      const prompt = `Analiza esta captura de pantalla de una tabla de clasificación de fútbol.
+Extrae los datos de todos los equipos visibles en formato JSON.
+
+Para cada equipo, extrae:
+- teamName: nombre del equipo
+- position: posición en la tabla (número)
+- played: partidos jugados (PJ)
+- won: partidos ganados (G)
+- drawn: partidos empatados (E)
+- lost: partidos perdidos (P)
+- goalsFor: goles a favor (GF)
+- goalsAgainst: goles en contra (GC)
+- goalDifference: diferencia de goles (puede calcularse)
+- points: puntos totales
+
+Responde SOLO con un JSON válido en este formato exacto:
+{
+  "teams": [
+    {
+      "teamName": "Nombre del Equipo",
+      "position": 1,
+      "played": 8,
+      "won": 6,
+      "drawn": 1,
+      "lost": 1,
+      "goalsFor": 25,
+      "goalsAgainst": 8,
+      "goalDifference": 17,
+      "points": 19
+    }
+  ]
+}
+
+Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los datos de la imagen"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: mimeType || "image/png", data: imageBase64 } }
+          ]
+        }]
+      });
+
+      // Get text from response - try multiple access methods
+      let responseText = "";
+      if (response.text) {
+        responseText = response.text;
+      } else if (response.candidates && response.candidates.length > 0) {
+        // Iterate all candidates and parts to collect full text
+        for (const candidate of response.candidates) {
+          if (candidate.content?.parts) {
+            for (const part of candidate.content.parts) {
+              if (part.text) {
+                responseText += part.text;
+              }
+            }
+          }
+        }
+      }
+      console.log("Gemini response for standings:", responseText);
+
+      // Extract JSON from response
+      if (!responseText) {
+        console.error("Gemini response (no text):", response);
+        return res.status(400).json({ message: "No se obtuvo respuesta de la IA. Intenta con otra imagen." });
+      }
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(400).json({ message: "No se pudo extraer JSON de la respuesta de IA", rawResponse: responseText.substring(0, 200) });
+      }
+
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      if (parsedData.error) {
+        return res.status(400).json({ message: parsedData.error });
+      }
+
+      if (!parsedData.teams || !Array.isArray(parsedData.teams)) {
+        return res.status(400).json({ message: "Formato de datos inválido" });
+      }
+
+      // Save standings to database
+      let imported = 0;
+      let updated = 0;
+      
+      for (const team of parsedData.teams) {
+        try {
+          const existingStandings = await storage.getStandings(orgId);
+          const existing = existingStandings.find((s: any) => 
+            s.team?.toLowerCase() === team.teamName?.toLowerCase()
+          );
+
+          const standingData = {
+            team: team.teamName,
+            position: team.position || 0,
+            matchesPlayed: team.played || 0,
+            wins: team.won || 0,
+            draws: team.drawn || 0,
+            losses: team.lost || 0,
+            goalsFor: team.goalsFor || 0,
+            goalsAgainst: team.goalsAgainst || 0,
+            goalDifference: team.goalDifference || (team.goalsFor - team.goalsAgainst) || 0,
+            points: team.points || 0,
+          };
+
+          if (existing) {
+            await storage.updateStanding(existing.id, standingData, orgId);
+            updated++;
+          } else {
+            await storage.createStanding(standingData, orgId);
+            imported++;
+          }
+        } catch (err) {
+          console.error("Error saving standing:", err);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Clasificación importada: ${imported} nuevos, ${updated} actualizados`,
+        importedTeams: imported,
+        updatedTeams: updated,
+        teams: parsedData.teams
+      });
+    } catch (error) {
+      console.error("Error importing standings from screenshot:", error);
+      res.status(500).json({ message: "Error al procesar la captura de pantalla", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/liga-hesperides/import-matches-screenshot", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { imageBase64, mimeType } = req.body;
+      
+      if (!imageBase64) {
+        return res.status(400).json({ message: "Se requiere una imagen" });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
+      const prompt = `Analiza esta captura de pantalla de partidos de fútbol.
+Extrae los datos de todos los partidos visibles en formato JSON.
+
+Para cada partido, extrae:
+- date: fecha del partido en formato YYYY-MM-DD
+- time: hora del partido en formato HH:MM (si está disponible)
+- homeTeam: nombre del equipo local
+- awayTeam: nombre del equipo visitante
+- homeScore: goles del equipo local (null si no se ha jugado)
+- awayScore: goles del equipo visitante (null si no se ha jugado)
+- venue: lugar/estadio (si está disponible)
+- competition: nombre de la competición (si está visible)
+
+Responde SOLO con un JSON válido en este formato exacto:
+{
+  "matches": [
+    {
+      "date": "2025-01-15",
+      "time": "19:00",
+      "homeTeam": "Equipo Local",
+      "awayTeam": "Equipo Visitante",
+      "homeScore": 2,
+      "awayScore": 1,
+      "venue": "Estadio Municipal",
+      "competition": "Liga"
+    }
+  ]
+}
+
+Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los datos de la imagen"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: mimeType || "image/png", data: imageBase64 } }
+          ]
+        }]
+      });
+
+      // Get text from response - try multiple access methods
+      let responseText = "";
+      if (response.text) {
+        responseText = response.text;
+      } else if (response.candidates && response.candidates.length > 0) {
+        // Iterate all candidates and parts to collect full text
+        for (const candidate of response.candidates) {
+          if (candidate.content?.parts) {
+            for (const part of candidate.content.parts) {
+              if (part.text) {
+                responseText += part.text;
+              }
+            }
+          }
+        }
+      }
+      console.log("Gemini response for matches:", responseText);
+
+      // Extract JSON from response
+      if (!responseText) {
+        console.error("Gemini response (no text):", response);
+        return res.status(400).json({ message: "No se obtuvo respuesta de la IA. Intenta con otra imagen." });
+      }
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(400).json({ message: "No se pudo extraer JSON de la respuesta de IA", rawResponse: responseText.substring(0, 200) });
+      }
+
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      if (parsedData.error) {
+        return res.status(400).json({ message: parsedData.error });
+      }
+
+      if (!parsedData.matches || !Array.isArray(parsedData.matches)) {
+        return res.status(400).json({ message: "Formato de datos inválido" });
+      }
+
+      // Get team config to identify our team
+      const config = await storage.getTeamConfig(orgId);
+      const teamName = config?.teamName || "";
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const match of parsedData.matches) {
+        try {
+          // Determine if we're home or away
+          const isHomeGame = match.homeTeam?.toLowerCase().includes(teamName.toLowerCase()) || 
+                            teamName.toLowerCase().includes(match.homeTeam?.toLowerCase() || "");
+          const opponentName = isHomeGame ? match.awayTeam : match.homeTeam;
+
+          // Check for or create opponent
+          let opponent = await storage.getOpponentByName(opponentName, orgId);
+          if (!opponent && opponentName) {
+            opponent = await storage.createOpponent({ name: opponentName }, orgId);
+          }
+
+          // Create match
+          const matchData = {
+            date: match.date || new Date().toISOString().split('T')[0],
+            time: match.time || "00:00",
+            opponent: opponentName || "Rival",
+            location: match.venue || "Campo",
+            homeScore: match.homeScore !== null ? (isHomeGame ? match.homeScore : match.awayScore) : null,
+            awayScore: match.awayScore !== null ? (isHomeGame ? match.awayScore : match.homeScore) : null,
+            competition: match.competition || "Liga",
+            isHomeGame: isHomeGame,
+            opponentId: opponent?.id || null,
+          };
+
+          await storage.createMatch(matchData as any, orgId);
+          imported++;
+        } catch (err) {
+          console.error("Error saving match:", err);
+          skipped++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Partidos importados: ${imported} nuevos, ${skipped} omitidos`,
+        importedCount: imported,
+        skippedCount: skipped,
+        matches: parsedData.matches
+      });
+    } catch (error) {
+      console.error("Error importing matches from screenshot:", error);
+      res.status(500).json({ message: "Error al procesar la captura de pantalla", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Opponents routes
   app.get("/api/opponents", isAuthenticated, async (req, res) => {
     try {
