@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Header from "@/components/layout/header";
 import { DataTable } from "@/components/ui/data-table";
-import { Plus, Eye, Pencil, Trash2, Archive, User } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Archive, User, Upload } from "lucide-react";
 import { insertPlayerSchema } from "@shared/schema";
 import type { Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,7 @@ export default function Players() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [filterNumber, setFilterNumber] = useState("");
   const [filterPosition, setFilterPosition] = useState("");
+  const importFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -171,6 +172,62 @@ export default function Players() {
       });
     },
   });
+
+  const importPlayersMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const response = await apiRequest("/api/liga-hesperides/import-players-screenshot", "POST", {
+        imageBase64: base64,
+        mimeType: file.type,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      toast({
+        title: "Jugadores importados",
+        description: data.message || `${data.imported} jugadores importados`,
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Redirigiendo al login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Error al importar jugadores",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImportFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importPlayersMutation.mutate(file);
+    }
+    if (importFileInputRef.current) {
+      importFileInputRef.current.value = '';
+    }
+  };
 
   const archiveMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -398,13 +455,29 @@ export default function Players() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header title="Jugadores" subtitle="Gestión de plantilla del equipo">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-player">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Jugador
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            ref={importFileInputRef}
+            onChange={handleImportFileSelect}
+            accept="image/*"
+            className="hidden"
+          />
+          <Button 
+            variant="outline"
+            onClick={() => importFileInputRef.current?.click()}
+            disabled={importPlayersMutation.isPending}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {importPlayersMutation.isPending ? "Importando..." : "Importar Jugadores"}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-player">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Jugador
+              </Button>
+            </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>
@@ -592,6 +665,7 @@ export default function Players() {
             </Form>
             </DialogContent>
           </Dialog>
+        </div>
       </Header>
 
       <main className="flex-1 overflow-auto bg-background p-3 md:p-6">

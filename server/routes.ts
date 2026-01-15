@@ -1813,6 +1813,216 @@ Requisitos:
     }
   });
 
+  // Import players from screenshot using Gemini AI
+  app.post("/api/liga-hesperides/import-players-screenshot", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = getOrgId(req);
+      const { imageBase64, mimeType } = req.body;
+      
+      if (!imageBase64) {
+        return res.status(400).json({ message: "Se requiere una imagen" });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
+      const prompt = `Analiza esta captura de pantalla de una lista de jugadores de fútbol.
+Extrae los datos de todos los jugadores visibles en formato JSON.
+
+Para cada jugador, extrae:
+- name: nombre completo del jugador
+- jerseyNumber: número de camiseta (número, puede ser null si no aparece)
+- position: posición del jugador (Portero, Defensa, Centrocampista, Delantero, o abreviaciones como PT, DEF, MC, DEL)
+
+Normaliza las posiciones a estas opciones:
+- "Portero" o "PT" → "Portero"
+- "Defensa" o "DEF" → "Defensa"  
+- "Centrocampista" o "MC" o "MED" → "Centrocampista"
+- "Delantero" o "DEL" → "Delantero"
+
+Responde SOLO con un JSON válido en este formato exacto:
+{
+  "players": [
+    {
+      "name": "Nombre del Jugador",
+      "jerseyNumber": 10,
+      "position": "Centrocampista"
+    }
+  ]
+}
+
+Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los datos de la imagen"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: mimeType || "image/png", data: imageBase64 } }
+          ]
+        }]
+      });
+
+      // Get text from response - try multiple access methods
+      let responseText = "";
+      if (response.text) {
+        responseText = response.text;
+      } else if (response.candidates && response.candidates.length > 0) {
+        for (const candidate of response.candidates) {
+          if (candidate.content?.parts) {
+            for (const part of candidate.content.parts) {
+              if (part.text) {
+                responseText += part.text;
+              }
+            }
+          }
+        }
+      }
+      console.log("Gemini response for players:", responseText);
+
+      if (!responseText) {
+        console.error("Gemini response (no text):", response);
+        return res.status(400).json({ message: "No se obtuvo respuesta de la IA. Intenta con otra imagen." });
+      }
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(400).json({ message: "No se pudo extraer JSON de la respuesta de IA", rawResponse: responseText.substring(0, 200) });
+      }
+
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      if (parsedData.error) {
+        return res.status(400).json({ message: parsedData.error });
+      }
+
+      if (!parsedData.players || !Array.isArray(parsedData.players)) {
+        return res.status(400).json({ message: "Formato de datos inválido" });
+      }
+
+      // Get existing players to avoid duplicates
+      const existingPlayers = await storage.getPlayers(orgId);
+      const existingPlayerKeys = new Set(
+        existingPlayers.map(p => `${p.name.toLowerCase().trim()}_${p.jerseyNumber || ''}`)
+      );
+
+      let imported = 0;
+      let skipped = 0;
+      const results: { name: string; status: string }[] = [];
+
+      for (const player of parsedData.players) {
+        try {
+          const playerName = player.name?.trim();
+          if (!playerName) {
+            skipped++;
+            continue;
+          }
+
+          // Coerce jerseyNumber to number or null
+          let jerseyNumber: number | null = null;
+          if (player.jerseyNumber !== null && player.jerseyNumber !== undefined) {
+            const parsed = parseInt(String(player.jerseyNumber), 10);
+            if (!isNaN(parsed) && parsed > 0 && parsed <= 99) {
+              jerseyNumber = parsed;
+            }
+          }
+
+          // Check for duplicate by name + jersey number combination
+          const playerKey = `${playerName.toLowerCase()}_${jerseyNumber || ''}`;
+          if (existingPlayerKeys.has(playerKey)) {
+            results.push({ name: playerName, status: "ya existe" });
+            skipped++;
+            continue;
+          }
+
+          // Normalize position to canonical values used by the UI filter
+          // Canonical values: Portero, Defensa, Mediocampista, Delantero
+          let position: string | null = null;
+          const posRaw = player.position || "";
+          const posLower = posRaw.toLowerCase().trim();
+          
+          if (posLower.includes("porter") || posLower === "pt" || posLower === "gk") {
+            position = "Portero";
+          } else if (posLower.includes("defens") || posLower === "def" || posLower === "df" || posLower === "lateral") {
+            position = "Defensa";
+          } else if (
+            posLower.includes("centrocampist") || 
+            posLower.includes("mediocampist") ||
+            posLower.includes("medio") ||
+            posLower === "mc" || 
+            posLower === "med" ||
+            posLower === "mf" ||
+            posLower === "interior" ||
+            posLower === "pivote"
+          ) {
+            position = "Mediocampista";
+          } else if (
+            posLower.includes("delanter") || 
+            posLower === "del" || 
+            posLower === "fw" || 
+            posLower === "st" ||
+            posLower === "extremo" ||
+            posLower === "punta"
+          ) {
+            position = "Delantero";
+          }
+          
+          // Skip players with unrecognized positions to maintain data integrity
+          if (!position) {
+            results.push({ name: playerName, status: `posición no reconocida: ${posRaw || 'vacía'}` });
+            skipped++;
+            continue;
+          }
+
+          // Build player data object
+          const playerData = {
+            name: playerName,
+            jerseyNumber: jerseyNumber,
+            position: position,
+            isActive: true,
+          };
+
+          // Validate with schema before inserting
+          const validationResult = insertPlayerSchema.safeParse(playerData);
+          if (!validationResult.success) {
+            console.error(`Schema validation failed for ${playerName}:`, validationResult.error);
+            results.push({ name: playerName, status: "datos inválidos" });
+            skipped++;
+            continue;
+          }
+
+          await storage.createPlayer(validationResult.data, orgId);
+
+          existingPlayerKeys.add(playerKey);
+          results.push({ name: playerName, status: "importado" });
+          imported++;
+        } catch (err) {
+          console.error(`Error importing player ${player.name}:`, err);
+          results.push({ name: player.name || "unknown", status: "error" });
+          skipped++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Jugadores importados: ${imported}, omitidos: ${skipped}`,
+        imported,
+        skipped,
+        results
+      });
+    } catch (error) {
+      console.error("Error importing players from screenshot:", error);
+      res.status(500).json({ message: "Error al procesar la captura de pantalla", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Opponents routes
   app.get("/api/opponents", isAuthenticated, async (req, res) => {
     try {
