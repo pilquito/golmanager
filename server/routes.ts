@@ -2075,13 +2075,13 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
             isActive: true,
           };
           
-          // Only add photo if existing player doesn't have one
-          if (profileImageUrl && (!existingPlayer || !existingPlayer.profileImageUrl)) {
+          // Add photo if one was extracted
+          if (profileImageUrl) {
             playerData.profileImageUrl = profileImageUrl;
           }
 
           if (existingPlayer) {
-            // Update existing player with new stats (but keep existing photo if they have one)
+            // Update existing player with new stats and photo
             const updateData: Record<string, any> = {
               position: position,
               goals: playerData.goals,
@@ -2091,8 +2091,8 @@ Si no puedes extraer los datos, responde: {"error": "No se pudieron extraer los 
               matchesPlayed: playerData.matchesPlayed,
             };
             
-            // Only update photo if player doesn't have one
-            if (profileImageUrl && !existingPlayer.profileImageUrl) {
+            // Always update photo if one was extracted
+            if (profileImageUrl) {
               updateData.profileImageUrl = profileImageUrl;
             }
             
